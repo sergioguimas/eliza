@@ -1,0 +1,32 @@
+# --- Dependências (em qualquer pasta) ---
+**/node_modules
+**/npm-debug.log
+**/yarn-error.log
+**/pnpm-debug.log
+
+# --- Next.js (Builds e Cache) ---
+**/web/.next
+**/web/out
+**/web/build
+**/web/.vercel
+
+# --- Variáveis de Ambiente (CRÍTICO - NÃO REMOVA) ---
+# Bloqueia qualquer arquivo .env em qualquer pasta
+.env
+.env*.local
+**/.env
+**/.env*.local
+
+# --- Supabase Local ---
+# Ignora arquivos temporários gerados pelo Docker do Supabase
+supabase/.temp
+supabase/.branches
+
+# --- IDE e Sistema Operacional ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --- TypeScript ---
+*.tsbuildinfo
