@@ -12,7 +12,7 @@ import { toast } from "sonner"
 const menuItems = [
   { href: "/", icon: LayoutDashboard, label: "Visão Geral" },
   { href: "/agendamentos", icon: Calendar, label: "Agenda Médica" },
-  { href: "/servicos", icon: Activity, label: "Procedimentos" },
+  { href: "/servicos", icon: Activity, label: "Procedimentos" }, // Ícone Activity é bom para exames/procedimentos
   { href: "/clientes", icon: Users, label: "Pacientes" },
   { href: "/configuracoes", icon: Settings, label: "Configurações" },
 ]
@@ -32,7 +32,7 @@ export function AppSidebar() {
     <div className="flex h-full flex-col border-r bg-zinc-950 text-zinc-100 w-64">
       <div className="p-6 border-b border-zinc-800">
         <h1 className="text-xl font-bold text-blue-400 flex items-center gap-2">
-          <Stethoscope className="h-6 w-6" />
+          <Stethoscope className="h-6 w-6" /> {/* Ícone Médico */}
           MedAgenda
         </h1>
       </div>

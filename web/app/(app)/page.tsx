@@ -3,64 +3,63 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { type Tables } from '@/lib/database.types'
+import { Activity, Users, Calendar } from 'lucide-react'
 
 export default function Home() {
   const supabase = createClient()
   const [services, setServices] = useState<Tables<'services'>[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchServices() {
-      // Tenta buscar dados da tabela 'services'
-      const { data, error } = await supabase.from('services').select('*')
-      
-      if (error) {
-        setError(error.message)
-        console.error('Erro Supabase:', error)
-      } else {
-        setServices(data || [])
-      }
+      const { data } = await supabase.from('services').select('*')
+      setServices(data || [])
       setLoading(false)
     }
-
     fetchServices()
   }, [])
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-24 bg-zinc-950 text-white font-sans">
-      <div className="z-10 max-w-5xl w-full items-center justify-between text-sm">
-        <h1 className="text-4xl font-bold mb-8 text-center text-emerald-400">
-          SaaS Agendamento
-        </h1>
-        
-        <div className="border border-zinc-800 p-6 rounded-lg bg-zinc-900 shadow-xl">
-          <h2 className="text-xl mb-4 font-semibold border-b border-zinc-700 pb-2">Status da Conexão:</h2>
-          
-          {loading && <p className="text-yellow-500 animate-pulse">📡 Conectando ao Supabase...</p>}
-          
-          {error && (
-            <div className="text-red-400 p-4 bg-red-950/30 rounded border border-red-900">
-              ❌ Erro: {error}
-              <p className="text-xs mt-2 text-red-300">Verifique se o Supabase local está rodando (npx supabase start).</p>
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold text-zinc-100">Visão Geral</h1>
+      
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-blue-500/10 rounded-lg text-blue-400">
+              <Activity className="h-6 w-6" />
             </div>
-          )}
+            <div>
+              <p className="text-sm text-zinc-400">Procedimentos Ativos</p>
+              <h3 className="text-2xl font-bold text-zinc-100">
+                {loading ? '...' : services.length}
+              </h3>
+            </div>
+          </div>
+        </div>
 
-          {!loading && !error && (
-            <div className="space-y-4">
-              <p className="text-green-400 font-medium flex items-center gap-2">
-                ✅ Conexão estabelecida com sucesso!
-              </p>
-              <div className="bg-zinc-950 p-4 rounded text-zinc-400">
-                <p>Serviços encontrados no banco: <span className="font-bold text-white">{services.length}</span></p>
-                {services.length === 0 && (
-                  <p className="text-xs text-zinc-500 mt-2 italic">
-                    (O banco está vazio, o que é esperado. O importante é que não deu erro de conexão.)
-                  </p>
-                )}
-              </div>
+        <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-400">
+              <Users className="h-6 w-6" />
             </div>
-          )}
+            <div>
+              <p className="text-sm text-zinc-400">Pacientes Cadastrados</p>
+              <h3 className="text-2xl font-bold text-zinc-100">0</h3> {/* Vamos conectar depois */}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-purple-500/10 rounded-lg text-purple-400">
+              <Calendar className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-sm text-zinc-400">Agendamentos Hoje</p>
+              <h3 className="text-2xl font-bold text-zinc-100">0</h3>
+            </div>
+          </div>
         </div>
       </div>
     </div>
