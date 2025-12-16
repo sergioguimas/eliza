@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Calendar, Users, Settings, Scissors, LogOut, LayoutDashboard } from "lucide-react"
+import { Calendar, Users, Settings, Activity, LogOut, LayoutDashboard, Stethoscope } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/utils/supabase/client"
@@ -11,9 +11,9 @@ import { toast } from "sonner"
 
 const menuItems = [
   { href: "/", icon: LayoutDashboard, label: "Visão Geral" },
-  { href: "/agendamentos", icon: Calendar, label: "Agendamentos" },
-  { href: "/servicos", icon: Scissors, label: "Serviços" },
-  { href: "/clientes", icon: Users, label: "Clientes" },
+  { href: "/agendamentos", icon: Calendar, label: "Agenda Médica" },
+  { href: "/servicos", icon: Activity, label: "Procedimentos" },
+  { href: "/clientes", icon: Users, label: "Pacientes" },
   { href: "/configuracoes", icon: Settings, label: "Configurações" },
 ]
 
@@ -31,9 +31,9 @@ export function AppSidebar() {
   return (
     <div className="flex h-full flex-col border-r bg-zinc-950 text-zinc-100 w-64">
       <div className="p-6 border-b border-zinc-800">
-        <h1 className="text-xl font-bold text-emerald-400 flex items-center gap-2">
-          <Scissors className="h-6 w-6" />
-          SaaS Agenda
+        <h1 className="text-xl font-bold text-blue-400 flex items-center gap-2">
+          <Stethoscope className="h-6 w-6" />
+          MedAgenda
         </h1>
       </div>
 
@@ -47,7 +47,7 @@ export function AppSidebar() {
               className={cn(
                 "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
                 isActive 
-                  ? "bg-emerald-500/10 text-emerald-400" 
+                  ? "bg-blue-500/10 text-blue-400" 
                   : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
               )}
             >
