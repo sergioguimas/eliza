@@ -17,7 +17,7 @@ const menuItems = [
   { href: "/configuracoes", icon: Settings, label: "Configurações" },
 ]
 
-export function AppSidebar() {
+export function AppSidebar({ clinicName }: { clinicName: string }) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
@@ -30,11 +30,22 @@ export function AppSidebar() {
 
   return (
     <div className="flex h-full flex-col border-r bg-zinc-950 text-zinc-100 w-64">
-      <div className="p-6 border-b border-zinc-800">
-        <h1 className="text-xl font-bold text-blue-400 flex items-center gap-2">
-          <Stethoscope className="h-6 w-6" />
-          MedAgenda
-        </h1>
+      {/* HEADER ATUALIZADO 👇 */}
+      <div className="p-6 border-b border-zinc-800 flex items-center gap-3">
+        {/* Ícone com fundo sutil */}
+        <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+          <Stethoscope className="h-6 w-6 text-blue-500" />
+        </div>
+        
+        {/* Textos em coluna */}
+        <div className="flex flex-col">
+          <span className="text-base font-bold text-zinc-100 leading-none">
+            MedAgenda
+          </span>
+          <span className="text-xs text-blue-400 font-medium truncate max-w-[130px]" title={clinicName}>
+            {clinicName}
+          </span>
+        </div>
       </div>
 
       <nav className="flex-1 px-4 py-6 space-y-2">

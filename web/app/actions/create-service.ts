@@ -6,36 +6,34 @@ import { revalidatePath } from 'next/cache'
 export async function createService(formData: FormData) {
   const supabase = await createClient()
 
-  // 1. Coletar dados do formulário
   const title = formData.get('title') as string
-  const duration = parseInt(formData.get('duration') as string)
   const price = parseFloat(formData.get('price') as string)
+  const duration = parseInt(formData.get('duration') as string)
+  const color = formData.get('color') as string // <--- Pegando a cor
 
-  // 2. Pegar o tenant_id do usuário logado (Segurança Multi-tenant)
   const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) return { error: 'Usuário não autenticado' }
+  if (!user) return { error: 'Não autorizado' }
 
-  // Busca o perfil para saber qual tenant ele pertence
   const { data: profile } = await supabase
     .from('profiles')
     .select('tenant_id')
     .eq('id', user.id)
     .single()
 
-  if (!profile?.tenant_id) return { error: 'Usuário sem empresa vinculada' }
+  if (!profile?.tenant_id) return { error: 'Erro de perfil' }
 
-  // 3. Inserir no banco
   const { error } = await supabase.from('services').insert({
     title,
-    duration_minutes: duration,
     price,
-    tenant_id: profile.tenant_id
+    duration_minutes: duration,
+    color, // <--- Salvando a cor
+    tenant_id: profile.tenant_id,
+    is_active: true
   })
 
   if (error) return { error: error.message }
 
-  // 4. Atualizar a tela sem refresh
-  revalidatePath('/')
+  revalidatePath('/servicos')
+  revalidatePath('/agendamentos')
   return { success: true }
 }
