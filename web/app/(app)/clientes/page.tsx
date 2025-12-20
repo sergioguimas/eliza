@@ -13,13 +13,17 @@ import { CreateCustomerDialog } from "@/components/create-customer-dialog"
 import { Search, MoreHorizontal, UserPlus } from "lucide-react"
 import Link from "next/link"
 
+// CORREÇÃO 1: Tipagem de searchParams como Promise
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams?: { query?: string }
+  searchParams: Promise<{ query?: string }>
 }) {
   const supabase = await createClient()
-  const query = searchParams?.query || ""
+  
+  // CORREÇÃO 2: Aguardar (await) os parâmetros antes de ler
+  const { query } = await searchParams
+  const searchQuery = query || ""
 
   // Busca clientes filtrando pelo nome se houver busca
   let queryBuilder = supabase
@@ -27,8 +31,8 @@ export default async function CustomersPage({
     .select('*')
     .order('name')
 
-  if (query) {
-    queryBuilder = queryBuilder.ilike('name', `%${query}%`)
+  if (searchQuery) {
+    queryBuilder = queryBuilder.ilike('name', `%${searchQuery}%`)
   }
 
   const { data: customers } = await queryBuilder
@@ -50,8 +54,7 @@ export default async function CustomersPage({
           placeholder="Buscar paciente por nome..." 
           className="border-0 bg-transparent focus-visible:ring-0 text-zinc-100 placeholder:text-zinc-600"
           name="query"
-          // Nota: Em um app real usaríamos um Client Component para busca via URL
-          // Por enquanto, isso é visual para o MVP
+          defaultValue={searchQuery} // Boa prática: manter o valor no input
         />
       </div>
 
@@ -71,13 +74,12 @@ export default async function CustomersPage({
             {customers?.map((customer) => (
               <TableRow key={customer.id} className="border-zinc-800 hover:bg-zinc-900/50 group">
                 <TableCell className="font-medium">
-                  {/* O Link Mágico 👇 */}
                   <Link 
                     href={`/clientes/${customer.id}`} 
                     className="flex items-center gap-2 text-zinc-200 hover:text-blue-400 transition-colors font-semibold py-2"
                   >
                     <div className="h-8 w-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs text-zinc-500 font-bold group-hover:bg-blue-900/30 group-hover:text-blue-400 transition-colors">
-                      {customer.name.substring(0, 2).toUpperCase()}
+                      {customer.name ? customer.name.substring(0, 2).toUpperCase() : 'PN'}
                     </div>
                     {customer.name}
                   </Link>
