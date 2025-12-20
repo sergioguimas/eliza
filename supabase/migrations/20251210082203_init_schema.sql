@@ -1,6 +1,6 @@
 -- 1. Habilitar extensões
 create extension if not exists "uuid-ossp";
-create extension if not exists "btree_gist"; -- CORREÇÃO: Necessária para a trava de segurança funcionar com UUID
+create extension if not exists "btree_gist";
 
 -- 2. Tabela de Tenants
 create table public.tenants (
