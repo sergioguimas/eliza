@@ -7,10 +7,28 @@ ADD COLUMN signature_metadata jsonb;
 -- 2. Garantir que registros antigos virem rascunho
 UPDATE public.medical_records SET status = 'draft' WHERE status IS NULL;
 
--- 3. SEGURANÇA (O Cadeado)
--- Essa regra impede qualquer edição (UPDATE) se o status for 'signed'
-CREATE POLICY "Prevent update of signed records"
-ON public.medical_records
-FOR UPDATE
-USING (status = 'draft')
-WITH CHECK (status = 'draft' OR status = 'signed');
+-- 3. SEGURANÇA
+-- Removemos a política anterior se existir (apenas segurança para re-runs)
+DROP POLICY IF EXISTS "Prevent update of signed records" ON public.medical_records;
+
+CREATE POLICY "Users can update own tenant drafts"
+ON public.medical_records FOR UPDATE
+USING (
+  tenant_id = (select tenant_id from public.profiles where id = auth.uid()) 
+  AND
+  status = 'draft'
+)
+WITH CHECK (
+  tenant_id = (select tenant_id from public.profiles where id = auth.uid())
+  AND
+  (status = 'draft' or status = 'signed')
+);
+
+-- Permite apagar APENAS se for draft e pertencer ao meu tenant
+create policy "Users can delete own tenant drafts"
+on public.medical_records for delete
+using (
+  tenant_id = (select tenant_id from public.profiles where id = auth.uid()) 
+  AND
+  status = 'draft'
+);

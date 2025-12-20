@@ -11,18 +11,16 @@ import { Badge } from "@/components/ui/badge"
 import { MedicalRecordForm } from "@/components/medical-record-form"
 import { MedicalRecordList } from "@/components/medical-record-list"
 
-// MUDANÇA 1: A tipagem de params mudou para Promise
 export default async function CustomerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient()
 
-  // MUDANÇA 2: Precisamos fazer o await de params antes de usar
   const { id } = await params
 
   // 1. Buscar dados do Cliente
   const { data: customer } = await supabase
     .from('customers')
     .select('*')
-    .eq('id', id) // <--- Agora usamos o ID resolvido
+    .eq('id', id)
     .single()
 
   if (!customer) {
