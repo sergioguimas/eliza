@@ -59,8 +59,8 @@ export default async function CustomersPage({
       </div>
 
       {/* Tabela de Clientes */}
-      <div className="rounded-md border border-zinc-800 bg-zinc-900 overflow-hidden">
-        <Table>
+      <div className="rounded-md border border-zinc-800 bg-zinc-900 overflow-x-auto">
+        <Table className="min-w-[600px]">
           <TableHeader>
             <TableRow className="border-zinc-800 hover:bg-zinc-900/50">
               <TableHead className="text-zinc-400">Nome</TableHead>

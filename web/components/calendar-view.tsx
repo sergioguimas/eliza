@@ -60,8 +60,8 @@ export function CalendarView({ appointments, customers, services }: Props) {
 
     return (
       <div className="grid grid-cols-7 gap-px bg-zinc-800 rounded-b-lg overflow-hidden border border-t-0 border-zinc-800">
-        {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d) => (
-          <div key={d} className="bg-zinc-900 py-2 text-center text-xs font-medium text-zinc-500">{d}</div>
+        {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
+          <div key={i} className="bg-zinc-900 py-2 text-center text-xs font-medium text-zinc-500">{d}</div>
         ))}
         {calendarDays.map((day) => {
           const dayAppts = appointments.filter(a => isSameDay(parseISO(a.start_time), day))
