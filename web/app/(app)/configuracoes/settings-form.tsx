@@ -42,13 +42,13 @@ export function SettingsForm({ tenant }: { tenant: any }) {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-zinc-300">Nome da Clínica / Médico</Label>
+              <Label htmlFor="name" className="text-zinc-300">Nome da Clínica</Label>
               <Input 
                 id="name" 
                 name="name" 
                 defaultValue={tenant.name} 
                 className="bg-zinc-950 border-zinc-800 focus:ring-blue-600 text-zinc-100"
-                placeholder="Ex: Dr. João Silva"
+                placeholder="Ex: Consultório Dr. João Silva"
                 required
               />
             </div>
@@ -60,7 +60,7 @@ export function SettingsForm({ tenant }: { tenant: any }) {
                 name="crm" 
                 defaultValue={tenant.crm || ''} 
                 className="bg-zinc-950 border-zinc-800 focus:ring-blue-600 text-zinc-100"
-                placeholder="Ex: CRM/SP 123456"
+                placeholder="Ex: CRM/MG 123456"
               />
             </div>
           </div>

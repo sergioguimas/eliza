@@ -1,46 +1,48 @@
 import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
 import { SettingsForm } from "./settings-form"
+import { ProfileForm } from "./profile-form"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default async function SettingsPage() {
   const supabase = await createClient()
 
-  // 1. Pegar usuário
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return redirect("/login")
   
-  //Se não tiver usuário, manda pro login.
-  if (!user) {
-    return redirect("/login")
-  }
-  
-  // 2. Buscar dados da clínica
+  // Buscar Profile E Tenant
   const { data: profile } = await supabase
     .from('profiles')
-    .select('tenants(*)')
+    .select('*, tenants(*)')
     .eq('id', user.id)
     .single()
 
   // @ts-ignore
   const tenant = profile?.tenants
 
-  // Se não achou a clínica, mostra erro
-  if (!tenant) {
-    return (
-      <div className="p-8 text-center">
-        <h2 className="text-xl font-bold text-red-500">Erro de Configuração</h2>
-        <p className="text-zinc-400">Não foi possível localizar os dados da clínica para este usuário.</p>
-      </div>
-    )
-  }
+  if (!tenant) return <div>Erro ao carregar dados.</div>
 
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-3xl font-bold text-zinc-100">Configurações da Clínica</h1>
-        <p className="text-zinc-400">Gerencie os dados que aparecerão nos documentos e prontuários.</p>
+        <h1 className="text-3xl font-bold text-zinc-100">Ajustes</h1>
+        <p className="text-zinc-400">Gerencie os dados da clínica e do seu perfil profissional.</p>
       </div>
 
-      <SettingsForm tenant={tenant} />
+      <Tabs defaultValue="clinic" className="w-full">
+        <TabsList className="bg-zinc-900 border border-zinc-800 w-full justify-start h-auto p-1 mb-6">
+          <TabsTrigger value="clinic" className="data-[state=active]:bg-zinc-800">Dados da Clínica</TabsTrigger>
+          <TabsTrigger value="profile" className="data-[state=active]:bg-zinc-800">Meu Perfil</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="clinic">
+          <SettingsForm tenant={tenant} />
+        </TabsContent>
+
+        <TabsContent value="profile">
+          <ProfileForm profile={profile} />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
