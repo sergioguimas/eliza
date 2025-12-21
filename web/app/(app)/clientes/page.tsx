@@ -89,7 +89,7 @@ export default async function CustomersPage({
                 <TableCell className="text-zinc-400">{customer.phone || '-'}</TableCell>
                 <TableCell className="text-zinc-400 capitalize">{customer.gender || '-'}</TableCell>
                 <TableCell className="text-right">
-                  <CustomerRowActions customer={{ id: customer.id, name: customer.name }} />
+                  <CustomerRowActions customer={customer} />
                 </TableCell>
               </TableRow>
             ))}
