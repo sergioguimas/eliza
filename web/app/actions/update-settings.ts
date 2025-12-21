@@ -1,16 +1,14 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
-import { revalidatePath } from 'next/cache'
+import { createClient } from "@/utils/supabase/server"
+import { revalidatePath } from "next/cache"
 
 export async function updateSettings(formData: FormData) {
   const supabase = await createClient()
 
-  const clinicName = formData.get('clinicName') as string
-
-  // 1. Pegar usuário atual
+  // 1. Pegar o usuário logado
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Não autenticado' }
+  if (!user) return { error: "Usuário não autenticado" }
 
   // 2. Descobrir qual é o Tenant (Clínica) desse usuário
   const { data: profile } = await supabase
@@ -19,17 +17,37 @@ export async function updateSettings(formData: FormData) {
     .eq('id', user.id)
     .single()
 
-  if (!profile?.tenant_id) return { error: 'Perfil inválido' }
+  if (!profile?.tenant_id) return { error: "Perfil não encontrado" }
 
-  // 3. Atualizar o nome da Clínica na tabela tenants
+  // 3. Pegar os dados do formulário
+  const name = formData.get('name') as string
+  const document = formData.get('document') as string
+  const crm = formData.get('crm') as string
+  const email = formData.get('email') as string
+  const phone = formData.get('phone') as string
+  const address = formData.get('address') as string
+
+  // 4. Atualizar a tabela tenants
   const { error } = await supabase
     .from('tenants')
-    .update({ name: clinicName })
+    .update({
+      name,
+      document,
+      crm,
+      email,
+      phone,
+      address,
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', profile.tenant_id)
 
-  if (error) return { error: error.message }
+  if (error) {
+    console.error('Erro ao atualizar:', error)
+    return { error: "Erro ao atualizar configurações." }
+  }
 
   revalidatePath('/configuracoes')
-  revalidatePath('/', 'layout')
+  revalidatePath('/')
+  
   return { success: true }
 }
