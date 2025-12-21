@@ -12,6 +12,7 @@ import {
 import { CreateCustomerDialog } from "@/components/create-customer-dialog"
 import { Search, MoreHorizontal, UserPlus } from "lucide-react"
 import Link from "next/link"
+import { CustomerRowActions } from "@/components/customer-row-actions"
 
 // CORREÇÃO 1: Tipagem de searchParams como Promise
 export default async function CustomersPage({
@@ -88,9 +89,7 @@ export default async function CustomersPage({
                 <TableCell className="text-zinc-400">{customer.phone || '-'}</TableCell>
                 <TableCell className="text-zinc-400 capitalize">{customer.gender || '-'}</TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-zinc-100">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
+                  <CustomerRowActions customer={{ id: customer.id, name: customer.name }} />
                 </TableCell>
               </TableRow>
             ))}
