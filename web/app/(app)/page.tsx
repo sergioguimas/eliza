@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, Calendar, DollarSign, Activity, Clock } from "lucide-react"
 import { format, isToday, parseISO } from "date-fns"
 import { AppointmentContextMenu } from "@/components/appointment-context-menu"
-import { STATUS_CONFIG } from "@/lib/appointment-config"
+import { STATUS_CONFIG } from "@/lib/appointment-config" // Importação corrigida
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -25,13 +25,27 @@ export default async function DashboardPage() {
 
   const tenantId = profile.tenant_id
 
-  // 1. Estatísticas Rápidas
+  // 1. Estatísticas Rápidas (Contador)
   const { count: customersCount } = await supabase
     .from('customers')
     .select('*', { count: 'exact', head: true })
     .eq('tenant_id', tenantId)
 
-  // 2. Agendamentos de Hoje e Futuros Próximos
+  // 2. Lista de Pacientes (Para o Dropdown de Editar)
+  const { data: customersList } = await supabase
+    .from('customers')
+    .select('id, name')
+    .eq('tenant_id', tenantId)
+    .order('name')
+
+  // 3. Lista de Serviços (Para o Dropdown de Editar e Cores)
+  const { data: servicesList } = await supabase
+    .from('services')
+    .select('id, title, price, color')
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true)
+
+  // 4. Agendamentos de Hoje e Futuros Próximos
   const { data: appointments } = await supabase
     .from('appointments')
     .select(`
@@ -39,8 +53,10 @@ export default async function DashboardPage() {
       start_time,
       end_time,
       status,
-      customers (name),
-      services (title, color)
+      customer_id,
+      service_id,
+      customers (id, name),
+      services (id, title, color)
     `)
     .eq('tenant_id', tenantId)
     .gte('start_time', new Date().toISOString())
@@ -139,7 +155,12 @@ export default async function DashboardPage() {
                   const serviceColor = apt.services?.color || '#3b82f6'
                   
                   return (
-                    <AppointmentContextMenu key={apt.id} appointment={apt}>
+                    <AppointmentContextMenu 
+                      key={apt.id} 
+                      appointment={apt}
+                      customers={customersList || []}
+                      services={servicesList || []}
+                    >
                       <div 
                         className={cn(
                           "flex items-center justify-between p-4 rounded-lg border transition-all hover:bg-zinc-800/50 cursor-pointer group",
@@ -216,7 +237,7 @@ export default async function DashboardPage() {
              <div className="mt-8 p-4 rounded bg-zinc-950 border border-zinc-800">
                 <h4 className="text-sm font-bold text-zinc-300 mb-2">Dica do Sistema</h4>
                 <p className="text-xs text-zinc-500 leading-relaxed">
-                   Clique nos agendamentos ao lado para mudar rapidamente o status para "Na Recepção" ou "Atendido".
+                   Clique com o botão esquerdo (ou toque) em qualquer atendimento da lista para abrir o menu de ações e editar o status.
                 </p>
              </div>
           </CardContent>

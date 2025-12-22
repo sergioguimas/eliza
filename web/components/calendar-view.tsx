@@ -62,7 +62,7 @@ export function CalendarView({ appointments, customers, services }: Props) {
     const isScheduled = status === 'scheduled'
 
     return (
-      <AppointmentContextMenu appointment={appointment} className="h-full">
+      <AppointmentContextMenu appointment={appointment} className="h-full" customers={customers} services={services}>
         <div 
           className={cn(
             "px-2 py-1 rounded border text-[10px] md:text-xs font-medium h-full flex flex-col justify-center gap-0.5 transition-all hover:brightness-110 shadow-sm overflow-hidden",
