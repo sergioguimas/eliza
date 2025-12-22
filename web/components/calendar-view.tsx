@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { CreateAppointmentDialog } from "@/components/create-appointment-dialog"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AppointmentContextMenu, STATUS_CONFIG } from "./appointment-context-menu"
+import { AppointmentContextMenu } from "./appointment-context-menu"
+import { STATUS_CONFIG } from "@/lib/appointment-config"
 
 type Appointment = {
   id: string
