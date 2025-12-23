@@ -2,7 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server"
 
-const EVOLUTION_URL = process.env.EVOLUTION_API_URL || "http://localhost:8080"
+const EVOLUTION_URL = process.env.EVOLUTION_API_URL || "http://127.0.0.1:8080"
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || "medagenda123"
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
@@ -26,14 +26,14 @@ export async function createWhatsappInstance() {
   console.log("🚀 Iniciando verificação para:", instanceName)
 
   try {
-    // 1. Tenta apenas BUSCAR a conexão primeiro (Sem deletar nada!)
+    // 1. Tenta apenas BUSCAR a conexão primeiro
     console.log("🔍 Verificando se instância já existe...")
     const checkResponse = await fetch(`${EVOLUTION_URL}/instance/connect/${instanceName}`, {
         method: 'GET',
         headers: { 'apikey': EVOLUTION_API_KEY }
     })
     
-    // Se deu 404 ou 400, significa que NÃO existe. Aí sim criamos.
+    // Se deu erro na busca (404/400), criamos.
     if (checkResponse.status !== 200) {
         console.log("🛠️ Instância não encontrada. Criando nova...")
         
@@ -51,24 +51,30 @@ export async function createWhatsappInstance() {
             })
         })
         
+        // Log para debug
+        if (!createResponse.ok) {
+            const errText = await createResponse.text()
+            console.error("Erro na criação:", errText)
+            return { error: "Erro ao criar instância na API." }
+        }
+
         const createData = await createResponse.json()
         console.log("📦 Status Criação:", createResponse.status)
     } else {
         console.log("✅ Instância já existe e está rodando. Buscando QR Code...")
     }
 
-    // 2. Entra no loop de busca (Agora sem ter matado o processo anterior)
+    // 2. Entra no loop de busca
     return await connectInstance(instanceName, profile.tenant_id)
 
   } catch (error) {
     console.error("❌ Erro Fatal:", error)
-    return { error: "Falha de comunicação com a API." }
+    return { error: "Falha de comunicação com a API (Verifique Docker e URL)." }
   }
 }
 
 async function connectInstance(instanceName: string, tenantId: string) {
     let attempts = 0
-    // Aumentei para 15 tentativas para dar bastante tempo ao Windows
     const maxAttempts = 15 
 
     while (attempts < maxAttempts) {
@@ -95,7 +101,6 @@ async function connectInstance(instanceName: string, tenantId: string) {
                 return { success: true, connected: true }
             }
 
-            // Espera 3 segundos entre tentativas
             if (attempts < maxAttempts) {
                 await delay(3000)
             }
@@ -106,7 +111,7 @@ async function connectInstance(instanceName: string, tenantId: string) {
         }
     }
 
-    return { error: "Tempo esgotado. O computador está lento para gerar o QR Code." }
+    return { error: "Tempo esgotado. Tente novamente." }
 }
 
 async function saveStatus(instance: string, tenant: string, status: string) {

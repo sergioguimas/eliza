@@ -16,7 +16,6 @@ export function WhatsappSettings() {
     setLoading(true)
     setQrCode(null)
     
-    // 👇 O SEGREDO: ": any" diz para o TypeScript não encher a paciência
     const result: any = await createWhatsappInstance()
     
     setLoading(false)
@@ -34,9 +33,6 @@ export function WhatsappSettings() {
       toast.info("Leia o QR Code para finalizar.")
     }
   }
-
-  // ... (O resto do return do componente continua IGUAL ao anterior)
-  // Vou colocar apenas o return aqui para você copiar tudo se preferir:
   
   return (
     <Card className="bg-zinc-900 border-zinc-800">
