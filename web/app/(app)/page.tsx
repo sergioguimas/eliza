@@ -2,9 +2,9 @@ import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, Calendar, DollarSign, Activity, Clock } from "lucide-react"
-import { format, isToday, parseISO } from "date-fns"
+import { format, isToday, parseISO, startOfMonth, endOfMonth } from "date-fns"
 import { AppointmentContextMenu } from "@/components/appointment-context-menu"
-import { STATUS_CONFIG } from "@/lib/appointment-config" // Importação corrigida
+import { STATUS_CONFIG } from "@/lib/appointment-config"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -25,27 +25,42 @@ export default async function DashboardPage() {
 
   const tenantId = profile.tenant_id
 
-  // 1. Estatísticas Rápidas (Contador)
+  // --- BUSCA DE DADOS ---
+
+  // 1. Contagem Total de Pacientes
   const { count: customersCount } = await supabase
     .from('customers')
     .select('*', { count: 'exact', head: true })
     .eq('tenant_id', tenantId)
 
-  // 2. Lista de Pacientes (Para o Dropdown de Editar)
+  // 2. Listas para o Menu de Contexto (Editar)
   const { data: customersList } = await supabase
     .from('customers')
     .select('id, name')
     .eq('tenant_id', tenantId)
     .order('name')
 
-  // 3. Lista de Serviços (Para o Dropdown de Editar e Cores)
   const { data: servicesList } = await supabase
     .from('services')
     .select('id, title, price, color')
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
 
-  // 4. Agendamentos de Hoje e Futuros Próximos
+  // 3. Métricas do Mês Atual (Para Faturamento e Taxa)
+  const monthStart = startOfMonth(new Date()).toISOString()
+  const monthEnd = endOfMonth(new Date()).toISOString()
+
+  const { data: monthAppointments } = await supabase
+    .from('appointments')
+    .select(`
+      status,
+      services (price)
+    `)
+    .eq('tenant_id', tenantId)
+    .gte('start_time', monthStart)
+    .lte('start_time', monthEnd)
+
+  // 4. Próximos Atendimentos (Lista Visual)
   const { data: appointments } = await supabase
     .from('appointments')
     .select(`
@@ -59,11 +74,42 @@ export default async function DashboardPage() {
       services (id, title, color)
     `)
     .eq('tenant_id', tenantId)
-    .gte('start_time', new Date().toISOString())
+    .gte('start_time', new Date().toISOString()) // Apenas futuros ou hoje
     .order('start_time', { ascending: true })
     .limit(5)
 
+  // --- CÁLCULOS ---
+
+  // A. Agendamentos de Hoje
   const todayAppointments = appointments?.filter(app => isToday(parseISO(app.start_time))) || []
+
+  // B. Faturamento (Soma Preço de Confirmados, Finalizados, Em Andamento)
+  // Ignora: Cancelados, No-Show, Agendado 
+  const revenue = monthAppointments?.reduce((acc, curr) => {
+    const status = curr.status || 'scheduled'
+    // @ts-ignore
+    const price = curr.services?.price || 0
+    
+    // Se não estiver cancelado ou faltante, conta como dinheiro (realizado ou previsto)
+    if (!['canceled', 'no_show'].includes(status)) {
+      return acc + price
+    }
+    return acc
+  }, 0) || 0
+
+  // C. Taxa de Presença
+  // (Total - Cancelados/Faltas) / Total
+  const totalMonth = monthAppointments?.length || 0
+  const missedAppointments = monthAppointments?.filter(a => ['canceled', 'no_show'].includes(a.status || '')).length || 0
+  const attendanceRate = totalMonth > 0 
+    ? Math.round(((totalMonth - missedAppointments) / totalMonth) * 100)
+    : 100 // Começa com 100% se não tiver agendamentos
+
+  // Formatador de Moeda
+  const formatter = new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  })
 
   return (
     <div className="space-y-6">
@@ -77,6 +123,7 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Card 1: Agenda Hoje */}
         <Card className="bg-zinc-900 border-zinc-800">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-zinc-400">
@@ -92,6 +139,7 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
+        {/* Card 2: Pacientes Ativos */}
         <Card className="bg-zinc-900 border-zinc-800">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-zinc-400">
@@ -107,6 +155,7 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
+        {/* Card 3: Faturamento */}
         <Card className="bg-zinc-900 border-zinc-800">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-zinc-400">
@@ -115,13 +164,16 @@ export default async function DashboardPage() {
             <DollarSign className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-zinc-100">R$ --</div>
+            <div className="text-2xl font-bold text-zinc-100">
+              {formatter.format(revenue)}
+            </div>
             <p className="text-xs text-zinc-500">
-              Em breve
+              estimado para este mês
             </p>
           </CardContent>
         </Card>
 
+        {/* Card 4: Taxa de Presença */}
         <Card className="bg-zinc-900 border-zinc-800">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-zinc-400">
@@ -130,9 +182,9 @@ export default async function DashboardPage() {
             <Activity className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-zinc-100">--%</div>
+            <div className="text-2xl font-bold text-zinc-100">{attendanceRate}%</div>
             <p className="text-xs text-zinc-500">
-              Em breve
+              média mensal
             </p>
           </CardContent>
         </Card>
