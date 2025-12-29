@@ -12,17 +12,24 @@ export default async function SettingsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return redirect("/login")
   
-  // Buscar Profile E Tenant
+  // CORREÇÃO: Buscando 'organizations' em vez de 'tenants'
   const { data: profile } = await supabase
     .from('profiles')
-    .select('*, tenants(*)')
+    .select('*, organizations(*)')
     .eq('id', user.id)
     .single()
 
+  // Pega a organização vinculada ao perfil
   // @ts-ignore
-  const tenant = profile?.tenants
+  const organization = profile?.organizations
 
-  if (!tenant) return <div>Erro ao carregar dados.</div>
+  if (!organization) {
+    return (
+      <div className="p-8 text-red-400">
+        Erro: Nenhuma organização vinculada ao seu perfil.
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -46,7 +53,8 @@ export default async function SettingsPage() {
         </TabsList>
 
         <TabsContent value="clinic">
-          <SettingsForm tenant={tenant} />
+          {/* Passamos a organização como 'tenant' para o form antigo funcionar */}
+          <SettingsForm tenant={organization} />
         </TabsContent>
 
         <TabsContent value="profile">
