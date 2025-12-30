@@ -1,66 +1,107 @@
+import { Metadata } from "next"
+import { Plus } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { createClient } from "@/utils/supabase/server"
 import { CreateServiceDialog } from "@/components/create-service-dialog"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Clock, DollarSign } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+
+export const metadata: Metadata = {
+  title: "Serviços | MedAgenda",
+  description: "Gerencie os procedimentos e serviços da sua clínica.",
+}
 
 export default async function ServicesPage() {
   const supabase = await createClient()
 
-  // Buscando os serviços ativos
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return <div>Não autorizado</div>
+  }
+
+  // 1. Buscar Perfil com Organization ID
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.organization_id) {
+    return <div className="p-8">Você precisa estar vinculado a uma organização.</div>
+  }
+
+  // 2. Buscar Serviços (Usando nomes novos: name, duration, active)
   const { data: services } = await supabase
     .from('services')
     .select('*')
-    .eq('is_active', true)
-    .order('title')
+    .eq('organization_id', profile.organization_id)
+    .order('name', { ascending: true })
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-zinc-100">Procedimentos</h1>
-          <p className="text-zinc-400">Gerencie seu catálogo de serviços.</p>
+    <div className="flex-1 space-y-4 p-8 pt-6">
+      <div className="flex items-center justify-between space-y-2">
+        <h2 className="text-3xl font-bold tracking-tight">Serviços</h2>
+        <div className="flex items-center space-x-2">
+          <CreateServiceDialog />
         </div>
-        <CreateServiceDialog />
       </div>
-
-      {!services?.length ? (
-        <div className="text-center py-20 bg-zinc-900/50 rounded-lg border border-zinc-800 border-dashed">
-          <p className="text-zinc-500">Nenhum procedimento cadastrado.</p>
-          <p className="text-sm text-zinc-600">Clique no botão acima para começar.</p>
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {services.map((service) => (
-            <Card key={service.id} className="bg-zinc-900 border-zinc-800 text-zinc-100 overflow-hidden relative group">
-              {/* Faixa lateral colorida */}
-              <div 
-                className="absolute left-0 top-0 bottom-0 w-1.5" 
-                style={{ backgroundColor: service.color || '#3b82f6' }} 
-              />
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Procedimentos</CardTitle>
+          <CardDescription>
+            Gerencie os preços e durações dos seus atendimentos.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Duração</TableHead>
+                <TableHead>Preço</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {services?.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    Nenhum serviço cadastrado.
+                  </TableCell>
+                </TableRow>
+              )}
               
-              <CardHeader className="pb-2 pl-6">
-                <CardTitle className="text-lg font-medium flex items-center justify-between">
-                  {service.title}
-                </CardTitle>
-              </CardHeader>
-              
-              <CardContent className="pl-6 space-y-2">
-                <div className="flex items-center gap-2 text-zinc-400">
-                  <DollarSign className="h-4 w-4 text-emerald-500" />
-                  <span className="font-bold text-zinc-200">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(service.price || 0)}
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-2 text-zinc-400 text-sm">
-                  <Clock className="h-4 w-4 text-blue-500" />
-                  <span>{service.duration_minutes} minutos</span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+              {services?.map((service) => (
+                <TableRow key={service.id}>
+                  <TableCell className="font-medium">{service.name}</TableCell>
+                  <TableCell>{service.duration} min</TableCell>
+                  <TableCell>
+                    {new Intl.NumberFormat('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL'
+                    }).format(service.price)}
+                  </TableCell>
+                  <TableCell>
+                    {service.active ? (
+                      <Badge variant="default" className="bg-green-600 hover:bg-green-700">Ativo</Badge>
+                    ) : (
+                      <Badge variant="secondary">Inativo</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {/* Futuramente você pode adicionar botão de editar aqui */}
+                    <Button variant="ghost" size="sm" disabled>Editar</Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   )
 }

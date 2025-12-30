@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { sendWhatsappMessage } from './send-whatsapp'
 
 export async function createAppointment(formData: FormData) {
   const supabase = await createClient()
@@ -15,49 +16,78 @@ export async function createAppointment(formData: FormData) {
     return { error: 'Preencha todos os campos' }
   }
 
-  // 2. Pegar User (e garantir que existe)
+  // 2. Pegar User
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return { error: 'Usuário não autenticado' }
   }
 
   // 3. Pegar detalhes do serviço
+  // CORREÇÃO: Usando os nomes certos do seu banco atual ('duration' e 'name')
   const { data: service } = await supabase
     .from('services')
-    .select('duration_minutes, price')
+    .select('duration, price, name') 
     .eq('id', serviceId)
     .single()
 
   if (!service) return { error: 'Procedimento não encontrado' }
 
-  // 4. Calcular Horário de Término
+  // 4. Calcular Horário
   const startTime = new Date(startTimeRaw)
-  const endTime = new Date(startTime.getTime() + service.duration_minutes * 60000)
+  const endTime = new Date(startTime.getTime() + service.duration * 60000)
 
-  // 5. Pegar Tenant (Segurança)
+  // 5. Pegar Organization
   const { data: profile } = await supabase
     .from('profiles')
-    .select('tenant_id')
-    .eq('id', user.id) // Agora seguro, pois checamos 'user' acima
+    .select('organization_id')
+    .eq('id', user.id)
     .single()
 
-  // AQUI ESTAVA O ERRO: Precisamos garantir que o tenant_id existe
-  if (!profile || !profile.tenant_id) {
-    return { error: 'Perfil sem clínica vinculada' }
+  if (!profile || !profile.organization_id) {
+    return { error: 'Perfil sem organização vinculada' }
   }
+
+  // Buscar dados do cliente (Nome e Telefone para o Zap)
+  const { data: customer } = await supabase
+    .from('customers')
+    .select('name, phone')
+    .eq('id', customerId)
+    .single()
+
+  if (!customer) return { error: 'Cliente não encontrado' }
 
   // 6. Salvar no Banco
   const { error } = await supabase.from('appointments').insert({
-    customer_id: customerId,
+    client_id: customerId,
     service_id: serviceId,
+    staff_id: user.id,
     start_time: startTime.toISOString(),
     end_time: endTime.toISOString(),
     price: service.price,
     status: 'confirmed',
-    tenant_id: profile.tenant_id // Agora o TypeScript sabe que é uma string válida
+    organization_id: profile.organization_id
   })
 
-  if (error) return { error: error.message }
+  if (error) {
+    console.error("Erro ao agendar:", error)
+    return { error: error.message }
+  }
+
+  // 7. Automação WhatsApp 🚀
+  if (customer.phone) {
+    try {
+      const dia = startTime.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+      const hora = startTime.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' })
+      
+      const message = `Olá ${customer.name}, seu agendamento de *${service.name}* foi confirmado para dia ${dia} às ${hora}.`
+      
+      await sendWhatsappMessage(customer.phone, message)
+      console.log("✅ Mensagem automática enviada!")
+      
+    } catch (err) {
+      console.error("Erro silencioso ao enviar zap:", err)
+    }
+  }
 
   revalidatePath('/agendamentos')
   revalidatePath('/') 

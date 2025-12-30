@@ -6,25 +6,24 @@ import { revalidatePath } from 'next/cache'
 export async function createCustomer(formData: FormData) {
   const supabase = await createClient()
 
-  // Pegando os dados do formulário
   const name = formData.get('name') as string
   const email = formData.get('email') as string
   const phone = formData.get('phone') as string
   const gender = formData.get('gender') as string
   const notes = formData.get('notes') as string
 
-  // 1. Validar usuário logado
+  // 1. Validar usuário
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Não autorizado' }
 
-  // 2. Pegar o Tenant ID
+  // 2. Pegar Organization ID (Correção aqui!)
   const { data: profile } = await supabase
     .from('profiles')
-    .select('tenant_id')
+    .select('organization_id') 
     .eq('id', user.id)
     .single()
 
-  if (!profile?.tenant_id) return { error: 'Perfil inválido' }
+  if (!profile?.organization_id) return { error: 'Perfil sem organização vinculada' }
 
   // 3. Salvar no Banco
   const { error } = await supabase.from('customers').insert({
@@ -33,7 +32,7 @@ export async function createCustomer(formData: FormData) {
     phone,
     gender,
     notes,
-    tenant_id: profile.tenant_id,
+    organization_id: profile.organization_id, // <--- CAMPO CORRETO
   })
 
   if (error) {

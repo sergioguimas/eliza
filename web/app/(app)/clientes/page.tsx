@@ -10,11 +10,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { CreateCustomerDialog } from "@/components/create-customer-dialog"
-import { Search, MoreHorizontal, UserPlus } from "lucide-react"
+import { Search, UserPlus } from "lucide-react"
 import Link from "next/link"
 import { CustomerRowActions } from "@/components/customer-row-actions"
 
-// CORREÇÃO 1: Tipagem de searchParams como Promise
 export default async function CustomersPage({
   searchParams,
 }: {
@@ -22,14 +21,29 @@ export default async function CustomersPage({
 }) {
   const supabase = await createClient()
   
-  // CORREÇÃO 2: Aguardar (await) os parâmetros antes de ler
+  // Parâmetros de busca (Next.js 15)
   const { query } = await searchParams
   const searchQuery = query || ""
 
-  // Busca clientes filtrando pelo nome se houver busca
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return <div>Não autorizado</div>
+
+  // 1. Buscar Organization ID
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.organization_id) {
+    return <div className="p-8">Você precisa estar vinculado a uma organização.</div>
+  }
+
+  // 2. Query segura filtrando pela organização
   let queryBuilder = supabase
     .from('customers')
     .select('*')
+    .eq('organization_id', profile.organization_id) // <--- O FILTRO MÁGICO
     .order('name')
 
   if (searchQuery) {
@@ -48,24 +62,21 @@ export default async function CustomersPage({
         <CreateCustomerDialog />
       </div>
 
-      {/* Área de Filtro e Busca */}
       <div className="flex items-center gap-2 bg-zinc-900/50 p-1 rounded-lg border border-zinc-800 w-full md:w-96">
         <Search className="h-4 w-4 text-zinc-500 ml-2" />
         <Input 
           placeholder="Buscar paciente por nome..." 
           className="border-0 bg-transparent focus-visible:ring-0 text-zinc-100 placeholder:text-zinc-600"
           name="query"
-          defaultValue={searchQuery} // Boa prática: manter o valor no input
+          defaultValue={searchQuery}
         />
       </div>
 
-      {/* Tabela de Clientes */}
       <div className="rounded-md border border-zinc-800 bg-zinc-900 overflow-x-auto">
         <Table className="min-w-[600px]">
           <TableHeader>
             <TableRow className="border-zinc-800 hover:bg-zinc-900/50">
               <TableHead className="text-zinc-400">Nome</TableHead>
-              <TableHead className="text-zinc-400">Email</TableHead>
               <TableHead className="text-zinc-400">Telefone</TableHead>
               <TableHead className="text-zinc-400">Gênero</TableHead>
               <TableHead className="text-right text-zinc-400">Ações</TableHead>
@@ -85,7 +96,6 @@ export default async function CustomersPage({
                     {customer.name}
                   </Link>
                 </TableCell>
-                <TableCell className="text-zinc-400">{customer.email || '-'}</TableCell>
                 <TableCell className="text-zinc-400">{customer.phone || '-'}</TableCell>
                 <TableCell className="text-zinc-400 capitalize">{customer.gender || '-'}</TableCell>
                 <TableCell className="text-right">

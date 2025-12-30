@@ -1,34 +1,111 @@
 'use server'
 
-import { createClient } from "@/utils/supabase/server"
-import { revalidatePath } from "next/cache"
+import { createClient } from '@/utils/supabase/server'
+import { revalidatePath } from 'next/cache'
+import { sendWhatsappMessage } from './send-whatsapp'
 
-// Opção A: Apenas muda o status (Paciente desistiu)
-export async function cancelAppointment(id: string) {
+// === OPÇÃO A: CANCELAR (Mantém registro, avisa cliente) ===
+export async function cancelAppointment(appointmentId: string) {
   const supabase = await createClient()
 
+  // 1. Buscar dados para a mensagem antes de atualizar
+  const { data: appointment } = await supabase
+    .from('appointments')
+    .select(`
+      *,
+      services ( name )
+    `)
+    .eq('id', appointmentId)
+    .single()
+
+  if (!appointment) return { error: "Agendamento não encontrado" }
+
+  // 2. Atualizar Status para 'canceled'
   const { error } = await supabase
     .from('appointments')
     .update({ status: 'canceled' })
-    .eq('id', id)
+    .eq('id', appointmentId)
 
-  if (error) return { error: "Erro ao cancelar." }
+  if (error) return { error: 'Erro ao cancelar agendamento' }
+
+  // 3. Enviar WhatsApp de Cancelamento 🚀
+  // Buscamos o cliente manualmente para garantir, caso o join falhe
+  if (appointment.client_id) {
+    const { data: client } = await supabase
+      .from('customers')
+      .select('name, phone')
+      .eq('id', appointment.client_id)
+      .single()
+
+    if (client?.phone) {
+        try {
+            // @ts-ignore
+            const nomeServico = appointment.services?.name || "atendimento"
+            const dataOriginal = new Date(appointment.start_time)
+            const dia = dataOriginal.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+            const hora = dataOriginal.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' })
+
+            const message = `Olá ${client.name}, seu agendamento de *${nomeServico}* para o dia ${dia} às ${hora} foi *cancelado*.`
+            
+            await sendWhatsappMessage(client.phone, message)
+            console.log("✅ Aviso de cancelamento enviado!")
+        } catch (err) {
+            console.error("Erro zap cancel:", err)
+        }
+    }
+  }
 
   revalidatePath('/')
   revalidatePath('/agendamentos')
   return { success: true }
 }
 
-// Opção B: Apaga do banco (Erro de digitação)
-export async function deleteAppointment(id: string) {
+// === OPÇÃO B: EXCLUIR (Apaga do banco, avisa cliente) ===
+export async function deleteAppointment(appointmentId: string) {
   const supabase = await createClient()
 
+  // 1. Buscar dados antes de deletar (para conseguir avisar)
+  const { data: appointment } = await supabase
+    .from('appointments')
+    .select(`
+      *,
+      services ( name )
+    `)
+    .eq('id', appointmentId)
+    .single()
+
+  // 2. Deletar o agendamento
   const { error } = await supabase
     .from('appointments')
     .delete()
-    .eq('id', id)
+    .eq('id', appointmentId)
 
-  if (error) return { error: "Erro ao excluir." }
+  if (error) return { error: 'Erro ao excluir agendamento' }
+
+  // 3. Enviar WhatsApp (Opcional na exclusão, mas bom para garantir) 🚀
+  if (appointment?.client_id) {
+    const { data: client } = await supabase
+      .from('customers')
+      .select('name, phone')
+      .eq('id', appointment.client_id)
+      .single()
+
+    if (client?.phone) {
+        try {
+            // @ts-ignore
+            const nomeServico = appointment.services?.name || "atendimento"
+            const dataOriginal = new Date(appointment.start_time)
+            const dia = dataOriginal.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+            
+            // Mensagem sutilmente diferente para exclusão
+            const message = `Olá ${client.name}, informamos que seu agendamento de *${nomeServico}* no dia ${dia} foi removido da nossa agenda.`
+            
+            await sendWhatsappMessage(client.phone, message)
+        } catch (err) {
+            console.error("Erro zap delete:", err)
+        }
+    }
+  }
 
   revalidatePath('/')
   revalidatePath('/agendamentos')
