@@ -8,7 +8,7 @@ import { CreateServiceDialog } from "@/components/create-service-dialog"
 import { Badge } from "@/components/ui/badge"
 
 export const metadata: Metadata = {
-  title: "Serviços | MedAgenda",
+  title: "Serviços | Eliza",
   description: "Gerencie os procedimentos e serviços da sua clínica.",
 }
 

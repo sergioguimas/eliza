@@ -20,7 +20,7 @@ const menuItems = [
 // 1. Definimos a Interface das Props para o TypeScript entender
 interface AppSidebarProps {
   clinicName: string
-  onNavigate?: () => void // <--- Opcional (?) porque no Desktop não usamos
+  onNavigate?: () => void // <--- Opcional
 }
 
 // 2. Adicionamos 'onNavigate' na desestruturação dos parâmetros 👇
@@ -47,7 +47,7 @@ export function AppSidebar({ clinicName, onNavigate }: AppSidebarProps) {
         
         <div className="flex flex-col">
           <span className="text-base font-bold text-zinc-100 leading-none">
-            MedAgenda
+            Eliza
           </span>
           <span className="text-xs text-blue-400 font-medium truncate max-w-[130px]" title={clinicName}>
             {clinicName}

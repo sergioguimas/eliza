@@ -2,8 +2,6 @@ import { createClient } from "@/utils/supabase/server"
 import { notFound } from "next/navigation"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { PrintButton } from "@/components/print-button"
-import { PrintStyles } from "@/components/print-styles"
 
 export default async function PrintRecordPage({
   params,
@@ -13,121 +11,96 @@ export default async function PrintRecordPage({
   const { id } = await params
   const supabase = await createClient()
 
-  // 1. Buscar o Prontuário
+  // Buscando o prontuário com os novos nomes de coluna
   const { data: record } = await supabase
     .from('medical_records')
     .select(`
       *,
-      customers (name, gender)
+      customers (
+        name,
+        email,
+        phone,
+        gender
+      ),
+      profiles!medical_records_staff_id_fkey (
+        name
+      )
     `)
     .eq('id', id)
     .single()
 
-  if (!record) return notFound()
-
-  // 2. Buscar dados do Médico
-  let doctorId = record.doctor_id
-  
-  // Fallback: Se não tiver médico vinculado, tenta pegar o usuário logado
-  if (!doctorId) {
-      const { data: { user } } = await supabase.auth.getUser()
-      doctorId = user?.id || null
+  if (!record) {
+    return notFound()
   }
 
-  if (!doctorId) return <div>Erro: Prontuário sem médico responsável vinculado.</div>
-
-  const { data: doctorProfile } = await supabase
-    .from('profiles')
-    .select(`
-      full_name, 
-      crm, 
-      specialty,
-      tenants (name, document, phone, email, address)
-    `)
-    .eq('id', doctorId)
-    .single()
-
+  // Agora usamos staff_id e a relação correta com profiles
   // @ts-ignore
-  const clinic = doctorProfile?.tenants
-  const doctor = doctorProfile
-
-  if (!clinic) return <div>Erro: Dados da clínica não encontrados.</div>
-
-  const dateToFormat = record.created_at ? new Date(record.created_at) : new Date()
+  const professionalName = record.profiles?.name || "Profissional Responsável"
 
   return (
-    <div className="min-h-screen bg-white text-black p-0 md:p-8 flex justify-center">
-      <PrintStyles />
-
-      {/* Botão Flutuante */}
-      <div className="fixed top-4 right-4 print:hidden z-50">
-        <PrintButton />
+    <div className="p-8 max-w-4xl mx-auto bg-white text-black min-h-screen">
+      {/* Cabeçalho de Impressão (Eliza) */}
+      <div className="flex justify-between items-start border-b-2 border-zinc-200 pb-6 mb-8">
+        <div>
+          <h1 className="text-2xl font-bold uppercase tracking-tight">Eliza - Prontuário Digital</h1>
+          <p className="text-zinc-500 text-sm">Registro gerado via sistema de gestão integrada</p>
+        </div>
+        <div className="text-right text-sm">
+          <p><strong>Data de Emissão:</strong> {new Date().toLocaleDateString('pt-BR')}</p>
+          <p><strong>ID do Registro:</strong> {record.id.split('-')[0].toUpperCase()}</p>
+        </div>
       </div>
 
-      {/* A Folha A4 */}
-      <div className="w-full max-w-[210mm] min-h-[297mm] bg-white md:shadow-xl p-[20mm] relative flex flex-col justify-between print:shadow-none print:p-0">
-        
-        {/* --- CABEÇALHO --- */}
-        <header className="border-b-2 border-gray-800 pb-6 mb-8 text-center">
-          <h1 className="text-2xl font-bold uppercase tracking-wide text-gray-900">
-            {clinic.name}
-          </h1>
-          <div className="text-sm text-gray-600 mt-2 space-y-1">
-            {clinic.document && <p>CNPJ/CPF: {clinic.document}</p>}
-            {clinic.address && <p>{clinic.address}</p>}
-            <p>
-              {clinic.phone && <span>Tel: {clinic.phone}</span>}
-              {clinic.phone && clinic.email && <span> • </span>}
-              {clinic.email && <span>{clinic.email}</span>}
-            </p>
-          </div>
-        </header>
+      {/* Dados do Paciente */}
+      <section className="mb-8">
+        <h2 className="text-lg font-semibold bg-zinc-100 p-2 mb-4">Dados do Paciente</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <p><strong>Nome:</strong> {record.customers?.name}</p>
+          <p><strong>Gênero:</strong> {record.customers?.gender || '-'}</p>
+          <p><strong>Telefone:</strong> {record.customers?.phone || '-'}</p>
+          <p><strong>E-mail:</strong> {record.customers?.email || '-'}</p>
+        </div>
+      </section>
 
-        {/* --- DADOS DO PACIENTE --- */}
-        <section className="mb-8 bg-gray-50 p-4 rounded-md border border-gray-200 print:border-gray-300">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="font-bold text-gray-700">Paciente:</span>
-              {/* @ts-ignore */}
-              <span className="block text-lg">{record.customers?.name || "Paciente Removido"}</span>
-            </div>
-            <div className="text-right">
-              <span className="font-bold text-gray-700">Data do Atendimento:</span>
-              <span className="block text-lg">
-                {format(dateToFormat, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-              </span>
-            </div>
-          </div>
-        </section>
+      {/* Conteúdo do Prontuário */}
+      <section className="mb-8">
+        <h2 className="text-lg font-semibold bg-zinc-100 p-2 mb-4">Evolução / Relato</h2>
+        <div className="whitespace-pre-wrap border p-4 rounded-md min-h-[300px] border-zinc-200">
+          {record.content}
+        </div>
+      </section>
 
-        {/* --- CONTEÚDO --- */}
-        <main className="flex-1">
-          <h2 className="text-sm font-bold text-gray-500 uppercase mb-4 border-b border-gray-200">
-            Evolução Clínica
-          </h2>
-          <div className="text-gray-900 leading-relaxed whitespace-pre-wrap text-justify font-serif text-lg">
-            {record.content}
-          </div>
-        </main>
-
-        {/* --- RODAPÉ --- */}
-        <footer className="mt-16 pt-8 text-center break-inside-avoid">
-          <div className="inline-block px-12 border-t border-gray-800 pt-2">
-            <p className="font-bold text-gray-900 text-lg">
-              {doctor?.full_name || "Médico Responsável"}
-            </p>
-            <p className="text-gray-600">
-              {doctor?.specialty && <span>{doctor.specialty} • </span>}
-              CRM: {doctor?.crm || "Não informado"}
-            </p>
-          </div>
+      {/* Rodapé e Assinatura */}
+      <footer className="mt-16 pt-8 border-t border-dashed border-zinc-300">
+        <div className="flex flex-col items-center justify-center">
+          <div className="w-64 border-b border-black mb-2"></div>
+          <p className="font-bold">{professionalName}</p>
+          <p className="text-sm text-zinc-500">Responsável Técnico</p>
           
-          <div className="mt-8 text-[10px] text-gray-400">
-            Documento assinado digitalmente • MedAgenda • {format(new Date(), "dd/MM/yyyy HH:mm")}
-          </div>
-        </footer>
+          {record.signed_at && (
+            <div className="mt-4 p-2 bg-green-50 border border-green-200 text-green-800 text-xs rounded">
+              Documento assinado digitalmente em {format(new Date(record.signed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+            </div>
+          )}
+        </div>
+      </footer>
 
+      {/* Botão de Impressão (Não aparece no papel) */}
+      <div className="mt-8 no-print flex justify-center">
+        <button 
+          onClick={() => window.print()}
+          className="bg-zinc-900 text-white px-6 py-2 rounded-lg hover:bg-zinc-800 transition-colors"
+        >
+          Imprimir Agora
+        </button>
       </div>
+
+      <style jsx global>{`
+        @media print {
+          .no-print { display: none !important; }
+          body { background: white !important; }
+        }
+      `}</style>
     </div>
   )
 }

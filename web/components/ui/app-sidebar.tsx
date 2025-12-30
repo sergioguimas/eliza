@@ -33,7 +33,7 @@ export function AppSidebar() {
       <div className="p-6 border-b border-zinc-800">
         <h1 className="text-xl font-bold text-blue-400 flex items-center gap-2">
           <Stethoscope className="h-6 w-6" /> {/* Ícone Médico */}
-          MedAgenda
+          Eliza
         </h1>
       </div>
 

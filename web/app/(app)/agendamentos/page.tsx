@@ -5,7 +5,7 @@ import { CreateAppointmentDialog } from "@/components/create-appointment-dialog"
 import { redirect } from "next/navigation"
 
 export const metadata: Metadata = {
-  title: "Agendamentos | MedAgenda",
+  title: "Agendamentos | Eliza",
   description: "Visualize e gerencie sua agenda.",
 }
 

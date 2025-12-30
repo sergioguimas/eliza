@@ -53,7 +53,7 @@ export default function LoginPage() {
       {/* ... conteúdo igual ao anterior ... */}
       <div className="absolute top-8 left-8 flex items-center gap-2 text-blue-500 font-bold text-xl">
         <Stethoscope className="h-6 w-6" />
-        MedAgenda
+        Eliza
       </div>
 
       <Card className="w-full max-w-md border-zinc-800 bg-zinc-900 text-zinc-100">
@@ -63,8 +63,8 @@ export default function LoginPage() {
           </CardTitle>
           <CardDescription className="text-zinc-400">
             {isLogin 
-              ? 'Entre para gerenciar sua agenda médica.' 
-              : 'Comece seu trial gratuito para gestão de pacientes.'}
+              ? 'Entre para gerenciar sua agenda.' 
+              : 'Comece seu trial gratuito para gestão de contatos.'}
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
@@ -95,7 +95,7 @@ export default function LoginPage() {
               {loading ? 'Processando...' : (isLogin ? 'Entrar no Sistema' : 'Criar Conta')}
             </Button>
             <p className="text-sm text-center text-zinc-500">
-              {isLogin ? "Ainda não usa o MedAgenda? " : "Já possui cadastro? " }
+              {isLogin ? "Ainda não usa o Eliza? " : "Já possui cadastro? " }
               <button 
                 type="button" 
                 onClick={() => setIsLogin(!isLogin)}

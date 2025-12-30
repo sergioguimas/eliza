@@ -6,8 +6,8 @@ import { Toaster } from "@/components/ui/sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "MedAgenda",
-  description: "Gestão Inteligente para Clínicas",
+  title: "Eliza",
+  description: "Gestão Inteligente",
 };
 
 export default function RootLayout({
