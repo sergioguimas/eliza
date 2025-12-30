@@ -1,119 +1,109 @@
-import { createClient } from "@/utils/supabase/server"
-import { notFound } from "next/navigation"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
-import { PrintButton } from "@/components/print-button"
-import { PrintStyles } from "@/components/print-styles"
+"use client"
 
-export default async function PrintHistoryPage({
+import { createClient } from "@/utils/supabase/client"
+import { notFound } from "next/navigation"
+import { useEffect, useState } from "react"
+
+export default function PrintHistoryPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
-  const { id } = await params
-  const supabase = await createClient()
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
-  // 1. Buscar Dados do Paciente e da Clínica
-  const { data: customer } = await supabase
-    .from('customers')
-    .select(`
-      *,
-      tenants (name, document, phone, email, address)
-    `)
-    .eq('id', id)
-    .single()
+  useEffect(() => {
+    async function loadData() {
+      const { id } = await params
+      const supabase = createClient()
+      
+      // Buscando dados do cliente e da organização (antigo clinic/tenant)
+      const { data: customerData } = await supabase
+        .from('customers')
+        .select(`
+          *,
+          organizations (
+            name
+          ),
+          medical_records (
+            id,
+            content,
+            created_at,
+            status
+          )
+        `)
+        .eq('id', id)
+        .single()
 
-  if (!customer) return notFound()
+      setData(customerData)
+      setLoading(false)
+    }
+    loadData()
+  }, [params])
 
-  // @ts-ignore
-  const clinic = customer.tenants
+  if (loading) return <div className="p-8 text-center text-zinc-500">Carregando histórico...</div>
+  if (!data) return notFound()
 
-  // 2. Buscar TODOS os prontuários (Histórico)
-  const { data: records } = await supabase
-    .from('medical_records')
-    .select(`
-      *,
-      profiles (full_name, crm, specialty)
-    `)
-    .eq('customer_id', id)
-    .order('created_at', { ascending: false }) // Mais recente primeiro
+  // @ts-ignore - Acessando o nome da organização de forma segura
+  const organizationName = data.organizations?.name || "Eliza"
 
   return (
-    <div className="min-h-screen bg-gray-700 text-black p-0 md:p-8 flex justify-center">
-      <PrintStyles />
+    <div className="p-8 max-w-4xl mx-auto bg-white text-black min-h-screen">
+      {/* Cabeçalho de Impressão */}
+      <header className="border-b-2 border-zinc-200 pb-6 mb-8 text-center">
+        <h1 className="text-2xl font-bold uppercase tracking-tight text-zinc-900">
+          {organizationName}
+        </h1>
+        <p className="text-sm text-zinc-500 mt-1">Histórico Completo do Paciente</p>
+      </header>
 
-      <div className="fixed top-4 right-4 print:hidden z-50">
-        <PrintButton />
-      </div>
+      {/* Identificação do Paciente */}
+      <section className="mb-8 grid grid-cols-2 gap-4 text-sm border p-4 rounded-lg bg-zinc-50">
+        <p><strong>Paciente:</strong> {data.name}</p>
+        <p><strong>Telefone:</strong> {data.phone || '-'}</p>
+        <p><strong>E-mail:</strong> {data.email || '-'}</p>
+        <p><strong>Data de Emissão:</strong> {new Date().toLocaleDateString('pt-BR')}</p>
+      </section>
 
-      <div className="w-full max-w-[210mm] min-h-[297mm] bg-white md:shadow-xl p-[20mm] relative flex flex-col print:shadow-none print:p-0">
-        
-        {/* CABEÇALHO */}
-        <header className="border-b-2 border-gray-800 pb-6 mb-8 text-center">
-          <h1 className="text-2xl font-bold uppercase tracking-wide text-gray-900">
-            {clinic?.name || "Clínica Médica"}
-          </h1>
-          <div className="text-sm text-gray-600 mt-2 space-y-1">
-            {clinic?.document && <p>CNPJ/CPF: {clinic.document}</p>}
-            {clinic?.address && <p>{clinic.address}</p>}
-            <p>
-              {clinic?.phone && <span>Tel: {clinic.phone}</span>}
-              {clinic?.email && <span> • {clinic.email}</span>}
-            </p>
-          </div>
-        </header>
-
-        {/* DADOS DO PACIENTE */}
-        <section className="mb-8 bg-gray-50 p-4 rounded-md border border-gray-200 print:border-gray-300">
-          <h2 className="text-xs font-bold text-gray-500 uppercase mb-2">Histórico Completo</h2>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="font-bold text-gray-700 block">Nome:</span>
-              <span className="text-lg">{customer.name}</span>
-            </div>
-            <div>
-              <span className="font-bold text-gray-700 block">Data de Emissão:</span>
-              <span>{format(new Date(), "dd/MM/yyyy", { locale: ptBR })}</span>
-            </div>
-          </div>
-        </section>
-
-        {/* LISTA DE EVOLUÇÕES */}
-        <main className="flex-1 space-y-8">
-          {!records?.length ? (
-            <p className="text-center text-gray-500 italic py-12">Nenhum registro clínico encontrado.</p>
-          ) : (
-            records.map((record) => (
-              <div key={record.id} className="break-inside-avoid border-l-4 border-gray-200 pl-4 py-1">
-                <div className="flex items-baseline justify-between mb-2">
-                  <h3 className="font-bold text-gray-900">
-                    {format(new Date(record.created_at!), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                  </h3>
-                  <span className="text-xs text-gray-500">
-                    às {format(new Date(record.created_at!), "HH:mm")}
-                  </span>
-                </div>
-
-                <div className="text-gray-800 whitespace-pre-wrap text-justify leading-relaxed text-sm mb-3">
-                  {record.content}
-                </div>
-
-                <div className="text-xs text-gray-500 flex items-center gap-1">
-                   Assinado por: 
-                   <span className="font-medium text-gray-700">
-                     {/* @ts-ignore */}
-                     {record.profiles?.full_name || "Médico Responsável"}
-                   </span>
-                </div>
+      {/* Lista de Registros */}
+      <div className="space-y-8">
+        <h2 className="text-lg font-semibold border-b pb-2">Registros de Prontuário</h2>
+        {data.medical_records?.length > 0 ? (
+          data.medical_records.map((record: any) => (
+            <div key={record.id} className="border-l-4 border-zinc-300 pl-4 py-2">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs font-bold text-zinc-500 uppercase">
+                  {new Date(record.created_at).toLocaleDateString('pt-BR')} às {new Date(record.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+                <span className="text-[10px] bg-zinc-100 px-2 py-1 rounded">ID: {record.id.split('-')[0]}</span>
               </div>
-            ))
-          )}
-        </main>
-        
-        <footer className="mt-12 pt-4 border-t border-gray-200 text-center text-[10px] text-gray-400">
-            Fim do Relatório • Página 1 de 1
-        </footer>
+              <div className="text-sm whitespace-pre-wrap text-zinc-800">
+                {record.content}
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="text-center text-zinc-400 py-10">Nenhum registro encontrado no histórico.</p>
+        )}
       </div>
+
+      {/* Botão de Impressão (Oculto no papel) */}
+      <div className="mt-12 flex justify-center no-print">
+        <button 
+          onClick={() => window.print()}
+          className="bg-zinc-900 text-white px-8 py-2 rounded-lg font-medium hover:bg-zinc-800 transition-all"
+        >
+          Imprimir Histórico
+        </button>
+      </div>
+
+      <style jsx global>{`
+        @media print {
+          .no-print { display: none !important; }
+          body { background: white !important; }
+          @page { margin: 2cm; }
+        }
+      `}</style>
     </div>
   )
 }
