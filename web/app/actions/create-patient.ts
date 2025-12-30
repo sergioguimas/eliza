@@ -6,32 +6,37 @@ import { revalidatePath } from 'next/cache'
 export async function createPatient(formData: FormData) {
   const supabase = await createClient()
 
-  // 1. Coletar dados
   const name = formData.get('name') as string
-  const phone = formData.get('phone') as string
   const email = formData.get('email') as string
+  const phone = formData.get('phone') as string
 
-  // 2. Segurança: Identificar a Clínica (Tenant) do usuário
+  // 1. Validar usuário logado
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Não autenticado' }
+  if (!user) return { error: 'Não autorizado' }
 
+  // 2. Buscar Perfil com organization_id (CORRIGIDO)
   const { data: profile } = await supabase
     .from('profiles')
-    .select('tenant_id')
+    .select('organization_id') 
     .eq('id', user.id)
     .single()
 
-  if (!profile?.tenant_id) return { error: 'Perfil sem clínica vinculada' }
+  if (!profile?.organization_id) {
+    return { error: 'Perfil sem organização vinculada' }
+  }
 
-  // 3. Salvar Paciente no Banco
+  // 3. Salvar Paciente no Banco usando organization_id (CORRIGIDO)
   const { error } = await supabase.from('customers').insert({
     name,
+    email,
     phone,
-    email, // opcional
-    tenant_id: profile.tenant_id
+    organization_id: profile.organization_id,
   })
 
-  if (error) return { error: error.message }
+  if (error) {
+    console.error("Erro ao criar paciente:", error.message)
+    return { error: 'Erro ao cadastrar paciente' }
+  }
 
   revalidatePath('/clientes')
   return { success: true }

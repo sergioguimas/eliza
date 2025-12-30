@@ -13,11 +13,11 @@ export async function updateSettings(formData: FormData) {
   // 2. Descobrir qual é o Tenant (Clínica) desse usuário
   const { data: profile } = await supabase
     .from('profiles')
-    .select('tenant_id')
+    .select('organization_id')
     .eq('id', user.id)
     .single()
 
-  if (!profile?.tenant_id) return { error: "Perfil não encontrado" }
+  if (!profile?.organization_id) return { error: "Perfil não encontrado" }
 
   // 3. Pegar os dados do formulário
   const name = formData.get('name') as string
@@ -27,9 +27,9 @@ export async function updateSettings(formData: FormData) {
   const phone = formData.get('phone') as string
   const address = formData.get('address') as string
 
-  // 4. Atualizar a tabela tenants
+  // 4. Atualizar a tabela organizations
   const { error } = await supabase
-    .from('tenants')
+    .from('organizations')
     .update({
       name,
       document,
@@ -39,7 +39,7 @@ export async function updateSettings(formData: FormData) {
       address,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', profile.tenant_id)
+    .eq('id', profile.organization_id)
 
   if (error) {
     console.error('Erro ao atualizar:', error)

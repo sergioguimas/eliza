@@ -18,7 +18,7 @@ export async function createService(formData: FormData) {
   // 2. Buscar Organization (Antigo Tenant)
   const { data: profile } = await supabase
     .from('profiles')
-    .select('organization_id') // <--- CORRIGIDO: tenant_id -> organization_id
+    .select('organization_id')
     .eq('id', user.id)
     .single()
 
@@ -30,7 +30,7 @@ export async function createService(formData: FormData) {
     price: price,
     duration: duration,        // <--- CORRIGIDO: duration_minutes -> duration
     // color: color,           // ⚠️ ATENÇÃO: Se seu banco não tiver a coluna 'color', comente essa linha ou crie a coluna.
-    organization_id: profile.organization_id, // <--- CORRIGIDO: tenant_id -> organization_id
+    organization_id: profile.organization_id,
     active: true               // <--- CORRIGIDO: is_active -> active
   })
 
