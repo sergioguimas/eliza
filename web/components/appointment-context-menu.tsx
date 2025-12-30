@@ -21,6 +21,8 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { EditAppointmentDialog } from "./update-appointment-dialog"
 import { CancelAppointmentDialog } from "./cancel-appointment-dialog"
+import { Database } from "@/lib/database.types"
+type AppointmentStatus = Database['public']['Enums']['appointment_status']
 
 interface AppointmentContextMenuProps {
   children: React.ReactNode
@@ -44,18 +46,19 @@ export function AppointmentContextMenu({
 
   const currentStatus = appointment.status || 'scheduled'
 
-  async function handleStatusChange(newStatus: string) {
-    if (newStatus === currentStatus) return
-    setLoading(true)
-    const result = await updateAppointmentStatus(appointment.id, newStatus)
-    setLoading(false)
+  async function handleStatusChange(newStatus: Database['public']['Enums']['appointment_status']) {
+      if (newStatus === currentStatus) return
+      setLoading(true)
+      
+      const result = await updateAppointmentStatus(appointment.id, newStatus)
+      setLoading(false)
 
-    if (result?.error) {
-      toast.error(result.error)
-    } else {
-      toast.success(`Status alterado para: ${STATUS_CONFIG[newStatus].label}`)
+      if (result?.error) {
+        toast.error(result.error)
+      } else {
+        toast.success("Status atualizado!")
+      }
     }
-  }
 
   return (
     <>
@@ -77,7 +80,7 @@ export function AppointmentContextMenu({
               <Clock className="mr-2 h-4 w-4" /> Mudar Status
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="bg-zinc-900 border-zinc-800 text-zinc-300">
-              <DropdownMenuRadioGroup value={currentStatus} onValueChange={handleStatusChange}>
+              <DropdownMenuRadioGroup value={currentStatus} onValueChange={(value) => handleStatusChange(value as AppointmentStatus)}>
                 {Object.entries(STATUS_CONFIG).map(([key, config]) => {
                   const Icon = config.icon
                   return (
