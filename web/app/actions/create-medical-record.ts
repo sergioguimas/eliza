@@ -9,30 +9,33 @@ export async function createMedicalRecord(formData: FormData) {
   const customerId = formData.get('customerId') as string
   const content = formData.get('content') as string
 
-  if (!content || !customerId) return { error: 'Dados inválidos' }
-
   // 1. Validar usuário
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Não autorizado' }
 
-  // 2. Pegar Tenant
+  // 2. Buscar Perfil (Mudança aqui: organization_id)
   const { data: profile } = await supabase
     .from('profiles')
-    .select('tenant_id')
+    .select('organization_id') 
     .eq('id', user.id)
     .single()
 
-  if (!profile?.tenant_id) return { error: 'Perfil inválido' }
+  // CORREÇÃO: Usar organization_id
+  if (!profile?.organization_id) return { error: 'Perfil inválido ou sem organização' }
 
-  // 3. Salvar
+  // 3. Salvar (Mudança aqui: organization_id e staff_id)
   const { error } = await supabase.from('medical_records').insert({
-    content,
     customer_id: customerId,
-    tenant_id: profile.tenant_id,
-    doctor_id: user.id,
+    content,
+    organization_id: profile.organization_id, // <--- Aqui
+    staff_id: user.id, // <--- O prontuário pertence a quem criou
+    status: 'completed'
   })
 
-  if (error) return { error: error.message }
+  if (error) {
+    console.error(error)
+    return { error: 'Erro ao salvar prontuário' }
+  }
 
   revalidatePath(`/clientes/${customerId}`)
   return { success: true }
