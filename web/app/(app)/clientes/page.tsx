@@ -1,121 +1,125 @@
+import { Metadata } from "next"
 import { createClient } from "@/utils/supabase/server"
+import { redirect } from "next/navigation"
+import { 
+  Users, Search, UserPlus, Phone, Mail, 
+  ChevronRight, FileText, Calendar 
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { CreateCustomerDialog } from "@/components/create-customer-dialog"
-import { Search, UserPlus } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 import Link from "next/link"
-import { CustomerRowActions } from "@/components/customer-row-actions"
+// Importaremos o modal de criação em seguida
+// import { CreateCustomerDialog } from "@/components/create-customer-dialog"
 
-export default async function CustomersPage({
+export const metadata: Metadata = {
+  title: "Pacientes | Eliza",
+}
+
+export default async function ClientesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ query?: string }>
+  searchParams: { q?: string }
 }) {
   const supabase = await createClient()
-  
-  // Parâmetros de busca (Next.js 15)
-  const { query } = await searchParams
-  const searchQuery = query || ""
+  const query = searchParams?.q || ""
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return <div>Não autorizado</div>
+  if (!user) redirect('/login')
 
-  // 1. Buscar Organization ID
   const { data: profile } = await supabase
     .from('profiles')
-    .select('organization_id')
+    .select('organizations_id')
     .eq('id', user.id)
-    .single()
+    .single() as any
 
-  if (!profile?.organization_id) {
-    return <div className="p-8">Você precisa estar vinculado a uma organização.</div>
-  }
-
-  // 2. Query segura filtrando pela organização
-  let queryBuilder = supabase
+  // Busca pacientes com filtro de busca se houver query
+  let customerQuery = supabase
     .from('customers')
     .select('*')
-    .eq('organization_id', profile.organization_id) // <--- O FILTRO MÁGICO
-    .order('name')
+    .eq('organizations_id', profile.organizations_id)
+    .order('full_name')
 
-  if (searchQuery) {
-    queryBuilder = queryBuilder.ilike('name', `%${searchQuery}%`)
+  if (query) {
+    customerQuery = customerQuery.ilike('full_name', `%${query}%`)
   }
 
-  const { data: customers } = await queryBuilder
+  const { data: customers } = await customerQuery as any
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-8 space-y-8 bg-black min-h-screen text-zinc-100">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800 pb-6">
         <div>
-          <h1 className="text-3xl font-bold text-zinc-100">Pacientes</h1>
-          <p className="text-zinc-400">Gerencie os dados e histórico dos seus pacientes.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Pacientes</h1>
+          <p className="text-zinc-400 text-sm">
+            Gerencie o cadastro e histórico clínico dos seus pacientes.
+          </p>
         </div>
-        <CreateCustomerDialog />
+        
+        {/* Futuro componente de criação */}
+        <Button className="bg-blue-600 hover:bg-blue-700">
+          <UserPlus className="mr-2 h-4 w-4" /> Novo Paciente
+        </Button>
       </div>
 
-      <div className="flex items-center gap-2 bg-zinc-900/50 p-1 rounded-lg border border-zinc-800 w-full md:w-96">
-        <Search className="h-4 w-4 text-zinc-500 ml-2" />
-        <Input 
-          placeholder="Buscar paciente por nome..." 
-          className="border-0 bg-transparent focus-visible:ring-0 text-zinc-100 placeholder:text-zinc-600"
-          name="query"
-          defaultValue={searchQuery}
-        />
+      {/* Barra de Busca */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+        <form method="GET">
+          <Input 
+            name="q"
+            placeholder="Buscar por nome..." 
+            defaultValue={query}
+            className="pl-10 bg-zinc-900/50 border-zinc-800 focus:ring-blue-500"
+          />
+        </form>
       </div>
 
-      <div className="rounded-md border border-zinc-800 bg-zinc-900 overflow-x-auto">
-        <Table className="min-w-[600px]">
-          <TableHeader>
-            <TableRow className="border-zinc-800 hover:bg-zinc-900/50">
-              <TableHead className="text-zinc-400">Nome</TableHead>
-              <TableHead className="text-zinc-400">Telefone</TableHead>
-              <TableHead className="text-zinc-400">Gênero</TableHead>
-              <TableHead className="text-right text-zinc-400">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {customers?.map((customer) => (
-              <TableRow key={customer.id} className="border-zinc-800 hover:bg-zinc-900/50 group">
-                <TableCell className="font-medium">
-                  <Link 
-                    href={`/clientes/${customer.id}`} 
-                    className="flex items-center gap-2 text-zinc-200 hover:text-blue-400 transition-colors font-semibold py-2"
-                  >
-                    <div className="h-8 w-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs text-zinc-500 font-bold group-hover:bg-blue-900/30 group-hover:text-blue-400 transition-colors">
-                      {customer.name ? customer.name.substring(0, 2).toUpperCase() : 'PN'}
-                    </div>
-                    {customer.name}
-                  </Link>
-                </TableCell>
-                <TableCell className="text-zinc-400">{customer.phone || '-'}</TableCell>
-                <TableCell className="text-zinc-400 capitalize">{customer.gender || '-'}</TableCell>
-                <TableCell className="text-right">
-                  <CustomerRowActions customer={customer} />
-                </TableCell>
-              </TableRow>
-            ))}
-            
-            {!customers?.length && (
-              <TableRow>
-                <TableCell colSpan={5} className="h-32 text-center text-zinc-500">
-                  <div className="flex flex-col items-center justify-center gap-2">
-                    <UserPlus className="h-8 w-8 opacity-20" />
-                    <p>Nenhum paciente encontrado.</p>
+      <div className="grid gap-4">
+        {customers?.map((customer: any) => (
+          <Link key={customer.id} href={`/clientes/${customer.id}`}>
+            <Card className="bg-zinc-900/40 border-zinc-800 hover:bg-zinc-900/80 transition-all group cursor-pointer">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                    <span className="text-blue-500 font-bold text-lg">
+                      {customer.full_name.charAt(0).toUpperCase()}
+                    </span>
                   </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                  <div>
+                    <h3 className="font-bold text-zinc-100 group-hover:text-blue-400 transition-colors">
+                      {customer.full_name}
+                    </h3>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-zinc-500">
+                      <span className="flex items-center gap-1">
+                        <Phone className="h-3 w-3" /> {customer.phone || 'Sem telefone'}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <FileText className="h-3 w-3" /> {customer.document || 'Sem CPF'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <div className="hidden md:flex flex-col items-end text-xs text-zinc-600">
+                    <span>Paciente desde</span>
+                    <span>{new Date(customer.created_at).toLocaleDateString('pt-BR')}</span>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-zinc-700 group-hover:text-zinc-400 transition-colors" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
+
+        {customers?.length === 0 && (
+          <div className="py-20 text-center border-2 border-dashed border-zinc-800 rounded-xl">
+            <Users className="h-12 w-12 text-zinc-800 mx-auto mb-4" />
+            <p className="text-zinc-500">Nenhum paciente encontrado.</p>
+          </div>
+        )}
       </div>
     </div>
   )

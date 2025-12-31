@@ -45,11 +45,13 @@ export default async function ProcedimentosPage() {
         <CreateServiceDialog organizations_id={profile.organizations_id} />
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {services?.map((service) => (
-          <Card key={service.id} className={cn(
-            "bg-zinc-900/50 border-zinc-800 transition-all",
-            !service.active && "opacity-60"
-          )}>
+        {services?.map((service: any) => (
+            <Card key={service.id} className={cn(
+              "bg-zinc-900/50 border-zinc-800 transition-all border-l-4", // Adicionamos border-l-4
+              !service.active && "opacity-60"
+            )}
+            style={{ borderLeftColor: service.color || '#3b82f6' }} // Aplica a cor na borda esquerda
+            >
             <CardContent className="p-6">
               <div className="flex justify-between items-start mb-4">
                 <div className="p-2 bg-blue-500/10 rounded-lg">
