@@ -38,29 +38,25 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* Card da Empresa - Agora mais compacto */}
-        <Card className="bg-zinc-900 border-zinc-800">
-          <CardHeader className="pb-0 pt-4"> {/* pb-0 remove o espaço de baixo do título */}
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        {/* Card da Empresa */}
+        <Card className="bg-zinc-900 border-zinc-800 shadow-sm max-w-xs">
+          <CardContent className="p-4 flex flex-col justify-center min-h-[90px]">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-1">
               Sua Empresa
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-1 pb-4"> {/* pt-1 deixa o nome logo abaixo do título */}
-            <div className="text-xl font-bold text-zinc-100 truncate">
+            </p>
+            <div className="text-lg font-bold text-zinc-100 truncate leading-tight">
               {profile?.organizations?.name || 'Sem Empresa'}
             </div>
           </CardContent>
         </Card>
 
-        {/* Card do Cargo - Seguindo o mesmo padrão compacto */}
-        <Card className="bg-zinc-900 border-zinc-800">
-          <CardHeader className="pb-0 pt-4">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        {/* Card do Cargo */}
+        <Card className="bg-zinc-900 border-zinc-800 shadow-sm max-w-xs">
+          <CardContent className="p-4 flex flex-col justify-center min-h-[90px]">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-1">
               Seu Cargo
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-1 pb-4">
-            <div className="text-xl font-bold capitalize text-zinc-100">
+            </p>
+            <div className="text-lg font-bold capitalize text-zinc-100 leading-tight">
               {profile?.role || 'Admin'}
             </div>
           </CardContent>
