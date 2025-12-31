@@ -1,6 +1,13 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { 
+  Users, 
+  Stethoscope, 
+  CalendarDays, 
+  Building2, 
+  ShieldCheck 
+} from 'lucide-react'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -53,81 +60,84 @@ export default async function DashboardPage() {
   ]) as any
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-8 space-y-8 bg-black min-h-screen text-zinc-100">
+    {/* Cabeçalho Otimizado: Nome + Empresa + Cargo em uma linha */}
+    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-zinc-800 pb-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-zinc-100">Dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Visão Geral</h1>
         <p className="text-muted-foreground">
-          Bem-vindo de volta, {profile?.full_name || user.user_metadata?.full_name || user.email}
+          Bem-vindo de volta, <span className="text-zinc-100 font-medium">{profile?.full_name || user.email}</span>
         </p>
       </div>
+      
+      <div className="flex gap-3">
+        {/* Info Compacta de Empresa */}
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800">
+          <Building2 className="h-4 w-4 text-zinc-500" />
+          <div className="flex flex-col">
+            <span className="text-[10px] uppercase text-zinc-500 font-bold leading-none">Empresa</span>
+            <span className="text-sm font-semibold text-zinc-200">{profile?.organizations?.name}</span>
+          </div>
+        </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* Card da Empresa */}
-        <Card className="bg-zinc-900 border-zinc-800 shadow-sm max-w-xs">
-          <CardContent className="p-4 flex flex-col justify-center min-h-[90px]">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-1">
-              Sua Empresa
-            </p>
-            <div className="text-lg font-bold text-zinc-100 truncate leading-tight">
-              {profile?.organizations?.name || 'Sem Empresa'}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Card do Cargo */}
-        <Card className="bg-zinc-900 border-zinc-800 shadow-sm max-w-xs">
-          <CardContent className="p-4 flex flex-col justify-center min-h-[90px]">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-1">
-              Seu Cargo
-            </p>
-            <div className="text-lg font-bold capitalize text-zinc-100 leading-tight">
-              {profile?.role || 'Admin'}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Info Compacta de Cargo */}
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800">
+          <ShieldCheck className="h-4 w-4 text-zinc-500" />
+          <div className="flex flex-col">
+            <span className="text-[10px] uppercase text-zinc-500 font-bold leading-none">Cargo</span>
+            <span className="text-sm font-semibold text-zinc-200 capitalize">{profile?.role || 'Admin'}</span>
+          </div>
+        </div>
       </div>
+    </div>
 
-      {/* Grid de Indicadores */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-zinc-900/50 border-zinc-800">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm text-zinc-400">Procedimentos Ativos</p>
-                <h2 className="text-3xl font-bold mt-2">{servicesCount.count || 0}</h2>
-                <p className="text-xs text-zinc-500 mt-1">Serviços cadastrados</p>
-              </div>
-              <div className="text-blue-500"> {/* Ícone aqui */} </div>
+    {/* Grid de Indicadores com Ícones */}
+    <div className="grid gap-4 md:grid-cols-3">
+      <Card className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-900 transition-colors">
+        <CardContent className="p-6">
+          <div className="flex justify-between items-start">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-zinc-400">Procedimentos Ativos</p>
+              <h2 className="text-3xl font-bold tracking-tight">{servicesCount.count || 0}</h2>
+              <p className="text-xs text-zinc-500">Serviços no catálogo</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="p-2 bg-blue-500/10 rounded-lg">
+              <Stethoscope className="h-5 w-5 text-blue-500" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card className="bg-zinc-900/50 border-zinc-800">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm text-zinc-400">Base de Pacientes</p>
-                <h2 className="text-3xl font-bold mt-2">{patientsCount.count || 0}</h2>
-                <p className="text-xs text-zinc-500 mt-1">Total de clientes registrados</p>
-              </div>
-              <div className="text-green-500"> {/* Ícone aqui */} </div>
+      <Card className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-900 transition-colors">
+        <CardContent className="p-6">
+          <div className="flex justify-between items-start">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-zinc-400">Base de Pacientes</p>
+              <h2 className="text-3xl font-bold tracking-tight">{patientsCount.count || 0}</h2>
+              <p className="text-xs text-zinc-500">Total de clientes</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="p-2 bg-green-500/10 rounded-lg">
+              <Users className="h-5 w-5 text-green-500" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card className="bg-zinc-900/50 border-zinc-800">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm text-zinc-400">Agenda Hoje</p>
-                <h2 className="text-3xl font-bold mt-2">{appointmentsToday.data?.length || 0}</h2>
-                <p className="text-xs text-zinc-500 mt-1">Consultas marcadas para hoje</p>
-              </div>
-              <div className="text-purple-500"> {/* Ícone aqui */} </div>
+      <Card className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-900 transition-colors">
+        <CardContent className="p-6">
+          <div className="flex justify-between items-start">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-zinc-400">Agenda Hoje</p>
+              <h2 className="text-3xl font-bold tracking-tight">{appointmentsToday.data?.length || 0}</h2>
+              <p className="text-xs text-zinc-500">Consultas marcadas</p>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+            <div className="p-2 bg-purple-500/10 rounded-lg">
+              <CalendarDays className="h-5 w-5 text-purple-500" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
 
       {/* Seção Próximo Atendimento */}
       <div className="space-y-4">
