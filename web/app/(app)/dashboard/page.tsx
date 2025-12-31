@@ -15,17 +15,25 @@ export default async function DashboardPage() {
   // 2. Busca os dados do Perfil e da Organização
   const { data: profile } = await supabase
     .from('profiles')
-    .select('*, organizations(*)')
+    .select(`
+      *,
+      organizations:organizations_id (
+        name,
+        slug
+      )
+    `)
     .eq('id', user.id)
-    .single()
+    .single() as any
+
+  // Para garantir que o TypeScript entenda a estrutura interna:
+  const org = profile?.organizations
 
   return (
     <div className="p-8 space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground">
-          Bem-vindo de volta, {profile?.full_name || user.email}
-        </p>
+          Bem-vindo de volta, {profile?.full_name || user.user_metadata?.full_name || user.email}        </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
