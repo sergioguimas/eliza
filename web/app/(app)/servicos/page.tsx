@@ -33,19 +33,15 @@ export default async function ProcedimentosPage() {
     <div className="p-8 space-y-8 bg-black min-h-screen text-zinc-100">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800 pb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Procedimentos</h1>
-          <p className="text-muted-foreground text-sm">
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-100">Procedimentos</h1>
+          <p className="text-zinc-400 text-sm">
             Gerencie o catálogo de serviços e especialidades da sua clínica.
           </p>
         </div>
         
-        {/* Aqui entrará o botão de Novo Procedimento futuramente */}
-        <Button className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="mr-2 h-4 w-4" /> 
-          <CreateServiceDialog organizations_id={profile.organizations_id} /> Novo Procedimento
-        </Button>
+        {/* Mantenha APENAS o componente Dialog aqui */}
+        <CreateServiceDialog organizations_id={profile.organizations_id} />
       </div>
-
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {services?.map((service) => (
           <Card key={service.id} className={cn(
