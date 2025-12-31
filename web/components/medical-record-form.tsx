@@ -3,49 +3,51 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { createMedicalRecord } from "@/app/actions/create-medical-record"
+import { Send, Loader2 } from "lucide-react"
+import { saveMedicalNote } from "@/app/actions/save-medical-note"
 import { toast } from "sonner"
-import { Loader2, Send } from "lucide-react"
 
 export function MedicalRecordForm({ customerId }: { customerId: string }) {
   const [loading, setLoading] = useState(false)
+  const [content, setContent] = useState("")
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  async function handleSave() {
+    if (!content.trim()) return
+    
     setLoading(true)
-    
-    const form = event.currentTarget
-    const formData = new FormData(form)
-    
-    // Adiciona o ID do cliente escondido no envio
-    formData.append('customerId', customerId)
+    const formData = new FormData()
+    formData.append('customer_id', customerId)
+    formData.append('content', content)
 
-    const result = await createMedicalRecord(formData)
+    const result = await saveMedicalNote(formData)
 
-    setLoading(false)
-
-    if (result?.error) {
-      toast.error("Erro ao salvar anotação.")
+    if (result.error) {
+      toast.error(result.error)
     } else {
-      toast.success("Evolução registrada!")
-      form.reset() // Limpa o campo de texto
+      toast.success("Evolução salva com sucesso!")
+      setContent("") // Limpa o campo após salvar
     }
+    setLoading(false)
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 bg-zinc-900/50 p-4 rounded-lg border border-zinc-800">
+    <div className="space-y-4">
       <Textarea 
-        name="content" 
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
         placeholder="Descreva a evolução clínica do paciente..." 
-        className="bg-zinc-950 border-zinc-800 focus:ring-blue-600 min-h-[120px] resize-none"
-        required
+        className="min-h-[200px] bg-zinc-950 border-zinc-800 focus:ring-blue-500 text-zinc-100"
       />
       <div className="flex justify-end">
-        <Button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700 gap-2">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+        <Button 
+          onClick={handleSave} 
+          disabled={loading || !content.trim()}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
           Salvar Evolução
         </Button>
       </div>
-    </form>
+    </div>
   )
 }

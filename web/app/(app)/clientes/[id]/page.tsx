@@ -7,11 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import { EditCustomerDialog } from "@/components/edit-customer-dialog"
+import { MedicalRecordForm } from "@/components/medical-record-form"
 
 export default async function PacienteDetalhesPage({ 
   params 
 }: { 
-  params: Promise<{ id: string }> // Define que params é uma Promise
+  params: Promise<{ id: string }>
 }) {
   const resolvedParams = await params;
   const id = resolvedParams.id;
@@ -25,6 +26,12 @@ export default async function PacienteDetalhesPage({
     .single() as any;
 
   if (!customer) notFound();
+
+  const { data: notes } = await supabase
+  .from('medical_records')
+  .select('*')
+  .eq('customer_id', id)
+  .order('created_at', { ascending: false }) as any
 
   // 2. Busca o histórico de agendamentos deste paciente
   const { data: appointments } = await supabase
@@ -95,20 +102,35 @@ export default async function PacienteDetalhesPage({
         </TabsContent>
 
         {/* Aba: Prontuário */}
-        <TabsContent value="prontuario" className="space-y-4 outline-none">
+        <TabsContent value="prontuario" className="space-y-6 outline-none">
           <Card className="bg-zinc-900/40 border-zinc-800">
-            <CardContent className="p-6 space-y-4">
-              <Textarea 
-                placeholder="Descreva a evolução clínica do paciente..." 
-                className="min-h-[200px] bg-zinc-950 border-zinc-800 focus:ring-blue-500 text-zinc-100"
-              />
-              <div className="flex justify-end">
-                <Button className="bg-blue-600 hover:bg-blue-700">
-                  <Send className="mr-2 h-4 w-4" /> Salvar Evolução
-                </Button>
-              </div>
+            <CardContent className="p-6">
+              <MedicalRecordForm customerId={id} />
             </CardContent>
           </Card>
+
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider">Histórico de Evoluções</h3>
+            {notes && notes.length > 0 ? (
+              notes.map((note: any) => (
+                <Card key={note.id} className="bg-zinc-900/60 border-zinc-800">
+                  <CardContent className="p-4 space-y-2">
+                    <div className="flex justify-between text-xs text-zinc-500">
+                      <span>Anotação clínica</span>
+                      <span>{new Date(note.created_at).toLocaleString('pt-BR')}</span>
+                    </div>
+                    <p className="text-zinc-200 whitespace-pre-wrap text-sm leading-relaxed">
+                      {note.content}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="py-8 text-center border-2 border-dashed border-zinc-800 rounded-xl text-zinc-600 text-sm">
+                Nenhuma anotação registrada anteriormente.
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         {/* Aba: Histórico de Agendamentos */}
