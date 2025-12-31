@@ -1,36 +1,66 @@
 import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { NextResponse, type NextRequest } from 'next/server'
 
-export async function createClient() {
-  const cookieStore = await cookies() // O await é obrigatório no Next.js 15/16
+export default async function middleware(request: NextRequest) {
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  })
 
-  return createServerClient(
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
-          return cookieStore.getAll()
+          return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              // CORREÇÃO: Passamos um único objeto para o .set()
-              cookieStore.set({
-                name,
-                value,
-                ...options,
-                // Garantimos que 'expires' seja compatível (número ou undefined)
-                expires: options.expires instanceof Date ? options.expires.getTime() : undefined,
-                // Garantimos que 'sameSite' seja compatível com os tipos do Next.js
-                sameSite: typeof options.sameSite === 'boolean' ? undefined : options.sameSite,
-              })
+          // Ajuste para compatibilidade com Next.js 16
+          cookiesToSet.forEach(({ name, value, options }) => {
+            // Atualiza o request
+            request.cookies.set({ name, value, ...options })
+            
+            // Cria uma nova resposta para garantir que o cookie seja enviado
+            response = NextResponse.next({
+              request,
             })
-          } catch (error) {
-            // O erro pode ser ignorado se chamado de um Server Component
-          }
+            
+            // Atualiza a resposta final com a sintaxe de objeto único
+            response.cookies.set({
+              name,
+              value,
+              ...options,
+              // Correção de tipos para SameSite e Expires
+              sameSite: typeof options.sameSite === 'boolean' ? undefined : options.sameSite,
+              expires: options.expires instanceof Date ? options.expires.getTime() : undefined,
+            })
+          })
         },
       },
     }
   )
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Lógica de proteção de rotas
+  const isAuthPage = request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup' || request.nextUrl.pathname === '/'
+  const isProtectedRoute = request.nextUrl.pathname.startsWith('/calendar') || request.nextUrl.pathname.startsWith('/dashboard')
+
+  if (!user && isProtectedRoute) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+
+  if (user && isAuthPage) {
+    return NextResponse.redirect(new URL('/calendar', request.url))
+  }
+
+  return response
+}
+
+export const config = {
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 }
