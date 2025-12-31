@@ -28,7 +28,6 @@ export async function signIn(formData: FormData) {
 export async function signUp(formData: FormData) {
   const headersList = await headers() 
   const origin = headersList.get('origin')
-  // ---------------------
 
   const email = formData.get('email') as string
   const password = formData.get('password') as string
@@ -52,6 +51,7 @@ export async function signUp(formData: FormData) {
   }
 
   return { success: 'Verifique seu email para confirmar o cadastro.' }
+  redirect('/setup')
 }
 
 // Função de Criar Empresa

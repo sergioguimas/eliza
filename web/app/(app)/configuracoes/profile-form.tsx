@@ -51,7 +51,7 @@ export function ProfileForm({ profile }: { profile: any }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="user_crm" className="text-zinc-300">Meu CRM</Label>
+              <Label htmlFor="user_crm" className="text-zinc-300">Documento</Label>
               <Input 
                 id="user_crm" 
                 name="crm" 

@@ -3,9 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export default async function middleware(request: NextRequest) {
   let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+    request: { headers: request.headers },
   })
 
   const supabase = createServerClient(
@@ -13,30 +11,11 @@ export default async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          // Ajuste para compatibilidade com Next.js 16
-          cookiesToSet.forEach(({ name, value, options }) => {
-            // Atualiza o request
-            request.cookies.set({ name, value, ...options })
-            
-            // Cria uma nova resposta para garantir que o cookie seja enviado
-            response = NextResponse.next({
-              request,
-            })
-            
-            // Atualiza a resposta final com a sintaxe de objeto único
-            response.cookies.set({
-              name,
-              value,
-              ...options,
-              // Correção de tipos para SameSite e Expires
-              sameSite: typeof options.sameSite === 'boolean' ? undefined : options.sameSite,
-              expires: options.expires instanceof Date ? options.expires.getTime() : undefined,
-            })
-          })
+        getAll: () => request.cookies.getAll(),
+        setAll: (cookiesToSet) => {
+          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set({ name, value, ...options }))
+          response = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set({ name, value, ...options }))
         },
       },
     }
@@ -44,15 +23,40 @@ export default async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Lógica de proteção de rotas
-  const isAuthPage = request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup' || request.nextUrl.pathname === '/'
-  const isProtectedRoute = request.nextUrl.pathname.startsWith('/calendar') || request.nextUrl.pathname.startsWith('/dashboard')
+  // 1. DEFINIÇÃO DAS VARIÁVEIS DE ROTA
+  const pathname = request.nextUrl.pathname
+  const isSetupPage = pathname === '/setup'
+  const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/'
+  const isPublicFile = pathname.includes('.') // Ignora imagens, favicons, etc.
 
-  if (!user && isProtectedRoute) {
+  if (isPublicFile) return response
+
+  // 2. VERIFICAÇÃO DE ORGANIZAÇÃO
+  let hasOrganization = false
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('organization_id')
+      .eq('id', user.id)
+      .single()
+    
+    hasOrganization = !!profile?.organization_id
+  }
+
+  // 3. REGRAS DE REDIRECIONAMENTO
+  
+  // Se não está logado e tenta acessar área restrita
+  if (!user && !isAuthPage) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  if (user && isAuthPage) {
+  // Se está logado, mas não tem empresa e não está na página de setup
+  if (user && !hasOrganization && !isSetupPage) {
+    return NextResponse.redirect(new URL('/setup', request.url))
+  }
+
+  // Se já está tudo OK e tenta voltar para login ou setup
+  if (user && hasOrganization && (isAuthPage || isSetupPage)) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
@@ -60,7 +64,5 @@ export default async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }
