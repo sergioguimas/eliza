@@ -36,7 +36,7 @@ export default async function ClientesPage({
   // Busca pacientes com filtro de busca se houver query
   let customerQuery = supabase
     .from('customers')
-    .select('*')
+    .select('*') // Agora vai encontrar full_name, document, etc.
     .eq('organizations_id', profile.organizations_id)
     .order('full_name')
 
@@ -44,11 +44,7 @@ export default async function ClientesPage({
     customerQuery = customerQuery.ilike('full_name', `%${query}%`)
   }
 
-  const { data: customers, error } = await customerQuery as any;
-
-  if (error) {
-    console.error("Erro ao buscar clientes:", error);
-  }
+  const { data: customers } = await customerQuery as any;
 
   return (
     <div className="p-8 space-y-8 bg-black min-h-screen text-zinc-100">
