@@ -62,19 +62,45 @@ export default async function PacienteDetalhesPage({
       </div>
 
       {/* Abas de Navegação */}
-      <Tabs defaultValue="prontuario" className="space-y-6">
-        <TabsList className="bg-zinc-900 border border-zinc-800 p-1 w-full justify-start overflow-x-auto">
-          <TabsTrigger value="dados" className="flex-1 md:flex-none">Dados Cadastrais</TabsTrigger>
-          <TabsTrigger value="prontuario" className="flex-1 md:flex-none">Prontuário</TabsTrigger>
-          <TabsTrigger value="historico" className="flex-1 md:flex-none">Histórico de Agendamentos</TabsTrigger>
+      <Tabs defaultValue="prontuario" className="w-full space-y-6">
+        {/* Ajuste do Flex: grid-cols-3 garante distribuição igualitária */}
+        <TabsList className="grid w-full grid-cols-3 bg-zinc-900 border border-zinc-800 h-12">
+          <TabsTrigger value="dados" className="data-[state=active]:bg-zinc-800">Dados Cadastrais</TabsTrigger>
+          <TabsTrigger value="prontuario" className="data-[state=active]:bg-zinc-800">Prontuário</TabsTrigger>
+          <TabsTrigger value="historico" className="data-[state=active]:bg-zinc-800">Histórico</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="prontuario" className="space-y-4">
+        {/* Aba: Dados Cadastrais */}
+        <TabsContent value="dados" className="space-y-4 outline-none">
+          <Card className="bg-zinc-900/40 border-zinc-800">
+            <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-1">
+                <p className="text-xs text-zinc-500 uppercase font-semibold">Nome Completo</p>
+                <p className="text-zinc-100">{customer.full_name}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-zinc-500 uppercase font-semibold">WhatsApp / Telefone</p>
+                <p className="text-zinc-100">{customer.phone || 'Não informado'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-zinc-500 uppercase font-semibold">Documento (CPF)</p>
+                <p className="text-zinc-100">{customer.document || 'Não informado'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-zinc-500 uppercase font-semibold">Gênero</p>
+                <p className="text-zinc-100">{customer.gender || 'Não definido'}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Aba: Prontuário */}
+        <TabsContent value="prontuario" className="space-y-4 outline-none">
           <Card className="bg-zinc-900/40 border-zinc-800">
             <CardContent className="p-6 space-y-4">
               <Textarea 
                 placeholder="Descreva a evolução clínica do paciente..." 
-                className="min-h-[200px] bg-zinc-950 border-zinc-800 focus:ring-blue-500"
+                className="min-h-[200px] bg-zinc-950 border-zinc-800 focus:ring-blue-500 text-zinc-100"
               />
               <div className="flex justify-end">
                 <Button className="bg-blue-600 hover:bg-blue-700">
@@ -83,28 +109,35 @@ export default async function PacienteDetalhesPage({
               </div>
             </CardContent>
           </Card>
-          
-          <div className="p-8 text-center border-2 border-dashed border-zinc-800 rounded-xl text-zinc-600">
-             Nenhuma anotação registrada anteriormente.
-          </div>
         </TabsContent>
 
-        <TabsContent value="historico">
+        {/* Aba: Histórico de Agendamentos */}
+        <TabsContent value="historico" className="outline-none">
           <div className="grid gap-4">
-            {appointments?.map((app: any) => (
-              <Card key={app.id} className="bg-zinc-900/40 border-zinc-800">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: app.services?.color }} />
-                    <div>
-                      <p className="font-bold">{app.services?.name}</p>
-                      <p className="text-xs text-zinc-500">{new Date(app.start_time).toLocaleString('pt-BR')}</p>
+            {appointments && appointments.length > 0 ? (
+              appointments.map((app: any) => (
+                <Card key={app.id} className="bg-zinc-900/40 border-zinc-800">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: app.services?.color || '#3b82f6' }} />
+                      <div>
+                        <p className="font-bold text-zinc-100">{app.services?.name}</p>
+                        <p className="text-xs text-zinc-500">
+                          {new Date(app.start_time).toLocaleString('pt-BR')}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <span className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-400 capitalize">{app.status}</span>
-                </CardContent>
-              </Card>
-            ))}
+                    <span className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-400 capitalize">
+                      {app.status}
+                    </span>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="py-12 text-center border-2 border-dashed border-zinc-800 rounded-xl text-zinc-600">
+                Nenhum agendamento encontrado para este paciente.
+              </div>
+            )}
           </div>
         </TabsContent>
       </Tabs>
