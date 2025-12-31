@@ -1,45 +1,38 @@
+// web/components/create-service-dialog.tsx
 'use client'
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Plus, Loader2, Clock, DollarSign } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Plus, Pencil, Palette } from "lucide-react"
+import { upsertService } from "@/app/actions/create-service"
 import { toast } from "sonner"
-import { createService } from "@/app/actions/create-service"
 
-type Props = {
-  organizations_id: string
-}
+const COLORS = [
+  { name: 'Azul', value: '#3b82f6' },
+  { name: 'Verde', value: '#10b981' },
+  { name: 'Roxo', value: '#8b5cf6' },
+  { name: 'Rosa', value: '#ec4899' },
+  { name: 'Laranja', value: '#f59e0b' },
+  { name: 'Vermelho', value: '#ef4444' },
+]
 
-export function CreateServiceDialog({ organizations_id }: Props) {
+export function CreateServiceDialog({ organizations_id, serviceToEdit }: { organizations_id: string, serviceToEdit?: any }) {
   const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [selectedColor, setSelectedColor] = useState(serviceToEdit?.color || COLORS[0].value)
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setLoading(true)
-    
     const formData = new FormData(event.currentTarget)
-    formData.append('organizations_id', organizations_id)
+    formData.append('color', selectedColor)
+    if (serviceToEdit) formData.append('id', serviceToEdit.id)
 
-    const result = await createService(formData)
-
-    if (result.error) {
-      toast.error(result.error)
-      setLoading(false)
-    } else {
-      toast.success("Procedimento cadastrado!")
-      setLoading(false)
+    const result = await upsertService(formData)
+    if (result.error) toast.error(result.error)
+    else {
+      toast.success(serviceToEdit ? "Atualizado!" : "Criado!")
       setOpen(false)
     }
   }
@@ -47,46 +40,40 @@ export function CreateServiceDialog({ organizations_id }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="mr-2 h-4 w-4" /> Novo Procedimento
-        </Button>
+        {serviceToEdit ? (
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-white">
+            <Pencil className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button className="bg-blue-600 hover:bg-blue-700"><Plus className="mr-2 h-4 w-4" /> Novo Procedimento</Button>
+        )}
       </DialogTrigger>
-      <DialogContent className="bg-zinc-900 border-zinc-800 text-zinc-100 sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Novo Procedimento</DialogTitle>
-          <DialogDescription className="text-zinc-400">
-            Adicione um novo serviço ao seu catálogo.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="name">Nome do Serviço</Label>
-            <Input id="name" name="name" placeholder="Ex: Consulta Pediátrica" required className="bg-zinc-950 border-zinc-800" />
+      <DialogContent className="bg-zinc-900 border-zinc-800 text-white">
+        <DialogHeader><DialogTitle>{serviceToEdit ? 'Editar' : 'Novo'} Procedimento</DialogTitle></DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label>Nome</Label>
+            <Input name="name" defaultValue={serviceToEdit?.name} required className="bg-zinc-950 border-zinc-800" />
           </div>
-
           <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="duration">Duração (min)</Label>
-              <div className="relative">
-                <Clock className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
-                <Input id="duration" name="duration" type="number" placeholder="30" required className="bg-zinc-950 border-zinc-800 pl-9" />
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="price">Preço (R$)</Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
-                <Input id="price" name="price" type="number" step="0.01" placeholder="150,00" required className="bg-zinc-950 border-zinc-800 pl-9" />
-              </div>
+            <div><Label>Duração (min)</Label><Input name="duration" type="number" defaultValue={serviceToEdit?.duration} className="bg-zinc-950 border-zinc-800" /></div>
+            <div><Label>Preço (R$)</Label><Input name="price" type="number" step="0.01" defaultValue={serviceToEdit?.price} className="bg-zinc-950 border-zinc-800" /></div>
+          </div>
+          <div>
+            <Label className="flex items-center gap-2 mb-2"><Palette className="h-4 w-4" /> Cor na Agenda</Label>
+            <div className="flex gap-2">
+              {COLORS.map(c => (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setSelectedColor(c.value)}
+                  className={`h-8 w-8 rounded-full border-2 transition-all ${selectedColor === c.value ? 'border-white scale-110' : 'border-transparent'}`}
+                  style={{ backgroundColor: c.value }}
+                />
+              ))}
             </div>
           </div>
-
-          <DialogFooter>
-            <Button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700 w-full mt-2">
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Salvar Procedimento'}
-            </Button>
-          </DialogFooter>
+          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">Salvar</Button>
         </form>
       </DialogContent>
     </Dialog>

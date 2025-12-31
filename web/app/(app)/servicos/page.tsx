@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { CreateServiceDialog } from "@/components/create-service-dialog"
+import { deleteService } from "@/app/actions/create-service"
+import { Trash2 } from "lucide-react"
 
 export const metadata: Metadata = {
   title: "Procedimentos | Eliza",
@@ -39,7 +41,6 @@ export default async function ProcedimentosPage() {
           </p>
         </div>
         
-        {/* Mantenha APENAS o componente Dialog aqui */}
         <CreateServiceDialog organizations_id={profile.organizations_id} />
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -54,14 +55,24 @@ export default async function ProcedimentosPage() {
                   <Stethoscope className="h-5 w-5 text-blue-500" />
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-500 hover:text-zinc-100">
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className={cn(
-                    "h-8 w-8",
-                    service.active ? "text-emerald-500 hover:text-emerald-400" : "text-zinc-500 hover:text-zinc-100"
-                  )}>
-                    {service.active ? <Power className="h-4 w-4" /> : <PowerOff className="h-4 w-4" />}
+                  {/* Componente de Edição (Lápis) */}
+                  <CreateServiceDialog 
+                    organizations_id={profile.organizations_id} 
+                    serviceToEdit={service} 
+                  />
+                  
+                  {/* Botão de Excluir (Lixo) */}
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-zinc-500 hover:text-red-500 transition-colors"
+                    onClick={async () => {
+                      if(confirm("Tem certeza que deseja excluir este procedimento?")) {
+                        await deleteService(service.id)
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
