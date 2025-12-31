@@ -52,7 +52,7 @@ export default async function middleware(request: NextRequest) {
 
   // Se está logado, mas não tem empresa e não está na página de setup
   if (user && !hasOrganization && !isSetupPage) {
-    return NextResponse.redirect(new URL('/setup', request.url))
+    //return NextResponse.redirect(new URL('/setup', request.url))
   }
 
   // Se já está tudo OK e tenta voltar para login ou setup

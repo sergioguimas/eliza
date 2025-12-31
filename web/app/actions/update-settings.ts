@@ -29,6 +29,7 @@ export async function updateSettings(formData: FormData) {
     .select('organization_id')
     .eq('id', user.id)
     .single()
+  console.log('ID do Usuário:', user.id, 'Org no Banco:', profile?.organization_id);
 
   try {
     if (!profile?.organization_id) {
@@ -69,6 +70,8 @@ export async function updateSettings(formData: FormData) {
     return { error: error.message || "Ocorreu um erro ao salvar os dados." }
   }
 
+  await supabase.auth.refreshSession(); // Força a atualização da sessão
+  revalidatePath('/', 'layout');
   // Se for o fluxo de setup, após salvar ele deve ser liberado pelo middleware
   redirect('/dashboard') 
 }
