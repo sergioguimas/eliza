@@ -21,7 +21,7 @@ export async function signIn(formData: FormData) {
     return { error: 'Credenciais inválidas.' }
   }
 
-  return { success: true }
+  redirect('/dashboard')
 }
 
 // Função de Cadastro
