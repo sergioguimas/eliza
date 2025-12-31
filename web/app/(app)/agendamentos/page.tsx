@@ -93,7 +93,11 @@ export default async function AgendamentosPage() {
       </div>
       
       <div className="h-[calc(100vh-200px)] bg-zinc-900/50 border border-zinc-800 rounded-lg overflow-hidden shadow-xl">
-         <CalendarView appointments={appointments} customers={customersForModal} services={servicesForModal} />
+         <CalendarView 
+            appointments={appointments} 
+            customers={customersForModal} 
+            services={servicesForModal} 
+         />
       </div>
     </div>
   )
