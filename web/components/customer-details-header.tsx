@@ -43,8 +43,6 @@ export function CustomerDetailsHeader({ customer }: CustomerDetailsHeaderProps) 
     <>
       {/* O Modal de Edição fica aqui, invisível até ser chamado */}
       <EditCustomerDialog 
-        open={showEditDialog} 
-        onOpenChange={setShowEditDialog} 
         customer={customer} 
       />
 
