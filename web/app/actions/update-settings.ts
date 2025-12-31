@@ -47,7 +47,7 @@ export async function updateSettings(formData: FormData) {
       // B. Vincular o perfil do usuário a essa nova organização
       const { error: profileUpdateError } = await supabase
         .from('profiles')
-        .update({ organization_id: newOrg.id })
+        .update({ ['organizations_id' as any]: newOrg.id })
         .eq('id', user.id)
 
       if (profileUpdateError) throw profileUpdateError

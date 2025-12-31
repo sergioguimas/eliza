@@ -36,11 +36,11 @@ export default async function middleware(request: NextRequest) {
   if (user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('organization_id')
+      .select('organizations_id')
       .eq('id', user.id)
       .single()
-    
-    hasOrganization = !!profile?.organization_id
+
+    hasOrganization = !!profile?.organizations_id
   }
 
   // 3. REGRAS DE REDIRECIONAMENTO
