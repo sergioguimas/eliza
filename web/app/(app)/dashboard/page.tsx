@@ -105,68 +105,67 @@ const presenceRate = total > 0 ? Math.round((presence / total) * 100) : 100
       </div>
     </div>
 
-    {/* Grid de Indicadores com Ícones */}
-    <div className="grid gap-4 md:grid-cols-3">
+    {/* Grid de Indicadores Otimizada - 4 cards na mesma linha */}
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Card: Procedimentos */}
       <Card className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-900 transition-colors">
-        <CardContent className="p-6">
+        <CardContent className="p-4">
           <div className="flex justify-between items-start">
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-zinc-400">Procedimentos Ativos</p>
-              <h2 className="text-3xl font-bold tracking-tight">{servicesCount.count || 0}</h2>
-              <p className="text-xs text-zinc-500">Serviços no catálogo</p>
+            <div className="space-y-1">
+              <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Procedimentos</p>
+              <h2 className="text-2xl font-bold tracking-tight">{servicesCount.count || 0}</h2>
             </div>
             <div className="p-2 bg-blue-500/10 rounded-lg">
-              <Stethoscope className="h-5 w-5 text-blue-500" />
+              <Stethoscope className="h-4 w-4 text-blue-500" />
             </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Card: Pacientes */}
       <Card className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-900 transition-colors">
-        <CardContent className="p-6">
+        <CardContent className="p-4">
           <div className="flex justify-between items-start">
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-zinc-400">Base de Pacientes</p>
-              <h2 className="text-3xl font-bold tracking-tight">{patientsCount.count || 0}</h2>
-              <p className="text-xs text-zinc-500">Total de clientes</p>
+            <div className="space-y-1">
+              <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Pacientes</p>
+              <h2 className="text-2xl font-bold tracking-tight">{patientsCount.count || 0}</h2>
             </div>
             <div className="p-2 bg-green-500/10 rounded-lg">
-              <Users className="h-5 w-5 text-green-500" />
+              <Users className="h-4 w-4 text-green-500" />
             </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Card: Agenda Hoje */}
       <Card className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-900 transition-colors">
-        <CardContent className="p-6">
+        <CardContent className="p-4">
           <div className="flex justify-between items-start">
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-zinc-400">Agenda Hoje</p>
-              <h2 className="text-3xl font-bold tracking-tight">{appointmentsToday.data?.length || 0}</h2>
-              <p className="text-xs text-zinc-500">Consultas marcadas</p>
+            <div className="space-y-1">
+              <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Agenda Hoje</p>
+              <h2 className="text-2xl font-bold tracking-tight">{appointmentsToday.data?.length || 0}</h2>
             </div>
             <div className="p-2 bg-purple-500/10 rounded-lg">
-              <CalendarDays className="h-5 w-5 text-purple-500" />
+              <CalendarDays className="h-4 w-4 text-purple-500" />
             </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Card: Taxa de Presença */}
       <Card className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-900 transition-colors">
-        <CardContent className="p-6">
+        <CardContent className="p-4">
           <div className="flex justify-between items-start">
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-zinc-400">Taxa de Presença</p>
-              <h2 className="text-3xl font-bold tracking-tight">{presenceRate}%</h2>
-              <p className="text-xs text-zinc-500">Média de comparecimento</p>
+            <div className="space-y-1">
+              <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Presença</p>
+              <h2 className="text-2xl font-bold tracking-tight">{presenceRate}%</h2>
             </div>
             <div className="p-2 bg-emerald-500/10 rounded-lg">
-              <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
             </div>
           </div>
         </CardContent>
       </Card>
-
     </div>
 
       {/* Seção Próximo Atendimento */}
