@@ -10,8 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
-// Importaremos o modal de criação em seguida
-// import { CreateCustomerDialog } from "@/components/create-customer-dialog"
+import { CreateCustomerDialog } from "@/components/create-customer-dialog"
 
 export const metadata: Metadata = {
   title: "Pacientes | Eliza",
@@ -56,11 +55,7 @@ export default async function ClientesPage({
             Gerencie o cadastro e histórico clínico dos seus pacientes.
           </p>
         </div>
-        
-        {/* Futuro componente de criação */}
-        <Button className="bg-blue-600 hover:bg-blue-700">
-          <UserPlus className="mr-2 h-4 w-4" /> Novo Paciente
-        </Button>
+        <CreateCustomerDialog organizations_id={profile.organizations_id} />
       </div>
 
       {/* Barra de Busca */}

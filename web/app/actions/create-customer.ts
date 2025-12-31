@@ -6,39 +6,30 @@ import { revalidatePath } from 'next/cache'
 export async function createCustomer(formData: FormData) {
   const supabase = await createClient()
 
-  const name = formData.get('name') as string
-  const email = formData.get('email') as string
+  const full_name = formData.get('full_name') as string
   const phone = formData.get('phone') as string
-  const gender = formData.get('gender') as string
-  const notes = formData.get('notes') as string
+  const document = formData.get('document') as string
+  const organizations_id = formData.get('organizations_id') as string
 
-  // 1. Validar usuário
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Não autorizado' }
-
-  // 2. Pegar Organization ID (Correção aqui!)
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('organization_id') 
-    .eq('id', user.id)
-    .single()
-
-  if (!profile?.organization_id) return { error: 'Perfil sem organização vinculada' }
-
-  // 3. Salvar no Banco
-  const { error } = await supabase.from('customers').insert({
-    name,
-    email,
-    phone,
-    gender,
-    notes,
-    organization_id: profile.organization_id, // <--- CAMPO CORRETO
-  })
-
-  if (error) {
-    return { error: error.message }
+  if (!full_name || !organizations_id) {
+    return { error: 'O nome completo é obrigatório.' }
   }
 
-  revalidatePath('/clientes')
-  return { success: true }
+  try {
+    const { error } = await supabase
+      .from('customers')
+      .insert({
+        full_name,
+        phone,
+        document,
+        organizations_id
+      } as any)
+
+    if (error) throw error
+
+    revalidatePath('/clientes')
+    return { success: true }
+  } catch (error: any) {
+    return { error: error.message }
+  }
 }
