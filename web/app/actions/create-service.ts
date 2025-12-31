@@ -22,6 +22,12 @@ export async function upsertService(formData: FormData) {
     organizations_id,
     active: true
   }
+  // LOG DE TESTE: Verifique se isso aparece no seu terminal/Vercel
+  console.log("Tentando salvar para a organização:", organizations_id);
+
+  if (!organizations_id || organizations_id === 'undefined') {
+    return { error: "ID da organização não encontrado. Recarregue a página." };
+  }
 
   try {
     const { error } = id 
@@ -51,3 +57,4 @@ export async function deleteService(id: string) {
   if (!error) revalidatePath('/procedimentos')
   return { error: error?.message }
 }
+
