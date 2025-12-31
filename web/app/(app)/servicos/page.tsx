@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { CreateServiceDialog } from "@/components/create-service-dialog"
 import { deleteService } from "@/app/actions/create-service"
 import { Trash2 } from "lucide-react"
+import { DeleteServiceButton } from "@/components/delete-service-button"
 
 export const metadata: Metadata = {
   title: "Procedimentos | Eliza",
@@ -55,25 +56,13 @@ export default async function ProcedimentosPage() {
                   <Stethoscope className="h-5 w-5 text-blue-500" />
                 </div>
                 <div className="flex gap-2">
-                  {/* Componente de Edição (Lápis) */}
                   <CreateServiceDialog 
                     organizations_id={profile.organizations_id} 
                     serviceToEdit={service} 
                   />
                   
-                  {/* Botão de Excluir (Lixo) */}
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 text-zinc-500 hover:text-red-500 transition-colors"
-                    onClick={async () => {
-                      if(confirm("Tem certeza que deseja excluir este procedimento?")) {
-                        await deleteService(service.id)
-                      }
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {/* Novo componente de cliente que lida com o clique */}
+                  <DeleteServiceButton serviceId={service.id} />
                 </div>
               </div>
 
