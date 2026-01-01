@@ -16,7 +16,7 @@ export default async function SettingsPage() {
     .from('profiles')
     .select('*, organizations(*)')
     .eq('id', user.id)
-    .single()
+    .single() as any
 
   // Pega a organização vinculada ao perfil
   // @ts-ignore
