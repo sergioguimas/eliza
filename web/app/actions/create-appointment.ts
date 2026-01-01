@@ -12,25 +12,28 @@ export async function createAppointment(formData: FormData) {
   const start_time_raw = formData.get('start_time') as string
   const organizations_id = formData.get('organizations_id') as string
 
-  // 1. Busca a duração do serviço para calcular o end_time
+  // 1. Busca a duração
   const { data: service } = await supabase
     .from('services')
     .select('duration')
     .eq('id', service_id)
     .single()
 
-  const duration = service?.duration || 30 // Padrão 30 min se não achar
+  const duration = service?.duration || 30
+  
+  // 2. CORREÇÃO DE TIMEZONE
+  // O parseISO interpreta strings "YYYY-MM-DDTHH:mm" como horário local do servidor/browser
   const start_time = parseISO(start_time_raw)
-  const end_time = addMinutes(start_time, duration).toISOString()
+  const end_time = addMinutes(start_time, duration)
 
-  // 2. Insere o agendamento com o end_time calculado
+  // 3. Insere usando a string ISO completa (que inclui o fuso se necessário)
   const { error } = await supabase
     .from('appointments')
     .insert({
       customer_id,
       service_id,
-      start_time: start_time.toISOString(),
-      end_time, // AGORA O VALOR NÃO É MAIS NULL
+      start_time: start_time.toISOString(), // Salva em UTC no banco
+      end_time: end_time.toISOString(),
       organizations_id,
       status: 'scheduled'
     } as any)
