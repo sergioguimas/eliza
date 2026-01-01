@@ -18,7 +18,6 @@ export async function updateSettings(formData: FormData) {
     phone: formData.get("phone") as string,
     email: formData.get("email") as string,
     address: formData.get("address") as string,
-    // ADICIONE ESTES DOIS:
     evolution_url: formData.get("evolution_url") as string,
     evolution_apikey: formData.get("evolution_apikey") as string,
   }

@@ -32,6 +32,8 @@ export function SettingsForm({ profile }: { profile: any }) {
 
   return (
     <form onSubmit={handleSubmit}>
+      <input type="hidden" name="user_id" value={profile?.id} />
+      <input type="hidden" name="org_id" value={profile?.organizations_id || ''} />
       <Card className="bg-zinc-900 border-zinc-800">
         <CardHeader>
           <CardTitle className="text-zinc-100">Dados Institucionais</CardTitle>
