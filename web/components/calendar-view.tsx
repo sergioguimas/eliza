@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { CreateAppointmentDialog } from "@/components/create-appointment-dialog"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-// Certifique-se que estes componentes existem ou ajuste o caminho
 import { AppointmentContextMenu } from "./appointment-context-menu"
 import { STATUS_CONFIG } from "@/lib/appointment-config"
 
@@ -20,8 +19,8 @@ type Appointment = {
   id: string
   start_time: string
   end_time: string
-  status: string | null // Adicionado o null para evitar o erro de incompatibilidade
-  customers: { full_name: string } | any // 'any' evita o erro "could not find relation" no TS
+  status: string | null
+  customers: { full_name: string } | any
   services: { name: string; color?: string } | any
 }
 
@@ -33,7 +32,6 @@ type Props = {
 }
 
 const getRawHour = (dateString: string) => {
-  // Extrai a hora diretamente da string ISO (ex: "2026-01-01T12:50:00Z" -> 12)
   return new Date(dateString).getUTCHours();
 };
 
@@ -175,16 +173,14 @@ export function CalendarView({ appointments, customers, services, organizations_
   }
 
   function renderDayView() {
-    const hours = Array.from({ length: 14 }, (_, i) => i + 7); // 07:00 às 20:00
+    const hours = Array.from({ length: 14 }, (_, i) => i + 7);
 
     return (
       <div className="rounded-md border border-zinc-800 bg-zinc-900 overflow-hidden flex flex-col h-[700px]">
         <div className="flex-1 overflow-y-auto">
           {hours.map(hour => {
-            // FILTRO CORRIGIDO: Comparamos a hora desejada com a hora UTC do agendamento
             const hourAppointments = appointments.filter(apt => {
               const aptDate = new Date(apt.start_time);
-              // Verifica se é o mesmo dia (em UTC) e a mesma hora (em UTC)
               return isSameDay(aptDate, date) && getRawHour(apt.start_time) === hour;
             });
 

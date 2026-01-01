@@ -1,202 +1,186 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { 
   Users, 
   Stethoscope, 
   CalendarDays, 
   Building2, 
   ShieldCheck,
-  CheckCircle2 
+  CheckCircle2,
+  Clock
 } from 'lucide-react'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
 
-  // 1. Verifica quem é o usuário
+  // 1. Verifica autenticação
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return redirect('/login')
 
-  if (!user) {
-    return redirect('/login')
-  }
-
-  // 2. Busca os dados do Perfil e da Organização
+  // 2. Busca Perfil e Organização
   const { data: profile } = await supabase
     .from('profiles')
     .select(`
       *,
-      organizations:organizations_id (
-        name,
-        slug
-      )
+      organizations:organizations_id (name, slug)
     `)
     .eq('id', user.id)
     .single() as any
 
-  // Para garantir que o TypeScript entenda a estrutura interna:
-  const org = profile?.organizations
+  if (!profile?.organizations_id) redirect('/configuracoes')
 
-  // 3. Busca Indicadores (Contagens)
-  const [servicesCount, patientsCount, appointmentsToday, allAppointments] = await Promise.all([
+  // 3. Definição do período de "Hoje" para o filtro UTC
+  const todayStart = new Date()
+  todayStart.setUTCHours(0, 0, 0, 0)
+  const todayEnd = new Date()
+  todayEnd.setUTCHours(23, 59, 59, 999)
+
+  // 4. Busca de dados unificada com nomes únicos
+  const [resServices, resPatients, resToday, resAll] = await Promise.all([
     supabase
       .from('services')
       .select('*', { count: 'exact', head: true })
-      .eq('organizations_id', profile.organizations_id),
+      .eq('organizations_id', profile.organizations_id)
+      .eq('active', true),
     
     supabase
       .from('customers')
       .select('*', { count: 'exact', head: true })
-      .eq('organizations_id', profile.organizations_id),
+      .eq('organizations_id', profile.organizations_id)
+      .eq('active', true),
 
     supabase
       .from('appointments')
       .select(`
-        *,
-        customers:customer_id (full_name),
-        services:service_id (name)
-      `) // Explicita que customer_id é a ponte para a tabela customers
+        id, 
+        start_time, 
+        status, 
+        customers(full_name), 
+        services(name, color)
+      `)
       .eq('organizations_id', profile.organizations_id)
-      .gte('start_time', new Date().toISOString().split('T')[0])
+      .gte('start_time', todayStart.toISOString())
+      .lte('start_time', todayEnd.toISOString())
       .order('start_time', { ascending: true }),
 
-      // Query de hoje (para o card de Próximo Atendimento)
-      supabase.from('appointments').select('...'),
-
-      // Nova query para estatísticas de presença (últimos 30 dias por exemplo)
-      supabase
+    supabase
       .from('appointments')
       .select('status')
       .eq('organizations_id', profile.organizations_id)
   ]) as any
 
-const total = allAppointments.data?.length || 0
-const presence = allAppointments.data?.filter((a: any) => a.status === 'concluded').length || 0
-const presenceRate = total > 0 ? Math.round((presence / total) * 100) : 100
+  // Cálculos de indicadores
+  const totalApps = resAll.data?.length || 0
+  const completedApps = resAll.data?.filter((a: any) => a.status === 'completed').length || 0
+  const presenceRate = totalApps > 0 ? Math.round((completedApps / totalApps) * 100) : 0
+  const nextApp = resToday.data?.[0]
 
   return (
     <div className="p-8 space-y-8 bg-black min-h-screen text-zinc-100">
-    {/* Cabeçalho Otimizado: Nome + Empresa + Cargo em uma linha */}
-    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-zinc-800 pb-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Visão Geral</h1>
-        <p className="text-muted-foreground">
-          Bem-vindo de volta, <span className="text-zinc-100 font-medium">{profile?.full_name || user.email}</span>
-        </p>
-      </div>
-      
-      <div className="flex gap-3">
-        {/* Info Compacta de Empresa */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800">
-          <Building2 className="h-4 w-4 text-zinc-500" />
-          <div className="flex flex-col">
-            <span className="text-[10px] uppercase text-zinc-500 font-bold leading-none">Empresa</span>
-            <span className="text-sm font-semibold text-zinc-200">{profile?.organizations?.name}</span>
+      {/* Cabeçalho Otimizado: Nome + Empresa + Cargo */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-zinc-800 pb-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Visão Geral</h1>
+          <p className="text-muted-foreground">
+            Bem-vindo de volta, <span className="text-zinc-100 font-medium">{profile?.full_name || user.email}</span>
+          </p>
+        </div>
+        
+        <div className="flex gap-3">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800">
+            <Building2 className="h-4 w-4 text-zinc-500" />
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase text-zinc-500 font-bold leading-none">Empresa</span>
+              <span className="text-sm font-semibold text-zinc-200">{profile?.organizations?.name}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800">
+            <ShieldCheck className="h-4 w-4 text-zinc-500" />
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase text-zinc-500 font-bold leading-none">Cargo</span>
+              <span className="text-sm font-semibold text-zinc-200 capitalize">{profile?.role || 'Admin'}</span>
+            </div>
           </div>
         </div>
-
-        {/* Info Compacta de Cargo */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800">
-          <ShieldCheck className="h-4 w-4 text-zinc-500" />
-          <div className="flex flex-col">
-            <span className="text-[10px] uppercase text-zinc-500 font-bold leading-none">Cargo</span>
-            <span className="text-sm font-semibold text-zinc-200 capitalize">{profile?.role || 'Admin'}</span>
-          </div>
-        </div>
       </div>
-    </div>
 
-    {/* Grid de Indicadores Otimizada - 4 cards na mesma linha */}
-    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-      {/* Card: Procedimentos */}
-      <Card className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-900 transition-colors">
-        <CardContent className="p-4">
-          <div className="flex justify-between items-start">
+      {/* Grid de 4 indicadores na mesma linha */}
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-900 transition-colors">
+          <CardContent className="p-4 flex justify-between items-start">
             <div className="space-y-1">
               <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Procedimentos</p>
-              <h2 className="text-2xl font-bold tracking-tight">{servicesCount.count || 0}</h2>
+              <h2 className="text-2xl font-bold tracking-tight">{resServices.count || 0}</h2>
             </div>
-            <div className="p-2 bg-blue-500/10 rounded-lg">
-              <Stethoscope className="h-4 w-4 text-blue-500" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="p-2 bg-blue-500/10 rounded-lg"><Stethoscope className="h-4 w-4 text-blue-500" /></div>
+          </CardContent>
+        </Card>
 
-      {/* Card: Pacientes */}
-      <Card className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-900 transition-colors">
-        <CardContent className="p-4">
-          <div className="flex justify-between items-start">
+        <Card className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-900 transition-colors">
+          <CardContent className="p-4 flex justify-between items-start">
             <div className="space-y-1">
               <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Pacientes</p>
-              <h2 className="text-2xl font-bold tracking-tight">{patientsCount.count || 0}</h2>
+              <h2 className="text-2xl font-bold tracking-tight">{resPatients.count || 0}</h2>
             </div>
-            <div className="p-2 bg-green-500/10 rounded-lg">
-              <Users className="h-4 w-4 text-green-500" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="p-2 bg-green-500/10 rounded-lg"><Users className="h-4 w-4 text-green-500" /></div>
+          </CardContent>
+        </Card>
 
-      {/* Card: Agenda Hoje */}
-      <Card className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-900 transition-colors">
-        <CardContent className="p-4">
-          <div className="flex justify-between items-start">
+        <Card className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-900 transition-colors">
+          <CardContent className="p-4 flex justify-between items-start">
             <div className="space-y-1">
               <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Agenda Hoje</p>
-              <h2 className="text-2xl font-bold tracking-tight">{appointmentsToday.data?.length || 0}</h2>
+              <h2 className="text-2xl font-bold tracking-tight">{resToday.data?.length || 0}</h2>
             </div>
-            <div className="p-2 bg-purple-500/10 rounded-lg">
-              <CalendarDays className="h-4 w-4 text-purple-500" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="p-2 bg-purple-500/10 rounded-lg"><CalendarDays className="h-4 w-4 text-purple-500" /></div>
+          </CardContent>
+        </Card>
 
-      {/* Card: Taxa de Presença */}
-      <Card className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-900 transition-colors">
-        <CardContent className="p-4">
-          <div className="flex justify-between items-start">
+        <Card className="bg-zinc-900/50 border-zinc-800 hover:bg-zinc-900 transition-colors">
+          <CardContent className="p-4 flex justify-between items-start">
             <div className="space-y-1">
               <p className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Presença</p>
               <h2 className="text-2xl font-bold tracking-tight">{presenceRate}%</h2>
             </div>
-            <div className="p-2 bg-emerald-500/10 rounded-lg">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+            <div className="p-2 bg-emerald-500/10 rounded-lg"><CheckCircle2 className="h-4 w-4 text-emerald-500" /></div>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Seção Próximo Atendimento */}
+      {/* Seção Próximo Atendimento em Destaque */}
       <div className="space-y-4">
-        <h3 className="text-lg font-medium">Próximo Atendimento</h3>
-        {appointmentsToday.data?.[0] ? (
-          <Card className="bg-zinc-900/50 border-zinc-800 p-6">
+        <h3 className="text-lg font-medium flex items-center gap-2">
+          <Clock className="h-5 w-5 text-blue-500" /> Próximo Atendimento
+        </h3>
+        {nextApp ? (
+          <Card className="bg-zinc-900/50 border-zinc-800 p-6 border-l-4" style={{ borderLeftColor: nextApp.services?.color || '#3b82f6' }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center font-bold">
-                  {appointmentsToday.data[0].customers?.full_name?.substring(0, 2).toUpperCase()}
+                <div className="h-12 w-12 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center font-bold text-blue-500">
+                  {nextApp.customers?.full_name?.substring(0, 2).toUpperCase()}
                 </div>
                 <div>
-                  <p className="font-bold text-lg">{appointmentsToday.data[0].customers?.full_name}</p>
+                  <p className="font-bold text-lg text-zinc-100">{nextApp.customers?.full_name}</p>
                   <p className="text-sm text-zinc-400">
-                    {appointmentsToday.data[0].services?.name} • {new Date(appointmentsToday.data[0].start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    {nextApp.services?.name} • <span className="text-blue-400 font-medium">
+                      {new Date(nextApp.start_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })}
+                    </span>
                   </p>
                 </div>
               </div>
-              <span className="px-3 py-1 rounded-full bg-green-500/10 text-green-500 text-xs font-bold border border-green-500/20">
-                Confirmado
+              <span className="px-3 py-1 rounded-full bg-blue-500/10 text-blue-500 text-xs font-bold border border-blue-500/20 uppercase tracking-widest">
+                Agendado
               </span>
             </div>
           </Card>
         ) : (
-          <div className="text-zinc-500 italic p-8 border border-dashed border-zinc-800 rounded-lg text-center">
+          <div className="text-zinc-500 italic p-12 border border-dashed border-zinc-800 rounded-xl text-center">
             Nenhuma consulta agendada para o restante do dia.
           </div>
         )}
       </div>
-
     </div>
   )
 }
