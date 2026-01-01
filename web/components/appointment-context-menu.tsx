@@ -11,17 +11,30 @@ import {
   ContextMenuSubContent
 } from "@/components/ui/context-menu"
 import { toggleAppointmentStatus } from "@/app/actions/toggle-appointment-status"
+import { cancelAppointment } from "@/app/actions/cancel-appointment" // Importe a nova action
 import { STATUS_CONFIG } from "@/lib/appointment-config"
 import { toast } from "sonner"
+import { Trash2 } from "lucide-react"
 
 export function AppointmentContextMenu({ children, appointment, className }: any) {
   
   async function handleStatusChange(newStatus: string) {
     const result = await toggleAppointmentStatus(appointment.id, newStatus)
     if (result.success) {
-      toast.success(`Status atualizado para: ${STATUS_CONFIG[newStatus].label}`)
+      toast.success(`Status atualizado!`)
     } else {
       toast.error("Erro ao atualizar status")
+    }
+  }
+
+  async function handleCancel() {
+    if (confirm("Tem certeza que deseja cancelar este agendamento?")) {
+      const result = await cancelAppointment(appointment.id)
+      if (result.success) {
+        toast.success("Agendamento cancelado com sucesso")
+      } else {
+        toast.error("Erro ao cancelar")
+      }
     }
   }
 
@@ -46,8 +59,15 @@ export function AppointmentContextMenu({ children, appointment, className }: any
             ))}
           </ContextMenuSubContent>
         </ContextMenuSub>
+        
         <ContextMenuSeparator className="bg-zinc-800" />
-        <ContextMenuItem className="text-red-400 focus:text-red-400">
+        
+        {/* BOTÃO DE CANCELAR AGORA FUNCIONAL */}
+        <ContextMenuItem 
+          onClick={handleCancel}
+          className="text-red-400 focus:text-red-400 gap-2"
+        >
+          <Trash2 className="h-4 w-4" />
           Cancelar Agendamento
         </ContextMenuItem>
       </ContextMenuContent>
