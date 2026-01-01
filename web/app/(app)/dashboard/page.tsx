@@ -153,54 +153,79 @@ export default async function DashboardPage() {
 
       {/* Seção Próximo Atendimento em Destaque */}
       <div className="space-y-4">
-        <h3 className="text-lg font-medium flex items-center gap-2">
-          <Clock className="h-5 w-5 text-blue-500" /> Próximo Atendimento
-        </h3>
-        {nextApp ? (
-          /* O Menu de Contexto agora envolve o Card, permitindo o clique com o botão direito */
-          <AppointmentContextMenu 
-            appointment={nextApp} 
-            customers={resPatients.data || []} 
-            services={resServices.data || []}
-          >
-            <Card 
-              className="bg-zinc-900/50 border-zinc-800 p-6 border-l-4 cursor-context-menu hover:bg-zinc-900 transition-all" 
-              style={{ borderLeftColor: nextApp.services?.color || '#3b82f6' }}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center font-bold text-blue-500">
-                    {nextApp.customers?.full_name?.substring(0, 2).toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="font-bold text-lg text-zinc-100">{nextApp.customers?.full_name}</p>
-                    <p className="text-sm text-zinc-400">
-                      {nextApp.services?.name} • <span className="text-blue-400 font-medium">
-                        {new Date(nextApp.start_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })}
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-medium flex items-center gap-2">
+            <Clock className="h-5 w-5 text-blue-500" /> Agenda de Hoje
+          </h3>
+          <span className="text-xs text-zinc-500 bg-zinc-900 px-2 py-1 rounded-full border border-zinc-800">
+            {resToday.data?.length || 0} atendimentos
+          </span>
+        </div>
+
+        <div className="grid gap-3">
+          {resToday.data && resToday.data.length > 0 ? (
+            resToday.data.map((app: any) => (
+              /* Cada agendamento da lista agora tem seu próprio Menu de Contexto */
+              <AppointmentContextMenu 
+                key={app.id}
+                appointment={app} 
+                customers={resPatients.data || []} 
+                services={resServices.data || []}
+              >
+                <Card 
+                  className="bg-zinc-900/50 border-zinc-800 p-4 border-l-4 cursor-context-menu hover:bg-zinc-900 transition-all group" 
+                  style={{ borderLeftColor: app.services?.color || '#3b82f6' }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      {/* Avatar com as iniciais do paciente */}
+                      <div className="h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center font-bold text-xs text-blue-500 group-hover:border-blue-500/50 transition-colors">
+                        {app.customers?.full_name?.substring(0, 2).toUpperCase()}
+                      </div>
+                      
+                      <div>
+                        <p className="font-bold text-sm text-zinc-100">{app.customers?.full_name}</p>
+                        <div className="flex items-center gap-2 text-xs text-zinc-400">
+                          <span>{app.services?.name}</span>
+                          <span className="text-zinc-700">•</span>
+                          <span className="text-blue-400 font-medium">
+                            {new Date(app.start_time).toLocaleTimeString('pt-BR', { 
+                              hour: '2-digit', 
+                              minute: '2-digit', 
+                              timeZone: 'UTC' 
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                      {/* Badge de Status Dinâmica */}
+                      <span className={cn(
+                        "px-2 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider",
+                        app.status === 'scheduled' && "bg-blue-500/10 text-blue-500 border-blue-500/20",
+                        app.status === 'arrived' && "bg-amber-500/10 text-amber-500 border-amber-500/20",
+                        app.status === 'completed' && "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+                        app.status === 'canceled' && "bg-red-500/10 text-red-500 border-red-500/20"
+                      )}>
+                        {app.status === 'scheduled' ? 'Agendado' : 
+                        app.status === 'arrived' ? 'Na Recepção' : 
+                        app.status === 'completed' ? 'Finalizado' : app.status}
                       </span>
-                    </p>
+                    </div>
                   </div>
-                </div>
-                
-                {/* Badge de Status Dinâmica */}
-                <span className={cn(
-                  "px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-widest",
-                  nextApp.status === 'scheduled' ? "bg-blue-500/10 text-blue-500 border-blue-500/20" :
-                  nextApp.status === 'arrived' ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
-                  "bg-zinc-800 text-zinc-500 border-zinc-700"
-                )}>
-                  {nextApp.status === 'scheduled' ? 'Agendado' : 
-                  nextApp.status === 'arrived' ? 'Chegou' : nextApp.status}
-                </span>
-              </div>
-              <p className="text-[10px] text-zinc-600 mt-4 italic text-right">Clique com o botão direito para gerenciar status</p>
-            </Card>
-          </AppointmentContextMenu>
-        ) : (
-          <div className="text-zinc-500 italic p-12 border border-dashed border-zinc-800 rounded-xl text-center">
-            Nenhuma consulta agendada para o restante do dia.
-          </div>
-        )}
+                </Card>
+              </AppointmentContextMenu>
+            ))
+          ) : (
+            <div className="text-zinc-500 italic p-12 border border-dashed border-zinc-800 rounded-xl text-center bg-zinc-900/20">
+              Nenhum agendamento para hoje.
+            </div>
+          )}
+        </div>
+        <p className="text-[10px] text-zinc-600 italic text-center">
+          Dica: Use o botão direito em qualquer card para gerenciar o status do atendimento.
+        </p>
       </div>
     </div>
   )
