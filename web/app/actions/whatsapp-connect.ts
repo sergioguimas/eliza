@@ -14,17 +14,17 @@ export async function createWhatsappInstance() {
   if (!user) return { error: "Usuário não autenticado" }
 
   const { data: profile } = await supabase
-    .from('profiles')
-    .select('organization_id, organizations(slug)')
-    .eq('id', user.id)
-    .single()
+  .from('profiles')
+  .select('organizations_id, organizations(slug)') // Alterado para plural
+  .eq('id', user.id)
+  .single() as any
 
-  if (!profile?.organization_id || !profile?.organizations?.slug) {
-    return { error: "Organização não encontrada." }
-  }
+if (!profile?.organizations_id || !profile?.organizations?.slug) {
+  return { error: "Organização não encontrada. Verifique o cadastro." }
+}
 
-  const instanceName = profile.organizations.slug
-  const organizationId = profile.organization_id
+const instanceName = profile.organizations.slug
+const organizationId = profile.organizations_id
 
   console.log("🚀 [Evolution v2.3.6] Iniciando Monster Instance:", instanceName)
 

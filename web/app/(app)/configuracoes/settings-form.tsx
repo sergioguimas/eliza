@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { updateSettings } from "@/app/actions/update-settings"
 import { toast } from "sonner"
 import { Loader2, Save, Building2, User, Share2, QrCode } from "lucide-react"
+import { WhatsappSettings } from "./whatsapp-settings"
 
 export function SettingsForm({ profile }: { profile: any }) {
   const [loading, setLoading] = useState(false)
@@ -94,33 +95,32 @@ export function SettingsForm({ profile }: { profile: any }) {
 
         {/* ABA 3: EVOLUTION API */}
         <TabsContent value="api">
-          <Card className="bg-zinc-900/50 border-zinc-800">
+          {/* Aqui injetamos o seu componente que já tem a lógica de QR Code e Connect */}
+          <WhatsappSettings />
+          
+          <Card className="mt-4 bg-zinc-900/50 border-zinc-800">
             <CardHeader>
-              <CardTitle>Conexão WhatsApp</CardTitle>
-              <CardDescription>Configurações para automação de mensagens.</CardDescription>
+              <CardTitle className="text-sm">Configurações Técnicas</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="evolution_url">URL da Instância</Label>
-                  <Input id="evolution_url" name="evolution_url" defaultValue={organization?.evolution_url} placeholder="https://api.instancia.com" className="bg-zinc-950 border-zinc-800 font-mono text-xs" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="evolution_apikey">API Key (ApuToken)</Label>
-                  <Input id="evolution_apikey" name="evolution_apikey" type="password" defaultValue={organization?.evolution_apikey} className="bg-zinc-950 border-zinc-800 font-mono text-xs" />
-                </div>
+            <CardContent className="space-y-4">
+              <div className="grid gap-2">
+                  <Label htmlFor="evolution_url">URL da Instância (Ngrok)</Label>
+                  <Input 
+                    id="evolution_url" 
+                    name="evolution_url" 
+                    defaultValue={organization?.evolution_url || 'http://localhost:8082'} 
+                    className="bg-zinc-950 border-zinc-800 font-mono text-xs" 
+                  />
               </div>
-
-              {/* Área do QR Code (Placeholder para próxima etapa) */}
-              <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-zinc-800 rounded-xl bg-zinc-950/50 space-y-4">
-                <QrCode className="h-12 w-12 text-zinc-700" />
-                <div className="text-center">
-                  <p className="text-sm font-medium text-zinc-400">QR Code de Conexão</p>
-                  <p className="text-xs text-zinc-600 italic">Salve as credenciais acima para gerar o código.</p>
-                </div>
-                <Button type="button" variant="outline" size="sm" className="border-zinc-700 text-zinc-400" disabled>
-                  Gerar QR Code
-                </Button>
+              <div className="grid gap-2">
+                  <Label htmlFor="evolution_apikey">API Key (Global)</Label>
+                  <Input 
+                    id="evolution_apikey" 
+                    name="evolution_apikey" 
+                    type="password" 
+                    defaultValue={organization?.evolution_apikey || 'medagenda123'} 
+                    className="bg-zinc-950 border-zinc-800 font-mono text-xs" 
+                  />
               </div>
             </CardContent>
           </Card>
