@@ -9,26 +9,39 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 export async function createWhatsappInstance() {
   const supabase = await createClient()
-  
   const { data: { user } } = await supabase.auth.getUser()
+  
   if (!user) return { error: "Usuário não autenticado" }
+  
+  const { data: profile, error: dbError } = await supabase
+    .from('profiles')
+    .select(`
+      organizations_id, 
+      organizations:organizations_id (
+        id,
+        slug, 
+        evolution_url, 
+        evolution_apikey
+      )
+    `)
+    .eq('id', user.id)
+    .single() as any
 
-  const { data: profile } = await supabase
-  .from('profiles')
-  .select('organizations_id, organizations(slug)') // Alterado para plural
-  .eq('id', user.id)
-  .single() as any
+  // LOG DE DEBUG: Verifique no terminal o que aparece aqui
+  console.log("🔍 Perfil encontrado:", profile)
 
-if (!profile?.organizations_id || !profile?.organizations?.slug) {
-    console.log("Perfil buscado:", profile);
-    return { error: "Organização não encontrada. Verifique o cadastro." }
-}
+  if (dbError || !profile?.organizations_id) {
+    return { error: "Vínculo com a organização não encontrado no seu perfil." }
+  }
 
-const url = profile.organizations.evolution_url || EVOLUTION_URL
-const apiKey = profile.organizations.evolution_apikey || EVOLUTION_API_KEY
+  if (!profile.organizations?.slug) {
+    return { error: "A clínica foi encontrada, mas o identificador (slug) está vazio." }
+  }
 
 const instanceName = profile.organizations.slug
 const organizationId = profile.organizations_id
+const url = profile.organizations.evolution_url || EVOLUTION_URL
+const apiKey = profile.organizations.evolution_apikey || EVOLUTION_API_KEY
 
   console.log("🚀 [Evolution v2.3.6] Iniciando Monster Instance:", instanceName)
 
