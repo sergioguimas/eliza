@@ -2,18 +2,22 @@
 
 import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { updateSettings } from "@/app/actions/update-settings"
 import { WhatsappSettings } from "./whatsapp-settings"
-import { sendTestMessage } from "@/app/actions/whatsapp-test"
 import { toast } from "sonner"
 import { Loader2, Save, Building2, User, Share2 } from "lucide-react"
 
-export function SettingsForm({ profile, whatsappStatus }: { profile: any, whatsappStatus?: string | null }) {
+interface SettingsFormProps {
+  profile: any
+  whatsappStatus?: string | null
+}
+
+export function SettingsForm({ profile, whatsappStatus }: SettingsFormProps) {
   const [loading, setLoading] = useState(false)
   const organization = profile?.organizations
 
@@ -35,7 +39,7 @@ export function SettingsForm({ profile, whatsappStatus }: { profile: any, whatsa
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* CAMPOS OCULTOS DE SEGURANÇA: Garantem que os IDs e o Nome sejam enviados independente da aba aberta */}
+      {/* CAMPOS OCULTOS DE SEGURANÇA: Garantem o envio de dados obrigatórios */}
       <input type="hidden" name="user_id" value={profile?.id} />
       <input type="hidden" name="org_id" value={profile?.organizations_id || ''} />
       <input type="hidden" name="name" value={organization?.name || ''} />
@@ -58,9 +62,7 @@ export function SettingsForm({ profile, whatsappStatus }: { profile: any, whatsa
           <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader>
               <CardTitle className="text-zinc-100">Dados Institucionais</CardTitle>
-              <CardDescription className="text-zinc-400">
-                Informações exibidas em documentos e cabeçalhos.
-              </CardDescription>
+              <CardDescription className="text-zinc-400">Informações exibidas em documentos e cabeçalhos.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-2">
@@ -70,7 +72,6 @@ export function SettingsForm({ profile, whatsappStatus }: { profile: any, whatsa
                   name="name" 
                   defaultValue={organization?.name || ''} 
                   className="bg-zinc-950 border-zinc-800 text-zinc-100"
-                  placeholder="Ex: Consultório Dr. João Silva"
                   required
                 />
               </div>
@@ -101,9 +102,7 @@ export function SettingsForm({ profile, whatsappStatus }: { profile: any, whatsa
           <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader>
               <CardTitle className="text-zinc-100">Configurações do Médico</CardTitle>
-              <CardDescription className="text-zinc-400">
-                Como você aparecerá nas mensagens para os pacientes.
-              </CardDescription>
+              <CardDescription className="text-zinc-400">Como você aparecerá nas mensagens para os pacientes.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-2">
@@ -113,13 +112,12 @@ export function SettingsForm({ profile, whatsappStatus }: { profile: any, whatsa
                   name="full_name" 
                   defaultValue={profile?.full_name || ''} 
                   className="bg-zinc-950 border-zinc-800 text-zinc-100"
-                  placeholder="Ex: Dr. Horácio Ferreira"
                   required
                 />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="crm" className="text-zinc-300">Registro Profissional (CRM/CRP)</Label>
-                <Input id="crm" name="crm" defaultValue={organization?.crm || ''} className="bg-zinc-950 border-zinc-800" placeholder="Ex: 123456" />
+                <Input id="crm" name="crm" defaultValue={organization?.crm || ''} className="bg-zinc-950 border-zinc-800" />
               </div>
             </CardContent>
           </Card>
@@ -127,8 +125,7 @@ export function SettingsForm({ profile, whatsappStatus }: { profile: any, whatsa
 
         {/* ABA 3: WHATSAPP E API */}
         <TabsContent value="api" className="space-y-4 mt-4">
-          {/* Componente Real do WhatsApp */}
-          <WhatsappSettings />
+          <WhatsappSettings initialStatus={whatsappStatus} />
 
           <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader>
@@ -156,34 +153,9 @@ export function SettingsForm({ profile, whatsappStatus }: { profile: any, whatsa
               </div>
             </CardContent>
           </Card>
-          <div className="mt-6 p-4 border border-zinc-800 rounded-lg bg-zinc-950/50">
-          <h4 className="text-sm font-medium text-zinc-300 mb-4">Teste de Envio</h4>
-          <div className="flex gap-2">
-            <Input 
-              id="test_phone" 
-              placeholder="Seu número (DDD + número)" 
-              className="bg-zinc-900 border-zinc-800"
-            />
-            <Button 
-              type="button"
-              variant="secondary"
-              onClick={async () => {
-                const phone = (document.getElementById('test_phone') as HTMLInputElement).value
-                if(!phone) return toast.error("Digite um número")
-                
-                const res = await sendTestMessage(phone)
-                if(res.success) toast.success("Mensagem enviada!")
-                else toast.error("Erro: " + res.error)
-              }}
-            >
-              Enviar Teste
-            </Button>
-          </div>
-        </div>
         </TabsContent>
       </Tabs>
 
-      {/* Botão Global de Salvamento */}
       <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12">
         {loading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Save className="h-5 w-5 mr-2" />}
         Salvar Todas as Configurações
