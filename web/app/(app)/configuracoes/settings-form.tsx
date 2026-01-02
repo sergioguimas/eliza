@@ -38,6 +38,7 @@ export function SettingsForm({ profile }: { profile: any }) {
       {/* CAMPOS OCULTOS DE SEGURANÇA: Garantem que os IDs e o Nome sejam enviados independente da aba aberta */}
       <input type="hidden" name="user_id" value={profile?.id} />
       <input type="hidden" name="org_id" value={profile?.organizations_id || ''} />
+      <input type="hidden" name="name" value={organization?.name || ''} />
 
       <Tabs defaultValue="organizacao" className="w-full">
         <TabsList className="grid w-full grid-cols-3 bg-zinc-900 border border-zinc-800">

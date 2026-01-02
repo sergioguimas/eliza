@@ -26,6 +26,7 @@ export async function sendTestMessage(phoneNumber: string) {
 
     const baseUrl = org.evolution_url || "http://127.0.0.1:8082"
     const url = `${baseUrl}/message/sendText/${org.slug}`
+    console.log("🔗 Tentando enviar para:", url)
   
   try {
     const response = await fetch(url, {
