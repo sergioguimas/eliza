@@ -1,13 +1,10 @@
 import { Metadata } from "next"
 import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
-import { Stethoscope, Plus, Pencil, Power, PowerOff } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Stethoscope } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { CreateServiceDialog } from "@/components/create-service-dialog"
-import { deleteService } from "@/app/actions/create-service"
-import { Trash2 } from "lucide-react"
 import { DeleteServiceButton } from "@/components/delete-service-button"
 
 export const metadata: Metadata = {
@@ -26,11 +23,13 @@ export default async function ProcedimentosPage() {
     .eq('id', user.id)
     .single() as any
 
+  if (!profile?.organization_id) redirect('/setup')
+
   const { data: services } = await supabase
     .from('services')
     .select('*')
     .eq('organization_id', profile.organization_id)
-    .order('name')
+    .order('title') // CORREÇÃO: Ordenar por title
 
   return (
     <div className="p-8 space-y-8 bg-black min-h-screen text-zinc-100">
@@ -47,10 +46,10 @@ export default async function ProcedimentosPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {services?.map((service: any) => (
             <Card key={service.id} className={cn(
-              "bg-zinc-900/50 border-zinc-800 transition-all border-l-4", // Adicionamos border-l-4
-              !service.active && "opacity-60"
+              "bg-zinc-900/50 border-zinc-800 transition-all border-l-4",
+              !service.is_active && "opacity-60" // CORREÇÃO: is_active
             )}
-            style={{ borderLeftColor: service.color || '#3b82f6' }} // Aplica a cor na borda esquerda
+            style={{ borderLeftColor: service.color || '#3b82f6' }}
             >
             <CardContent className="p-6">
               <div className="flex justify-between items-start mb-4">
@@ -67,9 +66,10 @@ export default async function ProcedimentosPage() {
               </div>
 
               <div className="space-y-1">
-                <h3 className="font-bold text-lg text-zinc-100">{service.name}</h3>
+                {/* CORREÇÃO: service.title em vez de service.name */}
+                <h3 className="font-bold text-lg text-zinc-100">{service.title}</h3>
                 <div className="flex items-center gap-4 text-sm text-zinc-400">
-                  <span>{service.duration} min</span>
+                  <span>{service.duration_minutes} min</span> {/* CORREÇÃO: duration_minutes */}
                   <span className="h-1 w-1 rounded-full bg-zinc-700" />
                   <span>
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(service.price || 0)}
