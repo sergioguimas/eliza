@@ -9,31 +9,33 @@ export default async function AgendamentosPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // 2. Busca o perfil para obter o ID da organização
+  // 2. Busca perfil
   const { data: profile } = await supabase
     .from('profiles')
-    .select('organizations_id')
+    .select('organization_id')
     .eq('id', user.id)
-    .single() as any
+    .single()
 
-  if (!profile?.organizations_id) {
-    redirect('/configuracoes') // Ou mostre uma mensagem de erro amigável
+  if (!profile?.organization_id) {
+    redirect('/configuracoes') 
   }
 
-// 3. Busca em paralelo com tipagem flexível para evitar erros de compilação
-  const [customersRes, servicesRes, appointmentsRes]: any = await Promise.all([
+  const orgId = profile.organization_id
+
+  // 3. Busca em paralelo
+  const [customersRes, servicesRes, appointmentsRes] = await Promise.all([
     supabase
       .from('customers')
-      .select('id, full_name') // Verifique no banco se é full_name ou name
-      .eq('organizations_id', profile.organizations_id)
+      .select('id, name')
+      .eq('organization_id', orgId)
       .eq('active', true)
-      .order('full_name'),
+      .order('name'),
 
     supabase
       .from('services')
-      .select('id, name, color') // Verifique no banco se é name ou title
-      .eq('organizations_id', profile.organizations_id)
-      .eq('active', true),
+      .select('id, title, color')
+      .eq('organization_id', orgId)
+      .eq('is_active', true),
 
     supabase
       .from('appointments')
@@ -42,16 +44,33 @@ export default async function AgendamentosPage() {
         start_time, 
         end_time, 
         status, 
-        customers(full_name), 
-        services(name, color)
+        customers(name), 
+        services(title, color)
       `)
-      .eq('organizations_id', profile.organizations_id)
+      .eq('organization_id', orgId)
   ])
 
-  // Tratamento de segurança para os dados
+  // Tratamento de segurança
   const customers = customersRes.data || []
   const services = servicesRes.data || []
   const appointments = appointmentsRes.data || []
+
+  // Adaptação para o CalendarView não quebrar
+  const mappedServices = services.map((s: any) => ({
+    ...s,
+    name: s.title 
+  }))
+
+  const mappedAppointments = appointments.map((a: any) => ({
+    ...a,
+    services: a.services ? { ...a.services, name: a.services.title } : null,
+    customers: a.customers ? { ...a.customers, full_name: a.customers.name } : null
+  }))
+
+  const mappedCustomers = customers.map((c: any) => ({
+    ...c,
+    full_name: c.name
+  }))
 
   return (
     <div className="p-8 space-y-8 bg-black min-h-screen text-zinc-100">
@@ -61,10 +80,10 @@ export default async function AgendamentosPage() {
       </div>
 
       <CalendarView 
-        appointments={appointments} 
-        customers={customers} 
-        services={services}
-        organizations_id={profile.organizations_id}
+        appointments={mappedAppointments} 
+        customers={mappedCustomers} 
+        services={mappedServices}
+        organizations_id={orgId}
       />
     </div>
   )

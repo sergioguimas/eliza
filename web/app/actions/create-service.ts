@@ -7,32 +7,30 @@ export async function upsertService(formData: FormData) {
   const supabase = await createClient()
 
   const id = formData.get('id') as string
-  const name = formData.get('name') as string
-  const duration = Number(formData.get('duration'))
+  const title = formData.get('name') as string // O form envia 'name', mas salvamos como 'title'
+  const duration_minutes = Number(formData.get('duration'))
   const price = Number(formData.get('price'))
   const color = formData.get('color') as string || '#3b82f6'
-  const organizations_id = formData.get('organizations_id') as string
+  const organization_id = formData.get('organizations_id') as string
 
-  // Objeto mapeado exatamente como a tabela física
+  if (!organization_id || organization_id === 'undefined') {
+    return { error: "Erro interno: ID da organização não identificado." }
+  }
+
+  // Objeto mapeado para o novo Schema
   const serviceData = {
-    name,
-    duration,
+    title,
+    duration_minutes,
     price,
     color,
-    organizations_id,
-    active: true
-  }
-  // LOG DE TESTE: Verifique se isso aparece no seu terminal/Vercel
-  // Validação extra antes do banco
-  if (!organizations_id || organizations_id === 'undefined') {
-    console.error("DEBUG: organizations_id está faltando no FormData");
-    return { error: "Erro interno: ID da organização não identificado." }
+    organization_id,
+    is_active: true
   }
 
   try {
     const { error } = id 
-      ? await supabase.from('services').update(serviceData as any).eq('id', id)
-      : await supabase.from('services').insert(serviceData as any)
+      ? await supabase.from('services').update(serviceData).eq('id', id)
+      : await supabase.from('services').insert(serviceData)
 
     if (error) throw error
 
@@ -48,7 +46,6 @@ export async function upsertService(formData: FormData) {
 export async function deleteService(id: string) {
   const supabase = await createClient()
   
-  // O 'as any' ajuda se houver conflito de tipagem no delete
   const { error } = await supabase
     .from('services')
     .delete()
@@ -57,4 +54,3 @@ export async function deleteService(id: string) {
   if (!error) revalidatePath('/procedimentos')
   return { error: error?.message }
 }
-

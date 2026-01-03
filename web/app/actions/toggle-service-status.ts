@@ -9,7 +9,7 @@ export async function toggleServiceStatus(serviceId: string, currentStatus: bool
   try {
     const { error } = await supabase
       .from('services')
-      .update({ active: !currentStatus })
+      .update({ is_active: !currentStatus })
       .eq('id', serviceId)
 
     if (error) throw error
