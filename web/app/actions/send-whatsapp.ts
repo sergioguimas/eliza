@@ -2,40 +2,37 @@
 
 import { createClient } from "@/utils/supabase/server"
 
-const EVOLUTION_URL = process.env.NEXT_PUBLIC_EVOLUTION_API_URL || "http://127.0.0.1:8082"
-const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY!
+const DEFAULT_EVOLUTION_URL = process.env.NEXT_PUBLIC_EVOLUTION_API_URL || "http://127.0.0.1:8082"
+const GLOBAL_API_KEY = process.env.EVOLUTION_API_KEY || "medagenda123"
 
 export async function sendWhatsappMessage(phone: string, message: string) {
   const supabase = await createClient()
 
-  // 1. Pega a instância da empresa do usuário logado
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Usuário não autenticado" }
 
+  // CORREÇÃO: organization_id singular
   const { data: profile } = await supabase
     .from('profiles')
-    .select('organizations(slug)')
+    .select('organization_id, organizations:organization_id(slug, evolution_url, evolution_api_key)')
     .eq('id', user.id)
-    .single()
+    .single() as any
 
   if (!profile?.organizations?.slug) return { error: "Organização sem instância." }
   
   const instanceName = profile.organizations.slug
+  const EVOLUTION_URL = profile.organizations.evolution_url || DEFAULT_EVOLUTION_URL
+  const API_KEY = profile.organizations.evolution_api_key || GLOBAL_API_KEY
 
-  // 2. Formata o telefone (Remove caracteres não numéricos)
-  // O padrão do Brasil é 55 + DDD + Numero.
   const cleanPhone = phone.replace(/\D/g, "")
   const formattedPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`
 
   try {
-    console.log(`📤 Enviando via [${instanceName}] para [${formattedPhone}]...`)
-
-    // 3. Dispara a requisição para a Evolution API
     const response = await fetch(`${EVOLUTION_URL}/message/sendText/${instanceName}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': EVOLUTION_API_KEY
+        'apikey': API_KEY
       },
       body: JSON.stringify({
         number: formattedPhone,
