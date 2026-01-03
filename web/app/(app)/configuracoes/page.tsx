@@ -10,7 +10,6 @@ export default async function SettingsPage() {
     redirect("/login")
   }
 
-  // CORREÇÃO: organization_id (singular)
   const { data: profile } = await supabase
     .from('profiles')
     .select(`
@@ -20,7 +19,6 @@ export default async function SettingsPage() {
     .eq('id', user.id)
     .single() as any
 
-  // CORREÇÃO: organization_id (singular)
   const { data: whatsapp } = await supabase
     .from('whatsapp_instances')
     .select('status')

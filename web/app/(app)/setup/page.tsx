@@ -8,7 +8,6 @@ export default async function SetupPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // CORREÇÃO: organization_id (singular)
   const { data: profile } = await supabase
     .from('profiles')
     .select(`

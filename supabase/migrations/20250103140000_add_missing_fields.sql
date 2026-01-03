@@ -24,3 +24,13 @@ add column if not exists signed_at timestamptz;
 
 -- Adiciona índice para listar por status
 create index if not exists idx_service_notes_status on public.service_notes(status);
+
+-- Adiciona campos de contato na tabela de Organizações (Clínica)
+alter table public.organizations 
+add column if not exists address text,
+add column if not exists phone text,
+add column if not exists email text;
+
+-- Adiciona o CRM na tabela de Perfis (Médico)
+alter table public.profiles
+add column if not exists crm text;

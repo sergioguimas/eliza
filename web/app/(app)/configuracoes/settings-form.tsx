@@ -66,7 +66,7 @@ export function SettingsForm({ profile, whatsappStatus }: SettingsFormProps) {
     
     // IDs obrigatórios
     dataToSend.append('user_id', profile?.id)
-    dataToSend.append('org_id', profile?.organization_id || '') // Corrigido para singular
+    dataToSend.append('org_id', profile?.organization_id || '')
     
     // Campos do formulário
     Object.entries(formData).forEach(([key, value]) => {
