@@ -2,28 +2,41 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Calendar, Clock, Loader2, Plus } from "lucide-react"
+import { Label } from "@/components/ui/label"
+import { CalendarPlus, Loader2 } from "lucide-react"
 import { createAppointment } from "@/app/actions/create-appointment"
 import { toast } from "sonner"
 
-interface Props {
-  customers: any[]
-  services: any[]
+// DEFINIÇÃO DE TIPOS CORRIGIDA
+type Props = {
+  customers: { id: string; name: string }[]
+  services: { id: string; title: string }[] 
+  staff: { id: string; full_name: string }[] // Recebe staff
   organization_id: string
 }
 
-export function CreateAppointmentDialog({ customers, services, organization_id }: Props) {
+export function CreateAppointmentDialog({ customers, services, staff, organization_id }: Props) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setLoading(true)
-
     const formData = new FormData(event.currentTarget)
     formData.append('organization_id', organization_id)
 
@@ -32,7 +45,7 @@ export function CreateAppointmentDialog({ customers, services, organization_id }
     if (result.error) {
       toast.error(result.error)
     } else {
-      toast.success("Agendamento realizado!")
+      toast.success("Agendamento criado!")
       setOpen(false)
     }
     setLoading(false)
@@ -41,57 +54,70 @@ export function CreateAppointmentDialog({ customers, services, organization_id }
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-          <Plus className="mr-2 h-4 w-4" /> Novo Agendamento
+        <Button className="bg-blue-600 hover:bg-blue-700">
+          <CalendarPlus className="mr-2 h-4 w-4" /> Novo Agendamento
         </Button>
       </DialogTrigger>
-      <DialogContent className="bg-zinc-900 border-zinc-800 text-white sm:max-w-[425px]">
+      <DialogContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
         <DialogHeader>
-          <DialogTitle>Agendar Atendimento</DialogTitle>
+          <DialogTitle>Novo Agendamento</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="customer">Paciente</Label>
+        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+          
+          <div className="space-y-2">
+            <Label>Paciente</Label>
             <Select name="customer_id" required>
               <SelectTrigger className="bg-zinc-950 border-zinc-800">
                 <SelectValue placeholder="Selecione o paciente" />
               </SelectTrigger>
-              <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
-                {customers.map((c) => (
+              <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
+                {customers.map(c => (
                   <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="service">Procedimento</Label>
-            <Select name="service_id" required>
+          <div className="space-y-2">
+            <Label>Profissional</Label>
+            <Select name="staff_id">
               <SelectTrigger className="bg-zinc-950 border-zinc-800">
-                <SelectValue placeholder="Selecione o serviço" />
+                <SelectValue placeholder="Selecione o médico (Opcional)" />
               </SelectTrigger>
-              <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
-                {services.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name} ({s.duration} min)
-                  </SelectItem>
+              <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
+                {staff?.map(s => (
+                  <SelectItem key={s.id} value={s.id}>{s.full_name || 'Sem nome'}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="start_time">Data e Hora</Label>
+          <div className="space-y-2">
+            <Label>Procedimento</Label>
+            <Select name="service_id" required>
+              <SelectTrigger className="bg-zinc-950 border-zinc-800">
+                <SelectValue placeholder="Selecione o procedimento" />
+              </SelectTrigger>
+              <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
+                {services.map(s => (
+                  <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Data e Hora</Label>
             <Input 
               name="start_time" 
               type="datetime-local" 
               required 
-              className="bg-zinc-950 border-zinc-800 text-white"
+              className="bg-zinc-950 border-zinc-800 block" 
             />
           </div>
 
-          <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 mt-4">
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirmar Agendamento'}
+          <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700">
+            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Confirmar Agendamento'}
           </Button>
         </form>
       </DialogContent>

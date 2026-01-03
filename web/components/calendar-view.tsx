@@ -7,7 +7,7 @@ import {
   isToday, parseISO, startOfDay, addWeeks, subWeeks, getHours
 } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock } from "lucide-react"
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { CreateAppointmentDialog } from "@/components/create-appointment-dialog"
@@ -15,19 +15,21 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AppointmentContextMenu } from "./appointment-context-menu"
 import { STATUS_CONFIG } from "@/lib/appointment-config"
 
+// Tipo alinhado com o Banco de Dados
 type Appointment = {
   id: string
   start_time: string
   end_time: string
   status: string | null
   customers: { name: string } | any
-  services: { name: string; color?: string } | any
+  services: { title: string; color?: string } | any 
 }
 
 type Props = {
   appointments: Appointment[]
   customers: { id: string; name: string }[]
-  services: { id: string; name: string }[]
+  services: { id: string; title: string }[] // Agora usa TITLE
+  staff: { id: string; full_name: string }[] // Agora aceita STAFF
   organization_id: string
 }
 
@@ -35,7 +37,7 @@ const getRawHour = (dateString: string) => {
   return new Date(dateString).getUTCHours();
 };
 
-export function CalendarView({ appointments, customers, services, organization_id }: Props) {
+export function CalendarView({ appointments, customers, services, staff, organization_id }: Props) {
   const [date, setDate] = useState(new Date())
   const [view, setView] = useState<'month' | 'week' | 'day'>('month')
 
@@ -55,7 +57,6 @@ export function CalendarView({ appointments, customers, services, organization_i
     setDate(new Date())
   }
   
-
   function AppointmentCard({ appointment }: { appointment: Appointment }) {
     const status = appointment.status || 'scheduled'
     const config = STATUS_CONFIG[status] || STATUS_CONFIG['scheduled']
@@ -87,7 +88,8 @@ export function CalendarView({ appointments, customers, services, organization_i
           </div>
           
           <div className="flex justify-between items-center opacity-70 text-[10px]">
-            <span className="truncate max-w-[60%]">{appointment.services?.name}</span>
+            {/* CORREÇÃO: Usa title */}
+            <span className="truncate max-w-[60%]">{appointment.services?.title}</span>
             <span>
               {new Date(appointment.start_time).toLocaleTimeString('pt-BR', { 
                 hour: '2-digit', 
@@ -238,9 +240,11 @@ export function CalendarView({ appointments, customers, services, organization_i
             </TabsList>
           </Tabs>
           <div className="h-6 w-px bg-zinc-800 mx-2 hidden md:block" />
+          
           <CreateAppointmentDialog 
             customers={customers} 
             services={services} 
+            staff={staff} // Passando staff
             organization_id={organization_id} 
           />
         </div>
