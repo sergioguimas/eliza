@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Loader2, QrCode, CheckCircle2, RefreshCw, Smartphone } from "lucide-react"
 import { createWhatsappInstance } from "@/app/actions/whatsapp-connect"
 import { toast } from "sonner"
+import { WhatsappTestButton } from "@/components/whatsapp-test-button"
 
 interface WhatsappSettingsProps {
   initialStatus?: string | null
@@ -132,6 +133,7 @@ export function WhatsappSettings({ initialStatus }: WhatsappSettingsProps) {
           </div>
         )}
       </CardContent>
+      <WhatsappTestButton />
     </Card>
   )
 }
