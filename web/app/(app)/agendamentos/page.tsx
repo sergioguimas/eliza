@@ -68,23 +68,4 @@ export default async function AgendamentosPage() {
       />
     </div>
   )
-
-  return (
-    <div className="p-8 space-y-8 bg-black min-h-screen text-zinc-100">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight text-white">Agenda Médica</h1>
-        <p className="text-zinc-400 text-sm">
-          Visualize e gerencie os atendimentos da sua clínica.
-        </p>
-      </div>
-
-      {/* Passa os dados mapeados para o componente de cliente */}
-      <CalendarView 
-        appointments={appointmentsRes.data || []} 
-        customers={customersRes.data || []} 
-        services={servicesRes.data || []}
-        organizations_id={profile.organizations_id}
-      />
-    </div>
-  )
 }
