@@ -10,7 +10,7 @@ const GLOBAL_API_KEY = process.env.EVOLUTION_API_KEY || "medagenda123"
 export async function sendAppointmentConfirmation(appointmentId: string) {
   const supabase = await createClient()
 
-  // 1. Busca os dados COMPLETOS (Join nas tabelas novas)
+  // 1. Busca os dados COMPLETOS
   const { data: appointment, error } = await supabase
     .from('appointments')
     .select(`
@@ -29,69 +29,79 @@ export async function sendAppointmentConfirmation(appointmentId: string) {
   }
 
   // 2. Validações
-  if (!appointment.customers?.phone) {
-    console.log("⚠️ Cliente sem telefone cadastrado.")
-    return { error: "Cliente sem telefone" }
-  }
-  
-  if (!appointment.organizations?.slug) {
-    console.log("⚠️ Organização sem slug/instância.")
-    return { error: "Organização sem instância WhatsApp" }
-  }
+  if (!appointment.customers?.phone) return { error: "Cliente sem telefone" }
+  if (!appointment.organizations?.slug) return { error: "Organização sem instância WhatsApp" }
 
-  // 3. Configuração da Instância
+  // 3. Configuração
   const instanceName = appointment.organizations.slug
   const EVOLUTION_URL = appointment.organizations.evolution_api_url || DEFAULT_EVOLUTION_URL
   const API_KEY = appointment.organizations.evolution_api_key || GLOBAL_API_KEY
   
-  // 4. Formata Telefone (Garante 55)
+  // 4. Formata Telefone
   const rawPhone = appointment.customers.phone.replace(/\D/g, "")
   const phone = rawPhone.startsWith("55") ? rawPhone : `55${rawPhone}`
 
-  // 5. Monta a Mensagem
+  // 5. Prepara Dados da Mensagem
   const dateObj = new Date(appointment.start_time)
   const dateStr = format(dateObj, "dd/MM 'às' HH:mm", { locale: ptBR })
   const profissional = appointment.profiles?.full_name || 'Clínica'
   const procedimento = appointment.services?.title || 'Consulta'
+  const primeiroNome = appointment.customers.name.split(' ')[0]
 
-  const message = `Olá *${appointment.customers.name.split(' ')[0]}*! 👋
+  // MENSAGEM 1: Texto Informativo
+  const messageText = `Olá *${primeiroNome}*! 👋
 
-  Seu agendamento está confirmado:
+Seu agendamento foi realizado com sucesso:
 
-  🏥 *Procedimento:* ${procedimento}
-  📅 *Data:* ${dateStr}
-  👨‍⚕️ *Profissional:* ${profissional}
+🏥 *${procedimento}*
+📅 *${dateStr}*
+👨‍⚕️ *${profissional}*
 
-  📍 _Chegue com 10 minutos de antecedência._
-  Responda essa mensagem para confirmar ou remarcar.`
+📍 _Chegue com 10 minutos de antecedência._
+Confirme sua presença abaixo 👇`
 
-  console.log(`📤 Enviando para ${phone} via ${instanceName}...`)
+  console.log(`📤 Enviando confirmação para ${phone}...`)
 
-  // 6. Envia para a API
   try {
-    const response = await fetch(`${EVOLUTION_URL}/message/sendText/${instanceName}`, {
+    // PASSO A: Envia o Texto
+    await fetch(`${EVOLUTION_URL}/message/sendText/${instanceName}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': API_KEY
-      },
+      headers: { 'Content-Type': 'application/json', 'apikey': API_KEY },
       body: JSON.stringify({
         number: phone,
-        text: message
+        text: messageText
       })
     })
 
-    const data = await response.json()
+    // Pequeno delay para garantir a ordem (opcional, mas bom)
+    await new Promise(r => setTimeout(r, 500))
 
-    if (!response.ok) {
-      console.error("❌ Erro Evolution API:", data)
-      return { error: "Falha no envio da mensagem" }
+    // PASSO B: Envia a Enquete (Botões Interativos)
+    const pollResponse = await fetch(`${EVOLUTION_URL}/message/sendPoll/${instanceName}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': API_KEY },
+      body: JSON.stringify({
+        number: phone,
+        name: "Você confirma este agendamento?", // Título da Enquete
+        selectableCount: 1, // Só pode escolher 1 opção
+        values: [
+          "✅ Confirmar Presença",
+          "❌ Preciso Remarcar"
+        ]
+      })
+    })
+
+    const data = await pollResponse.json()
+
+    if (!pollResponse.ok) {
+      console.error("❌ Erro Enquete:", data)
+      // Não retornamos erro aqui para não falhar o processo se só a enquete der ruim
     }
 
     return { success: true, data }
 
   } catch (err) {
-    console.error("❌ Erro de Conexão (Fetch):", err)
+    console.error("❌ Erro de Conexão:", err)
     return { error: "Erro de conexão" }
   }
 }
