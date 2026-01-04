@@ -17,13 +17,11 @@ const menuItems = [
   { href: "/configuracoes", icon: Settings, label: "Configurações" },
 ]
 
-// 1. Definimos a Interface das Props para o TypeScript entender
 interface AppSidebarProps {
   clinicName: string
-  onNavigate?: () => void // <--- Opcional
+  onNavigate?: () => void
 }
 
-// 2. Adicionamos 'onNavigate' na desestruturação dos parâmetros 👇
 export function AppSidebar({ clinicName, onNavigate }: AppSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
@@ -33,23 +31,21 @@ export function AppSidebar({ clinicName, onNavigate }: AppSidebarProps) {
     await supabase.auth.signOut()
     router.push("/login")
     toast.success("Saiu com sucesso")
-    // Se a função existir (mobile), chama ela para fechar o menu
     onNavigate?.() 
   }
 
   return (
-    // Removemos 'border-r' daqui para evitar borda dupla no Sheet do mobile
-    <div className="flex h-full flex-col bg-zinc-950 text-zinc-100 w-full">
-      <div className="p-6 border-b border-zinc-800 flex items-center gap-3">
+    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground w-full">
+      <div className="p-6 border-b border-sidebar-border flex items-center gap-3">
         <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
           <Stethoscope className="h-6 w-6 text-blue-500" />
         </div>
         
         <div className="flex flex-col">
-          <span className="text-base font-bold text-zinc-100 leading-none">
+          <span className="text-base font-bold text-sidebar-foreground leading-none">
             Eliza
           </span>
-          <span className="text-xs text-blue-400 font-medium truncate max-w-[130px]" title={clinicName}>
+          <span className="text-xs text-muted-foreground font-medium truncate max-w-[130px]" title={clinicName}>
             {clinicName}
           </span>
         </div>
@@ -62,13 +58,12 @@ export function AppSidebar({ clinicName, onNavigate }: AppSidebarProps) {
             <Link
               key={item.href}
               href={item.href}
-              // 3. Aqui usamos a função. Se for undefined (Desktop), não faz nada.
               onClick={onNavigate}
               className={cn(
                 "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
                 isActive 
-                  ? "bg-blue-500/10 text-blue-400" 
-                  : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground" 
+                  : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
               )}
             >
               <item.icon className="h-4 w-4" />
@@ -78,10 +73,10 @@ export function AppSidebar({ clinicName, onNavigate }: AppSidebarProps) {
         })}
       </nav>
 
-      <div className="p-4 border-t border-zinc-800">
+      <div className="p-4 border-t border-sidebar-border">
         <Button 
           variant="ghost" 
-          className="w-full justify-start gap-2 text-red-400 hover:text-red-300 hover:bg-red-950/30"
+          className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
           onClick={handleLogout}
         >
           <LogOut className="h-4 w-4" />

@@ -72,17 +72,17 @@ export default async function AgendamentosPage() {
   const appointments = appointmentsRes.data || []
 
   return (
-    <div className="p-8 space-y-8 bg-black min-h-screen text-zinc-100">
+    <div className="space-y-8">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight text-white">Agenda Médica</h1>
-        <p className="text-zinc-400 text-sm">Visualize e gerencie os atendimentos.</p>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Agenda Médica</h1>
+        <p className="text-muted-foreground text-sm">Visualize e gerencie os atendimentos.</p>
       </div>
 
       <CalendarView 
         appointments={appointments as any} 
         customers={customers as any} 
         services={services as any}
-        staff={staff as any} // Agora o componente aceita isso!
+        staff={staff as any}
         organization_id={orgId}
       />
     </div>

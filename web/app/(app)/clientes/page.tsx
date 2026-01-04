@@ -51,28 +51,26 @@ export default async function ClientesPage({
   const { data: customers } = await customerQuery as any;
 
   return (
-    <div className="p-8 space-y-8 bg-black min-h-screen text-zinc-100">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800 pb-6">
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Pacientes</h1>
-          <p className="text-zinc-400 text-sm">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Pacientes</h1>
+          <p className="text-muted-foreground text-sm">
             Gerencie o cadastro e histórico clínico dos seus pacientes.
           </p>
         </div>
-        {/* CORREÇÃO 5: Passando a prop com nome atualizado. 
-            ATENÇÃO: Você precisará atualizar o arquivo do Dialog também! */}
         <CreateCustomerDialog organization_id={profile.organization_id} />
       </div>
 
       {/* Barra de Busca */}
       <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <form method="GET">
           <Input 
             name="q"
             placeholder="Buscar por nome..." 
             defaultValue={query}
-            className="pl-10 bg-zinc-900/50 border-zinc-800 focus:ring-blue-500"
+            className="pl-10 bg-background border-input focus:ring-ring"
           />
         </form>
       </div>
@@ -88,14 +86,15 @@ export default async function ClientesPage({
               prefetch={false}
               className="block group"
             >
+              {/* Card usando variáveis de tema */}
               <Card className={cn(
-                "bg-zinc-900/40 border-zinc-800 hover:bg-zinc-900/80 transition-all cursor-pointer relative overflow-hidden",
-                !isActive && "opacity-75 border-amber-900/20"
+                "bg-card border-border hover:bg-accent/50 transition-all cursor-pointer relative overflow-hidden",
+                !isActive && "opacity-75 border-destructive/20"
               )}>
                 
                 {!isActive && (
-                  <div className="absolute top-0 right-0 bg-amber-500/10 border-l border-b border-amber-500/20 px-3 py-1">
-                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">Inativo</span>
+                  <div className="absolute top-0 right-0 bg-destructive/10 border-l border-b border-destructive/20 px-3 py-1">
+                    <span className="text-[10px] font-bold text-destructive uppercase tracking-wider">Inativo</span>
                   </div>
                 )}
 
@@ -104,12 +103,12 @@ export default async function ClientesPage({
                     <div className={cn(
                       "h-12 w-12 rounded-full flex items-center justify-center border transition-colors",
                       isActive 
-                        ? "bg-blue-500/10 border-blue-500/20" 
-                        : "bg-zinc-800/50 border-zinc-700/50"
+                        ? "bg-primary/10 border-primary/20" 
+                        : "bg-muted border-border"
                     )}>
                       <span className={cn(
                         "font-bold text-lg",
-                        isActive ? "text-blue-500" : "text-zinc-600"
+                        isActive ? "text-primary" : "text-muted-foreground"
                       )}>
                         {customer.name?.charAt(0).toUpperCase() || "P"}
                       </span>
@@ -119,13 +118,13 @@ export default async function ClientesPage({
                       <h3 className={cn(
                         "font-bold transition-colors",
                         isActive 
-                          ? "text-zinc-100 group-hover:text-blue-400" 
-                          : "text-zinc-500"
+                          ? "text-foreground group-hover:text-primary" 
+                          : "text-muted-foreground"
                       )}>
                         {customer.name}
                       </h3>
                       
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-zinc-500">
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Phone className="h-3 w-3" /> {customer.phone || 'Sem telefone'}
                         </span>
@@ -137,13 +136,13 @@ export default async function ClientesPage({
                   </div>
                   
                   <div className="flex items-center gap-4">
-                    <div className="hidden md:flex flex-col items-end text-xs text-zinc-600">
+                    <div className="hidden md:flex flex-col items-end text-xs text-muted-foreground">
                       <span>Paciente desde</span>
                       <span>{customer.created_at ? new Date(customer.created_at).toLocaleDateString('pt-BR') : 'N/D'}</span>
                     </div>
                     <ChevronRight className={cn(
                       "h-5 w-5 transition-colors",
-                      isActive ? "text-zinc-700 group-hover:text-zinc-400" : "text-zinc-800"
+                      isActive ? "text-muted-foreground group-hover:text-foreground" : "text-muted"
                     )} />
                   </div>
                 </CardContent>
@@ -153,9 +152,9 @@ export default async function ClientesPage({
         })}
 
         {customers?.length === 0 && (
-          <div className="py-20 text-center border-2 border-dashed border-zinc-800 rounded-xl">
-            <Users className="h-12 w-12 text-zinc-800 mx-auto mb-4" />
-            <p className="text-zinc-500">Nenhum paciente encontrado.</p>
+          <div className="py-20 text-center border-2 border-dashed border-border rounded-xl">
+            <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">Nenhum paciente encontrado.</p>
           </div>
         )}
       </div>
