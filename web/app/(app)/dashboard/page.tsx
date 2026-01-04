@@ -241,7 +241,7 @@ export default async function DashboardPage() {
                       </span>
 
                       {/* Ícone de 3 pontos para indicar que é clicável */}
-                      <div onClick={(e) => e.stopPropagation()}>
+                      <div className="relative z-10">
                         <AppointmentCardActions appointment={app} />
                       </div>
                     </div>

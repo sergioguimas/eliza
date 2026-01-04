@@ -25,7 +25,6 @@ export function AppointmentCardActions({ appointment }: AppointmentCardActionsPr
   const router = useRouter()
   const supabase = createClient()
 
-  // Função genérica para atualizar status
   async function updateStatus(status: string, label: string) {
     setLoading(true)
     try {
@@ -64,18 +63,24 @@ export function AppointmentCardActions({ appointment }: AppointmentCardActionsPr
             variant="ghost" 
             size="icon" 
             className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground data-[state=open]:bg-accent"
+            // CORREÇÃO AQUI: O evento é tratado no componente Client
+            onClick={(e) => {
+                e.preventDefault() // Evita que o Link pai navegue
+                e.stopPropagation() // Evita que o Link pai perceba o clique
+            }}
         >
           <MoreHorizontal className="h-4 w-4" />
           <span className="sr-only">Abrir menu</span>
         </Button>
       </DropdownMenuTrigger>
       
+      {/* O resto continua igual */}
       <DropdownMenuContent align="end" className="w-48 bg-zinc-900 border-zinc-800 text-zinc-200">
         <DropdownMenuLabel>Ações Rápidas</DropdownMenuLabel>
         <DropdownMenuSeparator className="bg-zinc-800" />
         
         <DropdownMenuItem 
-            onClick={() => updateStatus('confirmed', 'Confirmado')}
+            onClick={(e) => { e.stopPropagation(); updateStatus('confirmed', 'Confirmado') }}
             disabled={loading}
             className="cursor-pointer focus:bg-zinc-800 focus:text-zinc-100"
         >
@@ -84,7 +89,7 @@ export function AppointmentCardActions({ appointment }: AppointmentCardActionsPr
         </DropdownMenuItem>
 
         <DropdownMenuItem 
-            onClick={() => updateStatus('arrived', 'Na Recepção')}
+            onClick={(e) => { e.stopPropagation(); updateStatus('arrived', 'Na Recepção') }}
             disabled={loading}
             className="cursor-pointer focus:bg-zinc-800 focus:text-zinc-100"
         >
@@ -93,7 +98,7 @@ export function AppointmentCardActions({ appointment }: AppointmentCardActionsPr
         </DropdownMenuItem>
 
         <DropdownMenuItem 
-            onClick={() => updateStatus('completed', 'Finalizado')}
+            onClick={(e) => { e.stopPropagation(); updateStatus('completed', 'Finalizado') }}
             disabled={loading}
             className="cursor-pointer focus:bg-zinc-800 focus:text-zinc-100"
         >
@@ -104,7 +109,7 @@ export function AppointmentCardActions({ appointment }: AppointmentCardActionsPr
         <DropdownMenuSeparator className="bg-zinc-800" />
         
         <DropdownMenuItem 
-            onClick={handleCancel}
+            onClick={(e) => { e.stopPropagation(); handleCancel() }}
             disabled={loading}
             className="text-red-500 focus:text-red-400 focus:bg-red-950/20 cursor-pointer"
         >
