@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { AppointmentContextMenu } from "@/components/appointment-context-menu"
 import { cn } from "@/lib/utils"
+import { AppointmentCardActions } from "@/components/appointment-card-actions"
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -240,8 +241,8 @@ export default async function DashboardPage() {
                       </span>
 
                       {/* Ícone de 3 pontos para indicar que é clicável */}
-                      <div className="h-8 w-8 flex items-center justify-center rounded-md bg-transparent hover:bg-muted transition-colors text-muted-foreground group-hover:text-foreground">
-                        <MoreHorizontal className="h-4 w-4" />
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <AppointmentCardActions appointment={app} />
                       </div>
                     </div>
                   </div>
