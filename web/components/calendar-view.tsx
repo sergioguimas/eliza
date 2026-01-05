@@ -21,39 +21,45 @@ type Appointment = {
 }
 
 type Props = {
-  appointments: Appointment[]
-  customers: any[]
-  services: any[]
-  staff: any[]
+  appointments?: Appointment[] // Opcional para evitar crash se vier undefined
+  customers?: any[]
+  services?: any[]
+  staff?: any[]
   organization_id: string
 }
 
-export function CalendarView({ appointments, customers, services, staff, organization_id }: Props) {
-  // 1. Inicializa com uma data válida para evitar erro de "undefined" no componente Calendar
+export function CalendarView({ 
+  appointments = [], // Valor padrão: lista vazia
+  customers = [], 
+  services = [], 
+  staff = [], 
+  organization_id 
+}: Props) {
+  // 1. Inicializa data
   const [date, setDate] = useState<Date>(new Date())
   
-  // 2. Controla se estamos no cliente (navegador)
+  // 2. Controle de montagem (Hydration)
   const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
     setIsMounted(true)
   }, [])
 
-  // 3. Lógica de renderização segura
-  // Se não montou, não renderiza o conteúdo sensível a data para evitar Hydration Error
+  // Se não montou, esqueleto invisível
   if (!isMounted) {
     return (
       <div className="flex flex-col md:flex-row gap-6 opacity-0">
-         {/* Renderiza invisível apenas para manter estrutura básica layout shift */}
          <div className="w-full md:w-auto h-fit">Loading...</div>
       </div>
     )
   }
 
-  // Filtra agendamentos
-  const dailyAppointments = appointments
+  // 3. SEGURANÇA EXTRA: Garante que appointments seja um array antes de filtrar
+  const safeAppointments = Array.isArray(appointments) ? appointments : []
+
+  const dailyAppointments = safeAppointments
     .filter(app => {
-      if (!date) return false
+      if (!date || !app.start_time) return false
       const appDate = new Date(app.start_time)
       return isSameDay(appDate, date)
     })
@@ -67,7 +73,7 @@ export function CalendarView({ appointments, customers, services, staff, organiz
           <Calendar
             mode="single"
             selected={date}
-            onSelect={(day) => day && setDate(day)} // Proteção extra: só atualiza se 'day' não for nulo
+            onSelect={(day) => day && setDate(day)}
             locale={ptBR}
             className="rounded-md border"
           />
@@ -81,9 +87,10 @@ export function CalendarView({ appointments, customers, services, staff, organiz
             {format(date, "EEEE, d 'de' MMMM", { locale: ptBR })}
           </CardTitle>
           <CreateAppointmentDialog 
-            customers={customers} 
-            services={services} 
-            staff={staff}
+            // 4. SEGURANÇA EXTRA: Passa arrays vazios se for null/undefined
+            customers={Array.isArray(customers) ? customers : []}
+            services={Array.isArray(services) ? services : []}
+            staff={Array.isArray(staff) ? staff : []}
             organization_id={organization_id}
           />
         </CardHeader>
