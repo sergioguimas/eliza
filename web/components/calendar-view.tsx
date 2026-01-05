@@ -1,12 +1,23 @@
 'use client'
 
 import { useState, useEffect } from "react"
-import { Calendar } from "@/components/ui/calendar"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { format, isSameDay, isValid } from "date-fns"
+import { 
+  format, 
+  startOfMonth, 
+  endOfMonth, 
+  startOfWeek, 
+  endOfWeek, 
+  eachDayOfInterval, 
+  isSameDay, 
+  addMonths, 
+  subMonths,
+  isValid 
+} from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { ChevronLeft, ChevronRight } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CreateAppointmentDialog } from "@/components/create-appointment-dialog"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AppointmentContextMenu } from "./appointment-context-menu"
 import { STATUS_CONFIG } from "@/lib/appointment-config"
 
@@ -16,7 +27,7 @@ type Appointment = {
   end_time: string
   status: string
   customer: { name: string } | null
-  service: { title: string } | null // <-- Importante: Pode ser null
+  service: { title: string } | null
   profile: { full_name: string } | null
 }
 
@@ -35,115 +46,141 @@ export function CalendarView({
   staff = [], 
   organization_id 
 }: Props) {
-  const [date, setDate] = useState<Date>(new Date())
+  // Estado da data focada (Mês que estamos vendo)
+  const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
     setIsMounted(true)
-    // Debug: Mostra no console do navegador o que está chegando (Aperte F12 para ver)
-    console.log("Agendamentos recebidos:", appointments)
-  }, [appointments])
+  }, [])
 
   if (!isMounted) {
-    return <div className="p-8 text-center text-muted-foreground">Carregando agenda...</div>
+    return <div className="p-8 text-center text-muted-foreground">Carregando calendário...</div>
   }
+
+  // --- LÓGICA DO GRID DO MÊS ---
+  // 1. Pega o primeiro dia da grade (pode ser do mês anterior para completar a semana)
+  const monthStart = startOfMonth(currentDate)
+  const monthEnd = endOfMonth(monthStart)
+  const startDate = startOfWeek(monthStart, { locale: ptBR })
+  const endDate = endOfWeek(monthEnd, { locale: ptBR })
+
+  // 2. Gera todos os dias que vão aparecer na tela
+  const calendarDays = eachDayOfInterval({
+    start: startDate,
+    end: endDate,
+  })
+
+  // 3. Dias da semana para o cabeçalho (Dom, Seg, Ter...)
+  const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
   const safeAppointments = Array.isArray(appointments) ? appointments : []
 
-  const dailyAppointments = safeAppointments
-    .filter(app => {
-      if (!date || !app.start_time) return false
-      const appDate = new Date(app.start_time)
-      // Proteção: Só mostra se a data for válida
-      return isValid(appDate) && isSameDay(appDate, date)
-    })
-    .sort((a, b) => {
-      const timeA = new Date(a.start_time).getTime() || 0
-      const timeB = new Date(b.start_time).getTime() || 0
-      return timeA - timeB
-    })
+  function nextMonth() {
+    setCurrentDate(addMonths(currentDate, 1))
+  }
+
+  function prevMonth() {
+    setCurrentDate(subMonths(currentDate, 1))
+  }
+
+  function jumpToToday() {
+    setCurrentDate(new Date())
+  }
 
   return (
-    <div className="flex flex-col md:flex-row gap-6">
-      <Card className="w-full md:w-auto h-fit">
-        <CardContent className="p-0">
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={(day) => day && setDate(day)}
-            locale={ptBR}
-            className="rounded-md border"
-          />
-        </CardContent>
-      </Card>
-
-      <Card className="flex-1">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle>
-            {isValid(date) ? format(date, "EEEE, d 'de' MMMM", { locale: ptBR }) : 'Data Inválida'}
+    <Card className="h-full flex flex-col">
+      <CardHeader className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 pb-4">
+        
+        {/* Controles de Navegação */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center bg-secondary rounded-md border">
+            <Button variant="ghost" size="icon" onClick={prevMonth} className="h-8 w-8">
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="w-px h-4 bg-border" />
+            <Button variant="ghost" size="icon" onClick={nextMonth} className="h-8 w-8">
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <CardTitle className="text-xl font-bold capitalize">
+            {format(currentDate, "MMMM yyyy", { locale: ptBR })}
           </CardTitle>
-          <CreateAppointmentDialog 
-            customers={Array.isArray(customers) ? customers : []}
-            services={Array.isArray(services) ? services : []}
-            staff={Array.isArray(staff) ? staff : []}
-            organization_id={organization_id}
-          />
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="all" className="w-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="all">Todos</TabsTrigger>
-              <TabsTrigger value="morning">Manhã</TabsTrigger>
-              <TabsTrigger value="afternoon">Tarde</TabsTrigger>
-            </TabsList>
+        </div>
 
-            <div className="space-y-4">
-              {dailyAppointments.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
-                  Nenhum agendamento para este dia.
-                </p>
-              ) : (
-                dailyAppointments.map((app) => {
-                  // Proteção contra falha no parse da data
-                  const startTime = new Date(app.start_time)
-                  if (!isValid(startTime)) return null 
+        {/* Botões da Direita */}
+        <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={jumpToToday}>Hoje</Button>
+            <CreateAppointmentDialog 
+                customers={Array.isArray(customers) ? customers : []}
+                services={Array.isArray(services) ? services : []}
+                staff={Array.isArray(staff) ? staff : []}
+                organization_id={organization_id}
+            />
+        </div>
+      </CardHeader>
 
-                  const statusColor = STATUS_CONFIG[app.status as keyof typeof STATUS_CONFIG] || "bg-gray-500"
-                  
-                  return (
-                    <AppointmentContextMenu key={app.id} appointmentId={app.id}>
-                      <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors cursor-pointer group">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-2 h-12 rounded-full ${statusColor}`} />
-                          <div>
-                            <p className="font-medium text-lg">
-                              {format(startTime, "HH:mm")} - {app.customer?.name || "Cliente sem nome"}
-                            </p>
-                            <div className="flex gap-2 text-sm text-muted-foreground">
-                              {/* Proteção: Usa ?. para não quebrar se o serviço for null */}
-                              <span>{app.service?.title || "Serviço Indefinido"}</span>
-                              {app.profile && (
-                                <>
-                                  <span>•</span>
-                                  <span>Dr(a). {app.profile?.full_name || ""}</span>
-                                </>
-                              )}
-                            </div>
+      <CardContent className="p-0 flex-1 min-h-[600px]">
+        {/* Cabeçalho dos Dias da Semana */}
+        <div className="grid grid-cols-7 border-b bg-muted/40 text-center py-2 text-sm font-semibold text-muted-foreground">
+          {weekDays.map(day => (
+            <div key={day}>{day}</div>
+          ))}
+        </div>
+
+        {/* Grade de Dias */}
+        <div className="grid grid-cols-7 auto-rows-fr h-full">
+          {calendarDays.map((day, idx) => {
+            // Filtra agendamentos deste dia específico
+            const dayAppointments = safeAppointments.filter(app => {
+                const appTime = new Date(app.start_time)
+                return isValid(appTime) && isSameDay(appTime, day)
+            }).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+
+            const isCurrentMonth = day.getMonth() === currentDate.getMonth()
+            const isToday = isSameDay(day, new Date())
+
+            return (
+              <div 
+                key={day.toISOString()} 
+                className={`
+                  min-h-[100px] p-2 border-b border-r relative flex flex-col gap-1
+                  ${!isCurrentMonth ? 'bg-muted/20 text-muted-foreground' : 'bg-background'}
+                  ${idx % 7 === 0 ? 'border-l' : ''} /* Borda esquerda no domingo */
+                `}
+              >
+                {/* Número do Dia */}
+                <div className={`
+                  text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full mb-1
+                  ${isToday ? 'bg-primary text-primary-foreground' : ''}
+                `}>
+                  {format(day, 'd')}
+                </div>
+
+                {/* Lista de Agendamentos do Dia (Chips) */}
+                <div className="flex flex-col gap-1 overflow-y-auto max-h-[120px]">
+                  {dayAppointments.map(app => {
+                    const statusColor = STATUS_CONFIG[app.status as keyof typeof STATUS_CONFIG] || "bg-gray-500"
+                    
+                    return (
+                        <AppointmentContextMenu key={app.id} appointmentId={app.id}>
+                          <div className={`
+                            text-xs p-1.5 rounded-md border shadow-sm cursor-pointer hover:opacity-80 transition-opacity truncate
+                            flex items-center gap-2 bg-card
+                          `}>
+                            <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusColor}`} />
+                            <span className="font-semibold">{format(new Date(app.start_time), "HH:mm")}</span>
+                            <span className="truncate">{app.customer?.name || "Sem nome"}</span>
                           </div>
-                        </div>
-                        <div className="text-sm font-medium capitalize px-3 py-1 rounded-full bg-secondary text-secondary-foreground">
-                          {app.status === 'confirmed' ? 'Confirmado' : 
-                           app.status === 'scheduled' ? 'Agendado' : app.status}
-                        </div>
-                      </div>
-                    </AppointmentContextMenu>
-                  )
-                })
-              )}
-            </div>
-          </Tabs>
-        </CardContent>
-      </Card>
-    </div>
+                        </AppointmentContextMenu>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
