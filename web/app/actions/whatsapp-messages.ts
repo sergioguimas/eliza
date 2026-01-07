@@ -76,28 +76,6 @@ Confirme sua presença abaixo 👇`
     // Pequeno delay para garantir a ordem
     await new Promise(r => setTimeout(r, 500))
 
-    // PASSO B: Envia a Enquete (Botões Interativos)
-    const pollResponse = await fetch(`${EVOLUTION_URL}/message/sendPoll/${instanceName}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': API_KEY },
-      body: JSON.stringify({
-        number: phone,
-        name: "Você confirma este agendamento?", // Título da Enquete
-        selectableCount: 1, // Só pode escolher 1 opção
-        values: [
-          "✅ Confirmar Presença",
-          "❌ Preciso Remarcar"
-        ]
-      })
-    })
-
-    const data = await pollResponse.json()
-
-    if (!pollResponse.ok) {
-      console.error("❌ Erro Enquete:", data)
-    }
-
-    return { success: true, data }
 
   } catch (err) {
     console.error("❌ Erro de Conexão:", err)

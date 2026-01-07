@@ -4,14 +4,12 @@ import { addDays, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 // --- CONFIGURAÇÕES ---
-// Substitua pela URL do seu NGROK (sem a barra no final)
 const EVOLUTION_API_URL = "https://heterodoxly-unchastened-nichole.ngrok-free.dev" 
-// Sua API Key (definida no arquivo .env ou a global da Evolution)
 const EVOLUTION_API_KEY = "medagenda123" 
 
 const CONFIRMATION_KEYWORDS = ['sim', 'confirmar', 'confirmo', 'vou', 'comparecer', 'ok', '👍', 'diga']
 const CANCELLATION_KEYWORDS = ['não', 'nao', 'cancelar', 'cancela', 'não vou', 'nao vou', 'remarcar', 'outro dia', 'imprevisto']
-const WORKING_HOURS = [9, 10, 11, 14, 15, 16, 17] // Horários fixos de atendimento
+const WORKING_HOURS = [9, 10, 11, 14, 15, 16, 17]
 
 export async function POST(request: Request) {
   try {
@@ -23,11 +21,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Ignored event' }, { status: 200 })
     }
 
-    // 2. Identificação
+    // 2. Identificação Inteligente do Número
     const messageData = data.message || data
     const key = data.key || messageData.key || {}
-    const rawRemoteJid = key.remoteJidAlt || key.remoteJid || data.remoteJid || ''
     
+    // Tenta pegar o número real em prioridade: remoteJidAlt (Evolution) -> remoteJid (Padrão) -> participant (Grupos)
+    let rawRemoteJid = key.remoteJidAlt || key.remoteJid || data.remoteJid || key.participant || ''
+    
+    // Se o ID for um LID (termina com @lid) e não tivermos o Alt, tentamos procurar em outros lugares ou logamos o aviso
+    if (rawRemoteJid.includes('@lid') && !key.remoteJidAlt) {
+       console.warn("⚠️ ALERTA: Recebido LID (ID Interno) em vez de telefone. Tentando usar o remetente padrão se disponível.")
+       // Tenta fallback se disponível no payload data
+       if (data.pushName && data.key?.remoteJid && !data.key.remoteJid.includes('@lid')) {
+           rawRemoteJid = data.key.remoteJid
+       }
+    }
+
     if (rawRemoteJid.includes('@g.us') || key.fromMe) {
         return NextResponse.json({ message: 'Ignored group/self' }, { status: 200 })
     }
@@ -45,7 +54,7 @@ export async function POST(request: Request) {
 
     if (!content) return NextResponse.json({ message: 'No content' }, { status: 200 })
     
-    console.log(`📩 Processando: "${content}" de ...${searchPhone}`)
+    console.log(`📩 Processando: "${content}" de ...${searchPhone} (Raw: ${rawRemoteJid})`)
 
     const lowerContent = content.toLowerCase().trim()
     const isConfirmation = CONFIRMATION_KEYWORDS.some(w => lowerContent.includes(w))
@@ -65,7 +74,10 @@ export async function POST(request: Request) {
         .limit(1)
         .single()
 
-    if (!customer) return NextResponse.json({ message: 'Customer not found' }, { status: 200 })
+    if (!customer) {
+        console.log(`❌ Cliente não encontrado. Busquei por final ...${searchPhone} no banco.`)
+        return NextResponse.json({ message: 'Customer not found' }, { status: 200 })
+    }
 
     const yesterday = new Date()
     yesterday.setHours(yesterday.getHours() - 24)
@@ -80,7 +92,10 @@ export async function POST(request: Request) {
         .limit(1)
         .single()
 
-    if (!appointment) return NextResponse.json({ message: 'No appointment found' }, { status: 200 })
+    if (!appointment) {
+        console.log(`❌ Agendamento não encontrado para ${customer.name}.`)
+        return NextResponse.json({ message: 'No appointment found' }, { status: 200 })
+    }
 
     // --- AÇÃO: CONFIRMAR ---
     if (isConfirmation) {
@@ -104,22 +119,20 @@ export async function POST(request: Request) {
             .from('appointments')
             .select('start_time')
             .eq('organization_id', appointment.organization_id)
-            .neq('status', 'canceled') // Ignora os cancelados
+            .neq('status', 'canceled')
             .gte('start_time', startOfDay)
             .lte('start_time', endOfDay)
 
-        const busyTimes = new Set(busySlots?.map(a => new Date(a.start_time).getHours())) // Pega só a HORA
+        const busyTimes = new Set(busySlots?.map(a => new Date(a.start_time).getHours()))
 
-        // Filtra os slots fixos que não estão ocupados
         const freeSlots = WORKING_HOURS
             .filter(hour => !busyTimes.has(hour))
-            .slice(0, 3) // Top 3 horários
+            .slice(0, 3)
             .map(hour => `${hour}:00`)
 
         // 3. Envia Mensagem
         const textMessage = `Poxa, que pena! 😕\n\nJá cancelei seu horário aqui.\n\nSe quiser remarcar para *amanhã (${format(tomorrow, 'dd/MM', { locale: ptBR })})*, tenho estes horários livres:\n\n${freeSlots.map(h => `▪️ ${h}`).join('\n')}\n\nResponda com o horário desejado ou me chame para ver outros dias!`
 
-        // URL FIXA DO NGROK (Aqui estava o erro antes)
         const apiUrl = `${EVOLUTION_API_URL}/message/sendText/${instance}`
         
         await fetch(apiUrl, {
@@ -129,7 +142,7 @@ export async function POST(request: Request) {
                 'apikey': EVOLUTION_API_KEY
             },
             body: JSON.stringify({
-                number: rawRemoteJid.replace('@s.whatsapp.net', ''),
+                number: rawRemoteJid.replace('@s.whatsapp.net', '').replace('@lid', ''), // Remove sufixos
                 text: textMessage
             })
         })
