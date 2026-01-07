@@ -4,7 +4,7 @@ import { addDays, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 // --- CONFIGURAÇÕES ---
-// Substitua se o seu Ngrok mudou
+// Lembre-se: Se reiniciar o Ngrok, atualize esta URL
 const EVOLUTION_API_URL = "https://heterodoxly-unchastened-nichole.ngrok-free.dev" 
 const EVOLUTION_API_KEY = "medagenda123" 
 
@@ -15,7 +15,7 @@ const WORKING_HOURS = [9, 10, 11, 14, 15, 16, 17]
 export async function POST(request: Request) {
   try {
     const payload = await request.json()
-    const { event, data, instance } = payload
+    const { event, data, instance, sender } = payload
     
     // 1. Ignora eventos irrelevantes
     if (event !== 'messages.upsert' && event !== 'messages.update') {
@@ -25,19 +25,19 @@ export async function POST(request: Request) {
     const messageData = data.message || data
     const key = data.key || messageData.key || {}
 
-    // --- NOVA LÓGICA DE EXTRAÇÃO DE NÚMERO ---
-    // Coleta todos os IDs possíveis
+    // --- IDENTIFICAÇÃO DO NÚMERO (Blindada contra LID) ---
+    // Prioriza o ID alternativo ou o Sender da raiz, que costumam ser o número real
     const candidates = [
-        key.remoteJid,
         key.remoteJidAlt,
-        key.participant,
+        sender,
+        key.remoteJid,
         data.remoteJid
-    ].filter(Boolean) // Remove vazios
+    ].filter(Boolean)
 
-    // Procura o PRIMEIRO que seja um número real (@s.whatsapp.net)
-    let targetJid = candidates.find(jid => jid.includes('@s.whatsapp.net'))
+    // Procura o primeiro que seja um número padrão (@s.whatsapp.net)
+    let targetJid = candidates.find(jid => jid && jid.includes('@s.whatsapp.net'))
     
-    // Se não achar nenhum @s.whatsapp.net, pega o primeiro que tiver (fallback)
+    // Fallback: Se não achar, pega o primeiro que tiver
     if (!targetJid) {
         targetJid = candidates[0] || ''
     }
@@ -61,7 +61,8 @@ export async function POST(request: Request) {
 
     if (!content) return NextResponse.json({ message: 'No content' }, { status: 200 })
     
-    console.log(`📩 Processando: "${content}" de final ...${searchPhone} (JID: ${targetJid})`)
+    // Log limpo apenas com o essencial
+    console.log(`📩 Mensagem de final ...${searchPhone}: "${content}"`)
 
     const lowerContent = content.toLowerCase().trim()
     const isConfirmation = CONFIRMATION_KEYWORDS.some(w => lowerContent.includes(w))
@@ -82,7 +83,7 @@ export async function POST(request: Request) {
         .single()
 
     if (!customer) {
-        console.log(`❌ Cliente final ...${searchPhone} não encontrado.`)
+        console.warn(`⚠️ Cliente final ...${searchPhone} não encontrado no banco.`)
         return NextResponse.json({ message: 'Customer not found' }, { status: 200 })
     }
 
@@ -101,14 +102,14 @@ export async function POST(request: Request) {
         .single()
 
     if (!appointment) {
-        console.log(`❌ ${customer.name} não tem agendamento pendente.`)
+        // Silencioso para não poluir logs se o cliente só estiver batendo papo
         return NextResponse.json({ message: 'No appointment found' }, { status: 200 })
     }
 
     // --- AÇÃO: CONFIRMAR ---
     if (isConfirmation) {
         await supabase.from('appointments').update({ status: 'confirmed' }).eq('id', appointment.id)
-        console.log(`✅ Confirmado: ${customer.name}`)
+        console.log(`✅ Confirmado com sucesso: ${customer.name}`)
         return NextResponse.json({ success: true }, { status: 200 })
     }
 
@@ -116,7 +117,7 @@ export async function POST(request: Request) {
     if (isCancellation) {
         // 1. Cancela
         await supabase.from('appointments').update({ status: 'canceled' }).eq('id', appointment.id)
-        console.log(`🚫 Cancelado: ${customer.name}`)
+        console.log(`🚫 Cancelado por solicitação: ${customer.name}`)
 
         // 2. Busca Horários Livres Amanhã
         const tomorrow = addDays(new Date(), 1)
@@ -150,17 +151,16 @@ export async function POST(request: Request) {
                 'apikey': EVOLUTION_API_KEY
             },
             body: JSON.stringify({
-                number: targetJid.replace('@s.whatsapp.net', ''), // Usa o JID limpo que achamos no início
+                number: targetJid.replace('@s.whatsapp.net', ''),
                 text: textMessage
             })
         })
         
-        console.log("📤 Oferta enviada para:", apiUrl)
         return NextResponse.json({ success: true }, { status: 200 })
     }
 
   } catch (error) {
-    console.error("❌ Erro Interno:", error)
+    console.error("❌ Erro Fatal no Webhook:", error)
     return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
   }
 }

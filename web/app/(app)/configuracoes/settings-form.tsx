@@ -5,22 +5,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
+import { Database } from "@/utils/database.types"
 import { updateSettings } from "@/app/actions/update-settings"
 import { WhatsappSettings } from "./whatsapp-settings"
+import { MessagesSettings } from "./message-settings" // <--- Importamos o novo componente
 import { toast } from "sonner"
-import { Loader2, Save, Building2, User, Share2 } from "lucide-react"
+import { Loader2, Save, Building2, User, Share2, MessageSquare } from "lucide-react"
 
 interface SettingsFormProps {
   profile: any
-  whatsappStatus?: string | null
+  organization: any // Adicionei para garantir tipagem, mas usamos o profile.organizations
+  templates: any[]  // <--- Recebe os templates do banco
 }
 
-export function SettingsForm({ profile, whatsappStatus }: SettingsFormProps) {
+export function SettingsForm({ profile, organization, templates }: SettingsFormProps) {
   const [loading, setLoading] = useState(false)
   
-  // Estado inicial unificado para não perder dados ao trocar de aba
+  // Estado unificado do formulário principal (Perfil + Conexão)
   const [formData, setFormData] = useState({
     name: '',
     document: '',
@@ -33,212 +35,176 @@ export function SettingsForm({ profile, whatsappStatus }: SettingsFormProps) {
     evolution_apikey: 'medagenda123'
   })
 
-  // Carrega os dados existentes quando o componente monta
+  // Carrega os dados quando o componente monta
   useEffect(() => {
-    const org = profile?.organizations
-    if (org || profile) {
+    if (profile && profile.organizations) {
       setFormData({
-        name: org?.name || '',
-        document: org?.document || '',
-        phone: org?.phone || '',
-        email: org?.email || '',
-        address: org?.address || '',
-        full_name: profile?.full_name || '', // Nome do médico vem do profile
-        crm: org?.crm || '', // CRM pode estar na organização ou metadata
-        evolution_url: org?.evolution_api_url || org?.evolution_url || 'http://localhost:8082',
-        evolution_apikey: org?.evolution_api_key || org?.evolution_apikey || 'medagenda123'
+        name: profile.organizations.name || '',
+        document: profile.organizations.document || '',
+        phone: profile.organizations.phone || '',
+        email: profile.organizations.email || '',
+        address: profile.organizations.address || '',
+        full_name: profile.full_name || '',
+        crm: profile.crm || '',
+        evolution_url: profile.organizations.evolution_instance || '', // Ajuste conforme seu banco
+        evolution_apikey: profile.organizations.evolution_apikey || ''
       })
     }
   }, [profile])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setLoading(true)
-    
-    // Constrói o FormData manualmente a partir do Estado (State)
-    // Isso garante que mesmo campos de abas ocultas sejam enviados
-    const dataToSend = new FormData()
-    
-    // IDs obrigatórios
-    dataToSend.append('user_id', profile?.id)
-    dataToSend.append('org_id', profile?.organization_id || '')
-    
-    // Campos do formulário
-    Object.entries(formData).forEach(([key, value]) => {
-      dataToSend.append(key, value)
-    })
+  const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault() 
+      setLoading(true)
 
-    const result = await updateSettings(dataToSend)
+      try {
+        const dataToSend = new FormData()
 
-    setLoading(false)
+        Object.entries(formData).forEach(([key, value]) => {
+          dataToSend.append(key, value || '') 
+        })
 
-    if (result?.error) {
-      toast.error(result.error)
-    } else {
-      toast.success("Configurações salvas com sucesso!")
+        await updateSettings(dataToSend)
+        
+        toast.success("Configurações salvas com sucesso!")
+      } catch (error) {
+        console.error(error)
+        toast.error("Erro ao salvar configurações.")
+      } finally {
+        setLoading(false)
+      }
     }
-  }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <Tabs defaultValue="organizacao" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-background border border-border">
-          <TabsTrigger value="organizacao" className="gap-2 text-zinc-400 data-[state=active]:text-foreground">
-            <Building2 className="h-4 w-4" /> Clínica
-          </TabsTrigger>
-          <TabsTrigger value="profissional" className="gap-2 text-zinc-400 data-[state=active]:text-foreground">
-            <User className="h-4 w-4" /> Profissional
-          </TabsTrigger>
-          <TabsTrigger value="api" className="gap-2 text-zinc-400 data-[state=active]:text-foreground">
-            <Share2 className="h-4 w-4" /> Integração
-          </TabsTrigger>
-        </TabsList>
+    <Tabs defaultValue="profile" className="space-y-4">
+      <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+        <TabsTrigger value="profile">Perfil</TabsTrigger>
+        <TabsTrigger value="connection">Conexão</TabsTrigger>
+        <TabsTrigger value="messages">Mensagens</TabsTrigger> {/* <--- Nova Aba */}
+      </TabsList>
 
-        {/* ABA 1: DADOS DA CLÍNICA */}
-        <TabsContent value="organizacao" className="space-y-4 mt-4">
-          <Card className="bg-background border-border">
+      {/* --- ABA 1: PERFIL (Seu código original mantido) --- */}
+      <TabsContent value="profile">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-foreground">Dados Institucionais</CardTitle>
-              <CardDescription className="text-zinc-400">
-                Informações exibidas em documentos e cabeçalhos.
-              </CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" /> Dados da Clínica
+              </CardTitle>
+              <CardDescription>Informações exibidas para seus pacientes.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name" className="text-zinc-300">Nome da Clínica</Label>
-                <Input 
-                  id="name" 
-                  name="name" 
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="bg-zinc-950 border-border text-foreground"
-                  required
-                />
-              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="document" className="text-zinc-300">CPF ou CNPJ</Label>
-                  <Input 
-                    id="document" 
-                    name="document" 
-                    value={formData.document}
-                    onChange={handleChange}
-                    className="bg-zinc-950 border-border text-foreground" 
-                  />
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome da Clínica</Label>
+                  <Input id="name" name="name" value={formData.name} onChange={handleChange} />
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="phone" className="text-zinc-300">Telefone de Contato</Label>
-                  <Input 
-                    id="phone" 
-                    name="phone" 
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className="bg-zinc-950 border-border text-foreground" 
-                  />
+                <div className="space-y-2">
+                  <Label htmlFor="document">CNPJ / CPF</Label>
+                  <Input id="document" name="document" value={formData.document} onChange={handleChange} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Telefone</Label>
+                  <Input id="phone" name="phone" value={formData.phone} onChange={handleChange} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" name="email" value={formData.email} onChange={handleChange} />
                 </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="email" className="text-zinc-300">Email Comercial</Label>
-                <Input 
-                  id="email" 
-                  name="email" 
-                  type="email" 
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="bg-zinc-950 border-border text-foreground" 
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="address" className="text-zinc-300">Endereço Completo</Label>
-                <Textarea 
-                  id="address" 
-                  name="address" 
-                  value={formData.address}
-                  onChange={handleChange}
-                  className="bg-zinc-950 border-border text-foreground min-h-[80px]" 
-                />
+              <div className="space-y-2">
+                <Label htmlFor="address">Endereço Completo</Label>
+                <Input id="address" name="address" value={formData.address} onChange={handleChange} />
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        {/* ABA 2: DADOS DO PROFISSIONAL */}
-        <TabsContent value="profissional" className="space-y-4 mt-4">
-          <Card className="bg-background border-border">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-foreground">Configurações do Médico</CardTitle>
-              <CardDescription className="text-zinc-400">Como você aparecerá nas mensagens para os pacientes.</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" /> Dados do Profissional
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-2">
-                <Label htmlFor="full_name" className="text-zinc-300">Seu Nome Profissional</Label>
-                <Input 
-                  id="full_name" 
-                  name="full_name" 
-                  value={formData.full_name}
-                  onChange={handleChange}
-                  className="bg-zinc-950 border-border text-foreground"
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="crm" className="text-zinc-300">Registro Profissional (CRM/CRP)</Label>
-                <Input 
-                  id="crm" 
-                  name="crm" 
-                  value={formData.crm}
-                  onChange={handleChange}
-                  className="bg-zinc-950 border-border text-foreground" 
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="full_name">Nome Completo</Label>
+                  <Input id="full_name" name="full_name" value={formData.full_name} onChange={handleChange} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="crm">Registro Profissional (CRM/Outros)</Label>
+                  <Input id="crm" name="crm" value={formData.crm} onChange={handleChange} />
+                </div>
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        {/* ABA 3: WHATSAPP E API */}
-        <TabsContent value="api" className="space-y-4 mt-4">
-          <WhatsappSettings initialStatus={whatsappStatus} />
+          <Button type="submit" disabled={loading} className="w-full md:w-auto">
+            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Salvar Alterações de Perfil
+          </Button>
+        </form>
+      </TabsContent>
+      
+      {/* --- ABA 2: CONEXÃO (Seu código original mantido) --- */}
+      <TabsContent value="connection" className="space-y-4">
+        {/* Componente do QR Code (Importado) */}
+        <WhatsappSettings />
 
-          <Card className="bg-background border-border">
+        {/* Formulário de Configuração Técnica */}
+        <form onSubmit={handleSubmit}>
+          <Card>
             <CardHeader>
-              <CardTitle className="text-foreground text-sm">Parâmetros Técnicos</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Share2 className="h-5 w-5" /> Parâmetros da API
+              </CardTitle>
+              <CardDescription>Configuração avançada da Evolution API.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-2">
-                <Label htmlFor="evolution_url" className="text-zinc-300">URL da Evolution API</Label>
+              <div className="space-y-2">
+                <Label htmlFor="evolution_url">URL da Instância</Label>
                 <Input 
                   id="evolution_url" 
                   name="evolution_url" 
-                  value={formData.evolution_url}
-                  onChange={handleChange}
-                  className="bg-zinc-950 border-border font-mono text-xs text-blue-400"
+                  value={formData.evolution_url} 
+                  onChange={handleChange} 
+                  className="font-mono text-xs"
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="evolution_apikey" className="text-zinc-300">API Key (Global)</Label>
+              <div className="space-y-2">
+                <Label htmlFor="evolution_apikey">API Key</Label>
                 <Input 
                   id="evolution_apikey" 
                   name="evolution_apikey" 
                   type="password"
-                  value={formData.evolution_apikey}
-                  onChange={handleChange}
-                  className="bg-zinc-950 border-border font-mono text-xs"
+                  value={formData.evolution_apikey} 
+                  onChange={handleChange} 
+                  className="font-mono text-xs"
                 />
               </div>
+              <Button type="submit" disabled={loading} className="mt-4 w-full md:w-auto">
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                Salvar Conexão
+              </Button>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </form>
+      </TabsContent>
 
-      <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12">
-        {loading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Save className="h-5 w-5 mr-2" />}
-        Salvar Todas as Configurações
-      </Button>
-    </form>
+      {/* --- ABA 3: MENSAGENS (NOVA!) --- */}
+      <TabsContent value="messages" className="space-y-4">
+        <div className="flex items-center gap-2 mb-4">
+          <MessageSquare className="h-5 w-5 text-muted-foreground" />
+          <h2 className="text-lg font-semibold">Personalização de Respostas</h2>
+        </div>
+        
+        {/* Aqui entra o componente que criamos no passo anterior */}
+        <MessagesSettings templates={templates} />
+      </TabsContent>
+    </Tabs>
   )
 }

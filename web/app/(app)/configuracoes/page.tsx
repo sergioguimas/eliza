@@ -2,46 +2,45 @@ import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
 import { SettingsForm } from "./settings-form"
 
-export default async function SettingsPage() {
+export default async function ConfiguracoesPage() {
   const supabase = await createClient()
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) {
-    redirect("/login")
-  }
+  // 1. Auth Check
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
+  // 2. Busca Perfil e Organização
   const { data: profile } = await supabase
     .from('profiles')
-    .select(`
-      *,
-      organizations:organization_id (*)
-    `)
+    .select('*, organizations(*)')
     .eq('id', user.id)
-    .single() as any
+    .single()
 
-  const { data: whatsapp } = await supabase
-    .from('whatsapp_instances')
-    .select('status')
-    .eq('organization_id', profile?.organization_id)
-    .single() as any
+  if (!profile?.organization_id) {
+    return <div>Erro: Organização não encontrada.</div>
+  }
+
+  // 3. NOVO: Busca os Templates de Mensagem
+  const { data: templates } = await supabase
+    .from('message_templates')
+    .select('*')
+    .eq('organization_id', profile.organization_id)
 
   return (
-    <div className="flex-1 space-y-8 p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">Configurações</h2>
-          <p className="text-muted-foreground">
-            Gerencie as informações da sua clínica e sua conta profissional.
-          </p>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Configurações</h1>
+        <p className="text-muted-foreground text-sm">
+          Gerencie os dados da sua clínica, perfil e integrações.
+        </p>
       </div>
 
-      <div className="grid gap-4">
-        <SettingsForm 
-          profile={profile} 
-          whatsappStatus={whatsapp?.status || 'disconnected'} 
-        />
-      </div>
+      {/* Passamos os templates para o formulário */}
+      <SettingsForm 
+        profile={profile} 
+        organization={profile.organizations} 
+        templates={templates || []} 
+      />
     </div>
   )
 }
