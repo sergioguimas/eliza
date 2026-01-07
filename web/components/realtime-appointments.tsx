@@ -10,33 +10,35 @@ export function RealtimeAppointments() {
   const supabase = createClient()
 
   useEffect(() => {
-    // Inscreve no canal de mudanças do banco
+    // Inscreve no canal de mudanças da tabela 'appointments'
     const channel = supabase
       .channel('realtime-appointments')
       .on(
         'postgres_changes',
         {
-          event: '*', // Escuta tudo (INSERT, UPDATE, DELETE)
+          event: '*', // Escuta tudo: UPDATE, INSERT, DELETE
           schema: 'public',
           table: 'appointments',
         },
         (payload) => {
-          // Quando algo mudar, avisa o Next.js para recarregar os dados
           console.log('⚡ Mudança detectada no banco:', payload)
+          
+          // O comando mágico: Recarrega os dados da página sem piscar a tela inteira
           router.refresh()
 
-          // Feedback visual opcional
+          // Feedback visual (opcional)
           if (payload.eventType === 'UPDATE' && payload.new.status === 'confirmed') {
-             toast.success("Um agendamento foi confirmado!")
+             toast.success("Agendamento confirmado via WhatsApp!")
           }
         }
       )
       .subscribe()
 
+    // Limpeza quando sair da página
     return () => {
       supabase.removeChannel(channel)
     }
   }, [router, supabase])
 
-  return null // Esse componente não renderiza nada visual, só escuta
+  return null // Este componente é invisível
 }
