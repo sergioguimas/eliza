@@ -4,7 +4,6 @@ import { addDays, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 // --- CONFIGURAÇÕES ---
-// Lembre-se: Se reiniciar o Ngrok, atualize esta URL
 const EVOLUTION_API_URL = "https://heterodoxly-unchastened-nichole.ngrok-free.dev" 
 const EVOLUTION_API_KEY = "medagenda123" 
 
@@ -15,7 +14,7 @@ const WORKING_HOURS = [9, 10, 11, 14, 15, 16, 17]
 export async function POST(request: Request) {
   try {
     const payload = await request.json()
-    const { event, data, instance, sender } = payload
+    const { event, data, instance } = payload
     
     // 1. Ignora eventos irrelevantes
     if (event !== 'messages.upsert' && event !== 'messages.update') {
@@ -25,29 +24,28 @@ export async function POST(request: Request) {
     const messageData = data.message || data
     const key = data.key || messageData.key || {}
 
-    // --- IDENTIFICAÇÃO DO NÚMERO (Blindada contra LID) ---
-    // Prioriza o ID alternativo ou o Sender da raiz, que costumam ser o número real
-    const candidates = [
-        key.remoteJidAlt,
-        sender,
-        key.remoteJid,
-        data.remoteJid
-    ].filter(Boolean)
-
-    // Procura o primeiro que seja um número padrão (@s.whatsapp.net)
-    let targetJid = candidates.find(jid => jid && jid.includes('@s.whatsapp.net'))
+    // --- IDENTIFICAÇÃO DO NÚMERO (Lógica Corrigida) ---
     
-    // Fallback: Se não achar, pega o primeiro que tiver
-    if (!targetJid) {
-        targetJid = candidates[0] || ''
+    // Passo 1: O candidato principal é sempre o remoteJid (quem está conversando comigo)
+    let targetJid = key.remoteJid || data.remoteJid || ''
+
+    // Passo 2: Se o principal for um LID (ID interno), tentamos o Alternativo
+    if (targetJid.includes('@lid') && key.remoteJidAlt) {
+        targetJid = key.remoteJidAlt
     }
 
-    // Se for grupo ou mensagem enviada por mim, ignora
-    if (targetJid.includes('@g.us') || key.fromMe) {
+    // Passo 3: Segurança - Se ainda for LID, ou vazio, ignoramos (não dá para saber quem é)
+    if (!targetJid || targetJid.includes('@lid')) {
+        console.warn(`⚠️ Ignorado: JID inválido ou LID sem alternativo (${targetJid})`)
+        return NextResponse.json({ message: 'Invalid JID' }, { status: 200 })
+    }
+
+    // Passo 4: Se for mensagem enviada PELA clínica (outgoing), ignoramos
+    if (key.fromMe || targetJid.includes('@g.us')) {
         return NextResponse.json({ message: 'Ignored group/self' }, { status: 200 })
     }
 
-    // Limpeza: Pega os últimos 8 dígitos para garantir match no banco
+    // Limpeza: Pega os últimos 8 dígitos
     const phoneDigits = targetJid.replace(/\D/g, '')
     const searchPhone = phoneDigits.slice(-8)
 
@@ -61,7 +59,6 @@ export async function POST(request: Request) {
 
     if (!content) return NextResponse.json({ message: 'No content' }, { status: 200 })
     
-    // Log limpo apenas com o essencial
     console.log(`📩 Mensagem de final ...${searchPhone}: "${content}"`)
 
     const lowerContent = content.toLowerCase().trim()
@@ -102,9 +99,17 @@ export async function POST(request: Request) {
         .single()
 
     if (!appointment) {
-        // Silencioso para não poluir logs se o cliente só estiver batendo papo
         return NextResponse.json({ message: 'No appointment found' }, { status: 200 })
     }
+
+    // --- BUSCA O TEMPLATE DE RESPOSTA NO BANCO ---
+    // (Agora usamos o texto que você salvou na tela de Configurações!)
+    const { data: template } = await supabase
+        .from('message_templates')
+        .select('content')
+        .eq('organization_id', appointment.organization_id)
+        .eq('type', 'cancellation_response')
+        .single()
 
     // --- AÇÃO: CONFIRMAR ---
     if (isConfirmation) {
@@ -139,8 +144,12 @@ export async function POST(request: Request) {
             .slice(0, 3)
             .map(hour => `${hour}:00`)
 
-        // 3. Responde com Oferta
-        const textMessage = `Poxa, que pena! 😕\n\nJá cancelei seu horário aqui.\n\nSe quiser remarcar para *amanhã (${format(tomorrow, 'dd/MM', { locale: ptBR })})*, tenho estes horários livres:\n\n${freeSlots.map(h => `▪️ ${h}`).join('\n')}\n\nResponda com o horário desejado ou me chame para ver outros dias!`
+        // 3. Monta a Mensagem (Usando o Template do Banco ou Fallback)
+        let textMessage = template?.content || `Agendamento cancelado. Horários livres amanhã: {{horarios_livres}}`
+        
+        // Substitui a variável {{horarios_livres}} pela lista real
+        const slotsText = freeSlots.map(h => `▪️ ${h}`).join('\n')
+        textMessage = textMessage.replace('{{horarios_livres}}', slotsText)
 
         const apiUrl = `${EVOLUTION_API_URL}/message/sendText/${instance}`
         
@@ -151,7 +160,7 @@ export async function POST(request: Request) {
                 'apikey': EVOLUTION_API_KEY
             },
             body: JSON.stringify({
-                number: targetJid.replace('@s.whatsapp.net', ''),
+                number: targetJid.replace('@s.whatsapp.net', '').replace(/@lid/g, ''),
                 text: textMessage
             })
         })
