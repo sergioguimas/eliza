@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils"
 import { AppointmentCardActions } from "@/components/appointment-card-actions"
 import { RealtimeAppointments } from '@/components/realtime-appointments'
 
-// --- 1. FUNÇÃO DE CORREÇÃO DE DATA (BRASIL) ---
+// --- 1. FUNÇÃO DE DATA (BRASIL) ---
 function getBrazilDayRange() {
   const brazilDateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
   const start = `${brazilDateStr}T00:00:00-03:00`
@@ -46,7 +46,7 @@ export default async function DashboardPage() {
   const orgId = profile.organization_id
   const orgName = profile.organizations?.name || "Minha Clínica"
 
-  // 4. Definição do período de "Hoje" (Agora usando a função correta)
+  // 4. Definição do período de "Hoje"
   const { start: todayStart, end: todayEnd } = getBrazilDayRange()
 
   // 5. Busca de dados
@@ -54,7 +54,7 @@ export default async function DashboardPage() {
     supabase.from('services').select('*', { count: 'exact', head: true }).eq('organization_id', orgId).eq('is_active', true),
     supabase.from('customers').select('*').eq('organization_id', orgId).eq('active', true),
     
-    // --- QUERY DE AGENDA HOJE CORRIGIDA ---
+    // --- QUERY DE AGENDA HOJE ---
     supabase
       .from('appointments')
       .select(`
@@ -98,12 +98,11 @@ export default async function DashboardPage() {
   // Cálculos
   const totalServices = resServices.count || 0
   const totalCustomers = resCustomers.data?.length || 0
-  // Filtramos os cancelados da query principal, então aqui conta só os válidos
   const totalAllApps = resAll.data?.length || 0 
   const completedApps = resAll.data?.filter((a: any) => a.status === 'completed').length || 0
   const presenceRate = totalAllApps > 0 ? Math.round((completedApps / totalAllApps) * 100) : 0
 
-  // 7. Correção do Nome: Pega o primeiro nome do perfil ou fallback seguro
+  // 7. Pega o primeiro nome do perfil ou fallback seguro
   const doctorName = profile?.full_name ? profile.full_name.split(' ')[0] : "Doutor"
 
   return (
