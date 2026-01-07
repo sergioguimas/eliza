@@ -4,6 +4,7 @@ import { addDays, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 // --- CONFIGURAÇÕES ---
+// Verifique se o link do Ngrok ainda é este (muda se reiniciar o PC)
 const EVOLUTION_API_URL = "https://heterodoxly-unchastened-nichole.ngrok-free.dev" 
 const EVOLUTION_API_KEY = "medagenda123" 
 
@@ -14,33 +15,44 @@ const WORKING_HOURS = [9, 10, 11, 14, 15, 16, 17]
 export async function POST(request: Request) {
   try {
     const payload = await request.json()
-    const { event, data, instance } = payload
+    // 1. Extraímos o 'sender' da raiz também (O segredo está aqui!)
+    const { event, data, instance, sender } = payload
     
-    // 1. Validação
     if (event !== 'messages.upsert' && event !== 'messages.update') {
       return NextResponse.json({ message: 'Ignored event' }, { status: 200 })
     }
 
-    // 2. Identificação Inteligente do Número
     const messageData = data.message || data
     const key = data.key || messageData.key || {}
     
-    // Tenta pegar o número real em prioridade: remoteJidAlt (Evolution) -> remoteJid (Padrão) -> participant (Grupos)
-    let rawRemoteJid = key.remoteJidAlt || key.remoteJid || data.remoteJid || key.participant || ''
+    // --- LÓGICA DE IDENTIFICAÇÃO DO NÚMERO (TURBINADA) ---
+    // Ordem de prioridade:
+    // 1. remoteJidAlt (Evolution manda as vezes)
+    // 2. sender (Vem na raiz do payload e costuma ser o JID real)
+    // 3. remoteJid (Padrão, mas as vezes é LID)
     
-    // Se o ID for um LID (termina com @lid) e não tivermos o Alt, tentamos procurar em outros lugares ou logamos o aviso
-    if (rawRemoteJid.includes('@lid') && !key.remoteJidAlt) {
-       console.warn("⚠️ ALERTA: Recebido LID (ID Interno) em vez de telefone. Tentando usar o remetente padrão se disponível.")
-       // Tenta fallback se disponível no payload data
-       if (data.pushName && data.key?.remoteJid && !data.key.remoteJid.includes('@lid')) {
-           rawRemoteJid = data.key.remoteJid
-       }
+    let rawRemoteJid = key.remoteJidAlt || ''
+
+    // Se não tiver Alt, tenta o Sender (se for válido e não for o próprio bot)
+    if (!rawRemoteJid && sender && sender.includes('@s.whatsapp.net') && !key.fromMe) {
+        rawRemoteJid = sender
+    }
+
+    // Última tentativa: o remoteJid padrão
+    if (!rawRemoteJid) {
+        rawRemoteJid = key.remoteJid || data.remoteJid || ''
+    }
+
+    // Se depois de tudo isso ainda for LID, avisamos no log
+    if (rawRemoteJid.includes('@lid')) {
+        console.warn(`⚠️ ALERTA: Ainda estou com LID (${rawRemoteJid}). Tentando extrair número mesmo assim.`)
     }
 
     if (rawRemoteJid.includes('@g.us') || key.fromMe) {
         return NextResponse.json({ message: 'Ignored group/self' }, { status: 200 })
     }
 
+    // Limpeza: 553399998888@s.whatsapp.net -> 99998888
     const phoneDigits = rawRemoteJid.replace(/\D/g, '')
     const searchPhone = phoneDigits.slice(-8)
 
@@ -54,7 +66,7 @@ export async function POST(request: Request) {
 
     if (!content) return NextResponse.json({ message: 'No content' }, { status: 200 })
     
-    console.log(`📩 Processando: "${content}" de ...${searchPhone} (Raw: ${rawRemoteJid})`)
+    console.log(`📩 Processando: "${content}" de ...${searchPhone} (Origem: ${rawRemoteJid})`)
 
     const lowerContent = content.toLowerCase().trim()
     const isConfirmation = CONFIRMATION_KEYWORDS.some(w => lowerContent.includes(w))
@@ -67,6 +79,7 @@ export async function POST(request: Request) {
     // 3. Banco de Dados
     const supabase = createAdminClient()
 
+    // Busca pelo final do telefone (8 dígitos)
     const { data: customer } = await supabase
         .from('customers')
         .select('id, name, organization_id')
@@ -75,7 +88,7 @@ export async function POST(request: Request) {
         .single()
 
     if (!customer) {
-        console.log(`❌ Cliente não encontrado. Busquei por final ...${searchPhone} no banco.`)
+        console.log(`❌ Cliente não encontrado (Final: ...${searchPhone}).`)
         return NextResponse.json({ message: 'Customer not found' }, { status: 200 })
     }
 
@@ -97,20 +110,19 @@ export async function POST(request: Request) {
         return NextResponse.json({ message: 'No appointment found' }, { status: 200 })
     }
 
-    // --- AÇÃO: CONFIRMAR ---
+    // --- CENÁRIO: CONFIRMAR ---
     if (isConfirmation) {
         await supabase.from('appointments').update({ status: 'confirmed' }).eq('id', appointment.id)
         console.log(`✅ Confirmado: ${customer.name}`)
         return NextResponse.json({ success: true }, { status: 200 })
     }
 
-    // --- AÇÃO: CANCELAR E OFERECER HORÁRIOS ---
+    // --- CENÁRIO: CANCELAR ---
     if (isCancellation) {
-        // 1. Cancela
         await supabase.from('appointments').update({ status: 'canceled' }).eq('id', appointment.id)
         console.log(`🚫 Cancelado: ${customer.name}`)
 
-        // 2. Busca Horários Livres Amanhã
+        // Busca Horários Livres
         const tomorrow = addDays(new Date(), 1)
         const startOfDay = new Date(tomorrow.setHours(0,0,0,0)).toISOString()
         const endOfDay = new Date(tomorrow.setHours(23,59,59,999)).toISOString()
@@ -124,13 +136,11 @@ export async function POST(request: Request) {
             .lte('start_time', endOfDay)
 
         const busyTimes = new Set(busySlots?.map(a => new Date(a.start_time).getHours()))
-
         const freeSlots = WORKING_HOURS
             .filter(hour => !busyTimes.has(hour))
             .slice(0, 3)
             .map(hour => `${hour}:00`)
 
-        // 3. Envia Mensagem
         const textMessage = `Poxa, que pena! 😕\n\nJá cancelei seu horário aqui.\n\nSe quiser remarcar para *amanhã (${format(tomorrow, 'dd/MM', { locale: ptBR })})*, tenho estes horários livres:\n\n${freeSlots.map(h => `▪️ ${h}`).join('\n')}\n\nResponda com o horário desejado ou me chame para ver outros dias!`
 
         const apiUrl = `${EVOLUTION_API_URL}/message/sendText/${instance}`
@@ -142,7 +152,7 @@ export async function POST(request: Request) {
                 'apikey': EVOLUTION_API_KEY
             },
             body: JSON.stringify({
-                number: rawRemoteJid.replace('@s.whatsapp.net', '').replace('@lid', ''), // Remove sufixos
+                number: rawRemoteJid.replace('@s.whatsapp.net', '').replace(/@lid/g, ''),
                 text: textMessage
             })
         })
