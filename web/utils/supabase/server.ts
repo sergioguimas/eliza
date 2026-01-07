@@ -1,12 +1,11 @@
-// web/utils/supabase/server.ts
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { Database } from "@/utils/database.types" // Importe a interface aqui
+import { Database } from "@/utils/database.types"
 
 export async function createClient() {
   const cookieStore = await cookies()
 
-  return createServerClient<Database>( // Adicione o <Database> aqui
+  return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -20,7 +19,6 @@ export async function createClient() {
               cookieStore.set(name, value, options)
             )
           } catch {
-            // O middleware lida com isso
           }
         },
       },
