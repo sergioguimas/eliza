@@ -9,21 +9,28 @@ import {
   Building2, 
   ShieldCheck,
   CheckCircle2,
-  Clock,
-  MoreHorizontal // <--- NOVO IMPORT
+  Clock
 } from 'lucide-react'
 import { AppointmentContextMenu } from "@/components/appointment-context-menu"
 import { cn } from "@/lib/utils"
 import { AppointmentCardActions } from "@/components/appointment-card-actions"
 
+// --- 1. FUNÇÃO DE CORREÇÃO DE DATA (BRASIL) ---
+function getBrazilDayRange() {
+  const brazilDateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+  const start = `${brazilDateStr}T00:00:00-03:00`
+  const end = `${brazilDateStr}T23:59:59-03:00`
+  return { start, end }
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient()
 
-  // 1. Verifica autenticação
+  // 2. Verifica autenticação
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return redirect('/login')
 
-  // 2. Busca Perfil
+  // 3. Busca Perfil
   const { data: profile } = await supabase
     .from('profiles')
     .select(`
@@ -38,16 +45,15 @@ export default async function DashboardPage() {
   const orgId = profile.organization_id
   const orgName = profile.organizations?.name || "Minha Clínica"
 
-  // 3. Definição do período de "Hoje"
-  const todayStart = new Date()
-  todayStart.setHours(0, 0, 0, 0)
-  const todayEnd = new Date()
-  todayEnd.setHours(23, 59, 59, 999)
+  // 4. Definição do período de "Hoje" (Agora usando a função correta)
+  const { start: todayStart, end: todayEnd } = getBrazilDayRange()
 
-  // 4. Busca de dados
+  // 5. Busca de dados
   const [resServices, resCustomers, resToday, resAll] = await Promise.all([
     supabase.from('services').select('*', { count: 'exact', head: true }).eq('organization_id', orgId).eq('is_active', true),
     supabase.from('customers').select('*').eq('organization_id', orgId).eq('active', true),
+    
+    // --- QUERY DE AGENDA HOJE CORRIGIDA ---
     supabase
       .from('appointments')
       .select(`
@@ -56,13 +62,21 @@ export default async function DashboardPage() {
         services(title, color)
       `)
       .eq('organization_id', orgId)
-      .gte('start_time', todayStart.toISOString())
-      .lte('start_time', todayEnd.toISOString())
+      .gte('start_time', todayStart) // Começo do dia BR
+      .lte('start_time', todayEnd)   // Fim do dia BR
+      .neq('status', 'canceled')     // Tchau cancelados (1 L)
+      .neq('status', 'cancelled')    // Tchau cancelados (2 L)
       .order('start_time', { ascending: true }),
-    supabase.from('appointments').select('status').eq('organization_id', orgId)
+      
+    // --- QUERY DE TODOS OS AGENDAMENTOS (Para estatística) ---
+    supabase.from('appointments')
+      .select('status')
+      .eq('organization_id', orgId)
+      .neq('status', 'canceled')
+      .neq('status', 'cancelled')
   ]) as any
 
-  // 5. Preparação dos dados
+  // 6. Preparação dos dados
   const customersList = (resCustomers.data || []).map((c: any) => ({
     id: c.id,
     name: c.name || "Sem Nome"
@@ -83,9 +97,13 @@ export default async function DashboardPage() {
   // Cálculos
   const totalServices = resServices.count || 0
   const totalCustomers = resCustomers.data?.length || 0
-  const totalAllApps = resAll.data?.length || 0
+  // Filtramos os cancelados da query principal, então aqui conta só os válidos
+  const totalAllApps = resAll.data?.length || 0 
   const completedApps = resAll.data?.filter((a: any) => a.status === 'completed').length || 0
   const presenceRate = totalAllApps > 0 ? Math.round((completedApps / totalAllApps) * 100) : 0
+
+  // 7. Correção do Nome: Pega o primeiro nome do perfil ou fallback seguro
+  const doctorName = profile?.full_name ? profile.full_name.split(' ')[0] : "Doutor"
 
   return (
     <div className="space-y-8">
@@ -95,7 +113,7 @@ export default async function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Visão Geral</h1>
           <p className="text-muted-foreground mt-1">
-            Olá, <span className="text-foreground font-medium">{profile?.full_name?.split(' ')[0] || "Doutor"}</span>. 
+            Olá, <span className="text-foreground font-medium">{doctorName}</span>. 
             Aqui está o resumo operacional de hoje.
           </p>
         </div>
@@ -233,11 +251,12 @@ export default async function DashboardPage() {
                         app.status === 'scheduled' && "bg-blue-500/10 text-blue-500 border-blue-500/20",
                         app.status === 'arrived' && "bg-amber-500/10 text-amber-500 border-amber-500/20",
                         app.status === 'completed' && "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-                        app.status === 'canceled' && "bg-destructive/10 text-destructive border-destructive/20"
+                        app.status === 'confirmed' && "bg-green-500/10 text-green-500 border-green-500/20"
                       )}>
                         {app.status === 'scheduled' ? 'Agendado' : 
                          app.status === 'arrived' ? 'Na Recepção' : 
-                         app.status === 'completed' ? 'Finalizado' : 'Cancelado'}
+                         app.status === 'completed' ? 'Finalizado' : 
+                         app.status === 'confirmed' ? 'Confirmado' : app.status}
                       </span>
 
                       {/* Ícone de 3 pontos para indicar que é clicável */}
