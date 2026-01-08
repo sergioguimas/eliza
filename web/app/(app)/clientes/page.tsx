@@ -59,7 +59,7 @@ export default async function ClientesPage({
             Gerencie o cadastro e histórico clínico dos seus pacientes.
           </p>
         </div>
-        <CreateCustomerDialog organization_id={profile.organization_id} />
+        <CreateCustomerDialog />
       </div>
 
       {/* Barra de Busca */}
