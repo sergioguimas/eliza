@@ -1,107 +1,87 @@
-"use client"
-
-import { createClient } from "@/utils/supabase/client"
-import { notFound } from "next/navigation"
+import { createClient } from "@/utils/supabase/server"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 
-export default async function PrintRecordPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
+export default async function PrintRecordPage({ 
+  params 
+}: { 
+  params: Promise<{ id: string }> 
 }) {
-  const { id } = await params
+  const resolvedParams = await params
+  const id = resolvedParams.id
   const supabase = await createClient()
 
-  // Buscando o prontuário com os novos nomes de coluna
+  // 1. Busca segura do registro
   const { data: record } = await supabase
-    .from('service_notes')
+    .from('medical_records')
     .select(`
       *,
-      customers (
-        name,
-        email,
-        phone,
-        gender
-      ),
-      profiles!service_notes_profile_id_fkey (
-        name
+      customers (name),
+      professional:profiles!professional_id (
+        full_name,
+        organization_id
       )
     `)
     .eq('id', id)
     .single()
 
-  if (!record) {
-    return notFound()
-  }
+  if (!record) return <div className="p-10 text-center">Registro não encontrado.</div>
 
-  // @ts-ignore
-  const professionalName = record.profiles?.name || "Profissional Responsável"
+  // 2. Busca dados da organização
+  // CORREÇÃO 1: Adicionamos '|| ""' para garantir que nunca passamos undefined para o .eq()
+  const orgId = record.professional?.organization_id || ""
+  
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('*')
+    .eq('id', orgId) 
+    .single()
+
+  // CORREÇÃO 2: Fallback para data caso venha nula (evita erro no new Date)
+  const dataAtendimento = record.created_at 
+    ? format(new Date(record.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+    : "--/--/----"
 
   return (
-    <div className="p-8 max-w-4xl mx-auto bg-white text-black min-h-screen">
-      {/* Cabeçalho de Impressão (Eliza) */}
-      <div className="flex justify-between items-start border-b-2 border-zinc-200 pb-6 mb-8">
-        <div>
-          <h1 className="text-2xl font-bold uppercase tracking-tight">Eliza - Prontuário Digital</h1>
-          <p className="text-zinc-500 text-sm">Registro gerado via sistema de gestão integrada</p>
-        </div>
-        <div className="text-right text-sm">
-          <p><strong>Data de Emissão:</strong> {new Date().toLocaleDateString('pt-BR')}</p>
-          <p><strong>ID do Registro:</strong> {record.id.split('-')[0].toUpperCase()}</p>
-        </div>
+    <div className="p-12 max-w-[800px] mx-auto font-sans text-black bg-white min-h-screen">
+      
+      {/* Cabeçalho */}
+      <div className="text-center border-b-2 border-gray-800 pb-6 mb-8">
+        <h1 className="text-2xl font-bold uppercase tracking-wider">{org?.name || "Clínica MedAgenda"}</h1>
+        <p className="text-sm text-gray-600 mt-1">{org?.address}</p>
+        <p className="text-sm text-gray-600">{org?.phone}</p>
+      </div>
+      
+      {/* Dados do Cliente */}
+      <div className="mb-8 bg-gray-50 p-4 rounded border border-gray-200">
+        <p className="mb-1"><strong className="text-gray-700">Cliente:</strong> {record.customers?.name || "Não identificado"}</p>
+        <p><strong className="text-gray-700">Data do Atendimento:</strong> {dataAtendimento}</p>
       </div>
 
-      {/* Dados do Paciente */}
-      <section className="mb-8">
-        <h2 className="text-lg font-semibold bg-zinc-100 p-2 mb-4">Dados do Paciente</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <p><strong>Nome:</strong> {record.customers?.name}</p>
-          <p><strong>Gênero:</strong> {record.customers?.gender || '-'}</p>
-          <p><strong>Telefone:</strong> {record.customers?.phone || '-'}</p>
-          <p><strong>E-mail:</strong> {record.customers?.email || '-'}</p>
-        </div>
-      </section>
+      {/* Título */}
+      <h2 className="text-lg font-bold mb-4 border-l-4 border-gray-800 pl-3 uppercase">Relatório de Atendimento</h2>
 
-      {/* Conteúdo do Prontuário */}
-      <section className="mb-8">
-        <h2 className="text-lg font-semibold bg-zinc-100 p-2 mb-4">Evolução / Relato</h2>
-        <div className="whitespace-pre-wrap border p-4 rounded-md min-h-[300px] border-zinc-200">
-          {record.content}
-        </div>
-      </section>
-
-      {/* Rodapé e Assinatura */}
-      <footer className="mt-16 pt-8 border-t border-dashed border-zinc-300">
-        <div className="flex flex-col items-center justify-center">
-          <div className="w-64 border-b border-black mb-2"></div>
-          <p className="font-bold">{professionalName}</p>
-          <p className="text-sm text-zinc-500">Responsável Técnico</p>
-          
-          {record.signed_at && (
-            <div className="mt-4 p-2 bg-green-50 border border-green-200 text-green-800 text-xs rounded">
-              Documento assinado digitalmente em {format(new Date(record.signed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-            </div>
-          )}
-        </div>
-      </footer>
-
-      {/* Botão de Impressão (Não aparece no papel) */}
-      <div className="mt-8 no-print flex justify-center">
-        <button 
-          onClick={() => window.print()}
-          className="bg-background text-white px-6 py-2 rounded-lg hover:bg-zinc-800 transition-colors"
-        >
-          Imprimir Agora
-        </button>
+      {/* Conteúdo */}
+      <div className="text-justify whitespace-pre-wrap leading-relaxed text-gray-800 mb-12 min-h-[200px]">
+        {record.content || "Sem anotações."}
       </div>
 
-      <style jsx global>{`
+      {/* Assinatura */}
+      <div className="mt-20 border-t border-gray-400 pt-4 text-center w-64 mx-auto break-inside-avoid page-break-inside-avoid">
+        <p className="font-bold text-gray-900">{record.professional?.full_name || "Profissional Responsável"}</p>
+        <p className="text-xs text-gray-500 uppercase tracking-widest mt-1">Responsável Técnico</p>
+        {/* CORREÇÃO 3: Proteção caso o ID venha undefined (raro, mas possível em tipos) */}
+        <p className="text-[10px] text-gray-400 mt-2 font-mono">ID: {record.id?.slice(0, 8) || "---"}</p>
+      </div>
+
+      <style>{`
         @media print {
-          .no-print { display: none !important; }
-          body { background: white !important; }
+          @page { margin: 2cm; }
+          body { -webkit-print-color-adjust: exact; }
         }
       `}</style>
+
+      <script dangerouslySetInnerHTML={{__html: 'window.print()'}} />
     </div>
   )
 }
