@@ -1,14 +1,14 @@
 'use client'
 
 import { useState, useTransition } from "react"
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { saveDraft, signRecord, deleteRecord } from "@/app/actions/medical-records"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { Loader2, Save, CheckCircle, Printer, Trash2, Lock, FileText, CalendarClock } from "lucide-react"
+import { Loader2, Save, CheckCircle, Printer, Trash2, Lock, FileText, Calendar } from "lucide-react"
 
 interface MedicalRecordFormProps {
   customer_id: string
@@ -34,7 +34,7 @@ export function MedicalRecordForm({ customer_id, record, professionalName }: Med
         if (record?.id) formData.append('id', record.id)
 
         await saveDraft(formData)
-        toast.success("Rascunho salvo com sucesso!")
+        toast.success("Rascunho salvo!")
         if(isNew) setContent("") 
       } catch (error) {
         toast.error("Erro ao salvar.")
@@ -43,24 +43,24 @@ export function MedicalRecordForm({ customer_id, record, professionalName }: Med
   }
 
   const handleSign = () => {
-    if (!record?.id) return toast.error("Salve o rascunho antes de finalizar.")
-    if(!confirm("Ao finalizar, este registro não poderá mais ser editado. Confirmar?")) return
+    if (!record?.id) return toast.error("Salve antes de finalizar.")
+    if(!confirm("Ao finalizar, não será possível editar. Confirmar?")) return
 
     startTransition(async () => {
       try {
         await signRecord(record.id, customer_id)
-        toast.success("Registro finalizado!")
+        toast.success("Finalizado!")
       } catch (error) {
-        toast.error("Erro ao finalizar.")
+        toast.error("Erro ao assinar.")
       }
     })
   }
 
   const handleDelete = () => {
-    if(!confirm("Tem certeza que deseja excluir este item?")) return
+    if(!confirm("Excluir este item?")) return
     startTransition(async () => {
       await deleteRecord(record.id, customer_id)
-      toast.success("Item excluído.")
+      toast.success("Excluído.")
     })
   }
 
@@ -68,73 +68,72 @@ export function MedicalRecordForm({ customer_id, record, professionalName }: Med
     window.open(`/print/record/${record.id}`, '_blank')
   }
 
-  // Define a cor da borda lateral: Verde se assinado, Laranja se Rascunho, Azul se Novo
   const borderClass = isNew ? 'border-l-blue-500' : (isSigned ? 'border-l-green-500' : 'border-l-orange-400')
 
   return (
-    <Card className={`mb-3 border-l-4 shadow-sm ${borderClass}`}>
-      <CardHeader className="p-3 pb-2 flex flex-row items-center justify-between space-y-0">
+    <Card className={`mb-3 border shadow-sm ${borderClass}`}>
+      {/* HEADER: Compacto mas com fonte normal */}
+      <CardHeader className="p-3 pb-1 flex flex-row items-center justify-between space-y-0">
         <div className="flex items-center gap-2">
             {isSigned ? (
-                <Lock className="h-3.5 w-3.5 text-green-600" />
+                <Lock className="h-4 w-4 text-green-600" />
             ) : (
-                isNew ? <FileText className="h-3.5 w-3.5 text-blue-500"/> : <FileText className="h-3.5 w-3.5 text-orange-400"/>
+                isNew ? <FileText className="h-4 w-4 text-blue-500"/> : <FileText className="h-4 w-4 text-orange-400"/>
             )}
             
-            <CardTitle className="text-sm font-semibold text-foreground">
-                {isNew ? "Novo Registro / Anotação" : 
-                `Registro de ${format(new Date(record.created_at), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}`
-                }
-            </CardTitle>
+            <span className="text-sm font-semibold text-foreground">
+                {isNew ? "Nova Anotação" : format(new Date(record.created_at), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
+            </span>
         </div>
 
         {isSigned && (
-            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={handlePrint}>
-              <Printer className="h-3 w-3 mr-1.5" />
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground" onClick={handlePrint}>
+              <Printer className="h-3.5 w-3.5 mr-1.5" />
               Imprimir
             </Button>
         )}
       </CardHeader>
       
-      <CardContent className="p-3 pt-0">
+      {/* CONTENT: Espaçamento reduzido (p-3) mas texto legível (text-sm) */}
+      <CardContent className="p-3 pt-1">
         {isSigned ? (
-          <div className="prose prose-sm max-w-none text-sm bg-muted/30 p-3 rounded-md whitespace-pre-wrap text-foreground leading-relaxed">
+          <div className="text-sm text-foreground bg-muted/40 p-3 rounded-md whitespace-pre-wrap leading-relaxed border-0">
             {record.content}
           </div>
         ) : (
           <Textarea 
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Descreva os detalhes do atendimento, serviços realizados ou observações..."
-            className="min-h-[80px] text-sm bg-background resize-y" // Altura reduzida para 80px
+            placeholder="Escreva aqui os detalhes do atendimento..."
+            className="min-h-[100px] text-sm bg-background resize-y"
           />
         )}
       </CardContent>
 
+      {/* FOOTER: Botões compactos (h-8) */}
       <CardFooter className="p-3 pt-0 flex justify-between items-center">
         {isSigned ? (
-          <div className="text-[10px] text-muted-foreground w-full text-right flex items-center justify-end gap-1">
-            <CheckCircle className="h-3 w-3 text-green-600" />
-            Finalizado por <strong>{professionalName || "Profissional"}</strong> em {format(new Date(record.signed_at), "dd/MM/yy HH:mm")}
+          <div className="text-xs text-muted-foreground w-full text-right flex items-center justify-end gap-1">
+            <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+            Finalizado por <span className="font-medium text-foreground">{professionalName || "Profissional"}</span>
           </div>
         ) : (
           <>
-             {/* Botão de Excluir */}
              {!isNew ? (
-                <Button variant="ghost" size="sm" onClick={handleDelete} className="h-7 px-2 text-xs text-red-500 hover:text-red-600 hover:bg-red-50">
-                  <Trash2 className="h-3 w-3 mr-1" /> Excluir
+                <Button variant="ghost" size="sm" onClick={handleDelete} className="h-8 px-2 text-red-500 hover:text-red-600 hover:bg-red-50">
+                  <Trash2 className="h-4 w-4" />
                 </Button>
              ) : <div />}
 
              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={isPending} className="h-7 px-3 text-xs">
-                  {isPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Save className="h-3 w-3 mr-1" />}
+                <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={isPending} className="h-8 px-3 text-xs md:text-sm">
+                  {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
                   Salvar Rascunho
                 </Button>
                 
                 {!isNew && (
-                  <Button size="sm" onClick={handleSign} disabled={isPending} className="h-7 px-3 text-xs bg-green-600 hover:bg-green-700 text-white">
-                    <CheckCircle className="h-3 w-3 mr-1" />
+                  <Button size="sm" onClick={handleSign} disabled={isPending} className="h-8 px-3 text-xs md:text-sm bg-green-600 hover:bg-green-700 text-white">
+                    <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
                     Finalizar
                   </Button>
                 )}

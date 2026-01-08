@@ -20,16 +20,14 @@ export default async function ClienteDetalhesPage({
   const id = resolvedParams.id
   const supabase = await createClient()
 
-  // 1. Busca dados do Cliente
+  // 1. Busca dados
   const { data: customer, error } = await supabase
     .from('customers')
     .select('*')
     .eq('id', id)
     .single()
 
-  if (error || !customer) {
-    notFound()
-  }
+  if (error || !customer) notFound()
 
   // 2. Busca Agendamentos
   const { data: appointments } = await supabase
@@ -38,63 +36,47 @@ export default async function ClienteDetalhesPage({
     .eq('customer_id', id)
     .order('start_time', { ascending: false })
 
-  // 3. Busca Histórico (Blindado com Alias)
+  // 3. Busca Histórico (Safe)
   const { data: records } = await supabase
     .from('medical_records')
     .select('*, professional:profiles!professional_id(full_name)')
     .eq('customer_id', id)
     .order('created_at', { ascending: false })
 
-  // Cast para evitar erros de tipagem no map
   const safeRecords = records as any[] || []
-
   const isActive = customer.active !== false
 
-  // Helper para iniciais
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase()
-  }
+  const getInitials = (name: string) => name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
 
   return (
-    <div className="container max-w-5xl py-8 space-y-8 animate-in fade-in duration-500">
+    <div className="container max-w-5xl py-6 space-y-6 animate-in fade-in duration-300">
       
-      {/* --- CABEÇALHO --- */}
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-        <div className="flex items-center gap-6">
+      {/* CABEÇALHO */}
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+        <div className="flex items-center gap-4">
           <Link href="/clientes">
-            <Button variant="outline" size="icon" className="rounded-full h-10 w-10 border-dashed">
+            <Button variant="ghost" size="icon" className="rounded-full">
               <ArrowLeft className="h-5 w-5 text-muted-foreground" />
             </Button>
           </Link>
           
-          <div className="flex items-center gap-5">
-            <Avatar className="h-20 w-20 border-2 border-background shadow-sm">
-              <AvatarFallback className="text-2xl bg-primary/10 text-primary font-bold">
+          <div className="flex items-center gap-4">
+            <Avatar className="h-16 w-16 border bg-background">
+              <AvatarFallback className="text-xl bg-primary/5 text-primary font-bold">
                 {getInitials(customer.name)}
               </AvatarFallback>
             </Avatar>
             
-            <div className="space-y-1">
+            <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">{customer.name}</h1>
-                <Badge variant={isActive ? "default" : "destructive"} className="rounded-full px-3">
+                <h1 className="text-2xl font-bold tracking-tight">{customer.name}</h1>
+                <Badge variant={isActive ? "default" : "secondary"} className="text-xs px-2 h-5">
                   {isActive ? "Ativo" : "Inativo"}
                 </Badge>
               </div>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5" /> {customer.phone || "Sem telefone"}
-                </span>
-                {customer.email && (
-                   <span className="flex items-center gap-1.5 hidden sm:flex">
-                    <Mail className="h-3.5 w-3.5" /> {customer.email}
-                  </span>
-                )}
+              <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5"/> {customer.phone || "—"}</span>
+                {customer.email && <span className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5"/> {customer.email}</span>}
               </div>
             </div>
           </div>
@@ -105,30 +87,26 @@ export default async function ClienteDetalhesPage({
 
       <Separator />
 
-      {/* --- CONTEÚDO --- */}
+      {/* ABAS (LARGURA TOTAL) */}
       <Tabs defaultValue="historico" className="w-full">
-        {/* AQUI: Mudamos para w-full e removemos a restrição de largura */}
-        <TabsList className="grid w-full grid-cols-3 mb-8 h-12">
-          <TabsTrigger value="historico" className="h-10">Atendimentos</TabsTrigger>
-          <TabsTrigger value="agendamentos" className="h-10">Agendamentos</TabsTrigger>
-          <TabsTrigger value="dados" className="h-10">Perfil</TabsTrigger>
+        {/* w-full aqui garante que o menu ocupe a largura inteira */}
+        <TabsList className="w-full grid grid-cols-3 h-11 mb-6">
+          <TabsTrigger value="historico">Histórico</TabsTrigger>
+          <TabsTrigger value="agendamentos">Agendamentos</TabsTrigger>
+          <TabsTrigger value="dados">Dados</TabsTrigger>
         </TabsList>
 
-        {/* ABA 1: HISTÓRICO */}
+        {/* 1. HISTÓRICO */}
         <TabsContent value="historico" className="space-y-6">
-            {/* Removemos padding extra e borda tracejada para ficar mais limpo */}
-            <div className="bg-background rounded-xl">
-              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2 text-foreground">
-                <FileText className="h-5 w-5 text-primary" />
-                Novo Registro
-              </h2>
+            <div className="space-y-2">
+              <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider pl-1">Novo Registro</h2>
               <MedicalRecordForm customer_id={id} />
             </div>
 
             <div className="space-y-3">
-              <h2 className="text-lg font-semibold text-muted-foreground pl-1 mt-6">
-                Histórico
-              </h2>
+              <div className="flex items-center justify-between pl-1">
+                 <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Linha do Tempo</h2>
+              </div>
               
               {safeRecords.length > 0 ? (
                 safeRecords.map((rec) => (
@@ -140,126 +118,86 @@ export default async function ClienteDetalhesPage({
                   />
                 ))
               ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-center border rounded-xl bg-muted/10">
-                  <div className="bg-muted p-3 rounded-full mb-3">
-                    <FileText className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-base font-medium">Nenhum registro encontrado</h3>
-                  <p className="text-xs text-muted-foreground max-w-sm mt-1">
-                    Inicie o histórico deste cliente criando uma anotação acima.
-                  </p>
+                <div className="py-12 text-center border-2 border-dashed rounded-lg bg-muted/5">
+                  <p className="text-muted-foreground text-sm">Nenhum registro encontrado.</p>
                 </div>
               )}
             </div>
         </TabsContent>
 
-        {/* ABA 2: AGENDAMENTOS */}
-        <TabsContent value="agendamentos" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
+        {/* 2. AGENDAMENTOS */}
+        <TabsContent value="agendamentos" className="space-y-4">
+          <div className="grid gap-3">
             {appointments && appointments.length > 0 ? (
               appointments.map((app) => (
-                <Card key={app.id} className="overflow-hidden hover:shadow-sm transition-all duration-200 border-l-4" style={{ borderLeftColor: getStatusColorHex(app.status) }}>
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                <Card key={app.id} className="overflow-hidden hover:bg-muted/5 transition-colors border-l-4" style={{ borderLeftColor: getStatusColorHex(app.status) }}>
+                  <CardContent className="p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
                       <div className="bg-muted p-2 rounded-md">
                         <Calendar className="h-4 w-4 text-foreground" />
                       </div>
                       <div>
-                        <p className="font-semibold text-sm">{app.services?.title || 'Serviço Personalizado'}</p>
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                          <span className="flex items-center gap-1">
-                            {new Date(app.start_time).toLocaleDateString('pt-BR')}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {new Date(app.start_time).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}
-                          </span>
+                        <p className="font-medium text-sm">{app.services?.title || 'Serviço'}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{new Date(app.start_time).toLocaleDateString('pt-BR')}</span>
+                          <span>•</span>
+                          <span>{new Date(app.start_time).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</span>
                         </div>
                       </div>
                     </div>
-                    <Badge variant="secondary" className={`capitalize px-2 py-0.5 text-xs ${getStatusBadgeStyle(app.status)}`}>
+                    <Badge variant="outline" className={`text-xs border-0 ${getStatusBadgeStyle(app.status)}`}>
                       {translateStatus(app.status)}
                     </Badge>
                   </CardContent>
                 </Card>
               ))
             ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-center border rounded-xl bg-muted/10 col-span-full">
-                <div className="bg-muted p-3 rounded-full mb-3">
-                  <Calendar className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <h3 className="text-base font-medium">Sem agendamentos</h3>
-                <p className="text-xs text-muted-foreground">Este cliente ainda não possui horários marcados.</p>
+              <div className="py-12 text-center border-2 border-dashed rounded-lg">
+                <p className="text-muted-foreground text-sm">Sem agendamentos.</p>
               </div>
             )}
           </div>
         </TabsContent>
 
-        {/* ABA 3: PERFIL */}
+        {/* 3. DADOS */}
         <TabsContent value="dados">
           <Card>
-            <CardHeader className="p-4 pb-2">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <User className="h-4 w-4 text-primary" /> 
-                Dados Cadastrais
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-2">
+            <CardHeader className="p-4 pb-2"><CardTitle className="text-base">Dados Cadastrais</CardTitle></CardHeader>
+            <CardContent className="p-4">
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-1 p-3 rounded-lg bg-muted/20 border">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                    <Mail className="h-3 w-3" /> Email
-                  </p>
-                  <p className="font-medium text-sm">{customer.email || "—"}</p>
+                <InfoItem label="Email" value={customer.email} icon={<Mail className="h-3 w-3"/>} />
+                <InfoItem label="Telefone" value={customer.phone} icon={<Phone className="h-3 w-3"/>} />
+                <InfoItem label="Documento" value={customer.document} />
+                <InfoItem label="Nascimento" value={customer.birth_date ? new Date(customer.birth_date).toLocaleDateString('pt-BR') : null} />
+                <div className="md:col-span-2">
+                    <InfoItem label="Endereço" value={customer.address} icon={<MapPin className="h-3 w-3"/>} />
                 </div>
-                
-                <div className="space-y-1 p-3 rounded-lg bg-muted/20 border">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                    <Phone className="h-3 w-3" /> Telefone
-                  </p>
-                  <p className="font-medium text-sm">{customer.phone || "—"}</p>
-                </div>
-
-                <div className="space-y-1 p-3 rounded-lg bg-muted/20 border">
-                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Documento</p>
-                   <p className="font-medium text-sm">{customer.document || "—"}</p>
-                </div>
-
-                 <div className="space-y-1 p-3 rounded-lg bg-muted/20 border">
-                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Nascimento</p>
-                   <p className="font-medium text-sm">
-                    {customer.birth_date 
-                      ? new Date(customer.birth_date).toLocaleDateString('pt-BR') 
-                      : "—"}
-                   </p>
-                </div>
-                
-                <div className="space-y-1 md:col-span-2 p-3 rounded-lg bg-muted/20 border">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                    <MapPin className="h-3 w-3" /> Endereço
-                  </p>
-                  <p className="font-medium text-sm">{customer.address || "Endereço não cadastrado"}</p>
-                </div>
-
-                <div className="space-y-1 md:col-span-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                   <p className="text-[10px] font-bold text-yellow-600 uppercase tracking-wider flex items-center gap-2">
-                      <ShieldAlert className="h-3 w-3" /> Observações Internas
-                   </p>
-                   <p className="text-xs text-yellow-700 mt-1">
-                      {customer.notes || "Nenhuma observação interna."}
-                   </p>
-                </div>
+                {customer.notes && (
+                    <div className="md:col-span-2 p-3 bg-yellow-50 rounded border border-yellow-200 text-sm">
+                        <span className="font-bold text-yellow-700 block mb-1">Observações:</span>
+                        {customer.notes}
+                    </div>
+                )}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
-
       </Tabs>
     </div>
   )
 }
 
-// --- Helpers Visuais ---
+// Componente simples para dados (evita repetição)
+function InfoItem({ label, value, icon }: { label: string, value: string | null, icon?: React.ReactNode }) {
+    return (
+        <div className="space-y-1 p-3 bg-muted/20 rounded border">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                {icon} {label}
+            </p>
+            <p className="text-sm font-medium">{value || "—"}</p>
+        </div>
+    )
+}
 
 function getStatusColorHex(status: string | null) {
   if (!status) return '#94a3b8' 
