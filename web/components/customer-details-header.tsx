@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { EditCustomerDialog } from "@/components/edit-customer-dialog"
+import { UpdateCustomerDialog } from "./update-customer-dialog"
 import { deleteCustomer } from "@/app/actions/delete-customer"
 import { toast } from "sonner"
 import { ArrowLeft, Pencil, Trash2, Loader2, Phone, Mail, Printer } from "lucide-react"
@@ -42,7 +42,12 @@ export function CustomerDetailsHeader({ customer }: CustomerDetailsHeaderProps) 
   return (
     <>
       {/* O Modal de Edição fica aqui, invisível até ser chamado */}
-      <EditCustomerDialog customer={customer} />
+      <UpdateCustomerDialog customer={customer}>
+        <Button variant="outline" size="sm">
+          <Pencil className="mr-2 h-4 w-4" />
+          Editar Dados
+        </Button>
+      </UpdateCustomerDialog>
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div className="flex items-center gap-4">

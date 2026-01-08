@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { deleteCustomer } from "@/app/actions/delete-customer"
-import { EditCustomerDialog } from "@/components/edit-customer-dialog"
+import { UpdateCustomerDialog } from "./update-customer-dialog"
 import { toast } from "sonner"
 
 interface CustomerRowActionsProps {
@@ -52,9 +52,12 @@ export function CustomerRowActions({ customer }: CustomerRowActionsProps) {
   return (
     <>
       {/* 2. O COMPONENTE DO DIALOG (Invisível até abrir) */}
-      <EditCustomerDialog 
-        customer={customer} 
-      />
+      <UpdateCustomerDialog customer={customer}>
+        <Button variant="outline" size="sm">
+          <Pencil className="mr-2 h-4 w-4" />
+          Editar Dados
+        </Button>
+      </UpdateCustomerDialog>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
