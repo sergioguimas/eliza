@@ -26,7 +26,6 @@ export default async function ClientesPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // CORREÇÃO 1: organization_id (singular)
   const { data: profile } = await supabase
     .from('profiles')
     .select('organization_id')
@@ -36,7 +35,6 @@ export default async function ClientesPage({
   if (!profile?.organization_id) redirect('/configuracoes')
 
   // Busca pacientes filtrando pela organização
-  // CORREÇÃO 2: organization_id (singular)
   let customerQuery = supabase
     .from('customers')
     .select('*')

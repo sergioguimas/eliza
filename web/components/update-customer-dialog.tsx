@@ -1,130 +1,129 @@
 'use client'
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
+import { Pencil, Loader2 } from "lucide-react"
+import { useState, useTransition } from "react"
 import { updateCustomer } from "@/app/actions/update-customer"
 import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
 
-// Definimos o tipo esperado dos dados
-interface EditCustomerDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  customer: {
-    id: string
-    name: string
-    email?: string | null
-    phone?: string | null
-    gender?: string | null
-    notes?: string | null
+export function UpdateCustomerDialog({ customer, open: controlledOpen, onOpenChange }: { 
+  customer: any, 
+  open?: boolean, 
+  onOpenChange?: (open: boolean) => void 
+}) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  
+  // Gerencia se o modal é controlado por fora (props) ou internamente (state)
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen
+  const setOpen = onOpenChange || setInternalOpen
+
+  const [isActive, setIsActive] = useState(customer.active !== false)
+
+  async function handleSubmit(formData: FormData) {
+    startTransition(async () => {
+      // O ID já está num input hidden dentro do form, então o formData já o contém.
+      // A ação agora espera APENAS o formData.
+      const result = await updateCustomer(formData)
+      
+      if (result.success) {
+        toast.success("Dados atualizados com sucesso!")
+        setOpen(false)
+      } else {
+        toast.error("Erro ao atualizar dados.")
+      }
+    })
   }
-}
 
-export function EditCustomerDialog({ open, onOpenChange, customer }: EditCustomerDialogProps) {
-  const [loading, setLoading] = useState(false)
-
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setLoading(true)
-    
-    const formData = new FormData(event.currentTarget)
-    const result = await updateCustomer(customer.id, formData)
-
-    setLoading(false)
-
-    if (result?.error) {
-      toast.error(result.error)
-    } else {
-      toast.success("Dados atualizados!")
-      onOpenChange(false)
-    }
-  }
+  const birthDateValue = customer.birth_date ? new Date(customer.birth_date).toISOString().split('T')[0] : ''
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-background border-border text-foreground sm:max-w-[500px]">
+    <Dialog open={open} onOpenChange={setOpen}>
+      {/* Só mostra o Trigger se não for controlado externamente */}
+      {controlledOpen === undefined && (
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="icon">
+            <Pencil className="h-4 w-4" />
+          </Button>
+        </DialogTrigger>
+      )}
+      
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Editar Paciente</DialogTitle>
+          <DialogTitle>Editar Cliente</DialogTitle>
+          <DialogDescription>
+            Atualize as informações cadastrais e preferências.
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+        
+        <form action={handleSubmit} className="space-y-4 py-4">
+          <input type="hidden" name="id" value={customer.id} />
           
-          <div className="grid gap-2">
-            <Label htmlFor="edit-name">Nome Completo</Label>
-            <Input 
-              id="edit-name" 
-              name="name" 
-              defaultValue={customer.name}
-              required 
-              className="bg-zinc-950 border-border focus:ring-blue-600" 
+          <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/20">
+            <div className="space-y-0.5">
+                <Label className="text-base">Cadastro Ativo</Label>
+                <p className="text-xs text-muted-foreground">Desative para ocultar de novos agendamentos.</p>
+            </div>
+            <Switch 
+                name="active" 
+                checked={isActive} 
+                onCheckedChange={setIsActive} 
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="edit-email">Email</Label>
-              <Input 
-                id="edit-email" 
-                name="email" 
-                type="email" 
-                defaultValue={customer.email || ''}
-                className="bg-zinc-950 border-border focus:ring-blue-600" 
-              />
+            <div className="space-y-2 col-span-2">
+                <Label htmlFor="name">Nome Completo *</Label>
+                <Input id="name" name="name" defaultValue={customer.name} required />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-phone">Telefone</Label>
-              <Input 
-                id="edit-phone" 
-                name="phone" 
-                defaultValue={customer.phone || ''}
-                className="bg-zinc-950 border-border focus:ring-blue-600" 
-              />
+            
+            <div className="space-y-2">
+                <Label htmlFor="phone">WhatsApp *</Label>
+                <Input id="phone" name="phone" defaultValue={customer.phone} required />
+            </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="birth_date">Data de Nascimento</Label>
+                <Input id="birth_date" name="birth_date" type="date" defaultValue={birthDateValue} />
+            </div>
+
+            <div className="space-y-2 col-span-2">
+                <Label htmlFor="email">E-mail</Label>
+                <Input id="email" name="email" type="email" defaultValue={customer.email} />
+            </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="document">CPF</Label>
+                <Input id="document" name="document" defaultValue={customer.document} />
             </div>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="edit-gender">Gênero</Label>
-            <Select name="gender" defaultValue={customer.gender || undefined}>
-              <SelectTrigger className="bg-zinc-950 border-border">
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent className="bg-background border-border text-foreground">
-                <SelectItem value="masculino">Masculino</SelectItem>
-                <SelectItem value="feminino">Feminino</SelectItem>
-                <SelectItem value="outro">Outro</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="space-y-2">
+            <Label htmlFor="address">Endereço Completo</Label>
+            <Textarea id="address" name="address" defaultValue={customer.address} rows={2} />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="edit-notes">Observações</Label>
-            <Textarea 
-              id="edit-notes" 
-              name="notes" 
-              defaultValue={customer.notes || ''}
-              className="bg-zinc-950 border-border focus:ring-blue-600 resize-none h-20" 
-            />
+          <div className="space-y-2">
+            <Label htmlFor="notes">Observações Internas</Label>
+            <Textarea id="notes" name="notes" defaultValue={customer.notes} rows={2} />
           </div>
 
           <DialogFooter>
-            <Button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700 w-full md:w-auto gap-2">
-              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={isPending}>
+              {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Salvar Alterações
             </Button>
           </DialogFooter>
