@@ -1,13 +1,13 @@
 import { createClient } from "@/utils/supabase/server"
 import { notFound } from "next/navigation"
-import { ArrowLeft, Phone, Mail, MapPin, Calendar, Clock, FileText, User, ShieldAlert } from "lucide-react"
+import { ArrowLeft, Phone, Mail, MapPin, Calendar, Clock, FileText, User, ShieldAlert, Pencil } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { EditCustomerDialog } from "@/components/edit-customer-dialog"
+import { UpdateCustomerDialog } from "@/components/update-customer-dialog"
 import { MedicalRecordForm } from "@/components/medical-record-form"
 import { Separator } from "@/components/ui/separator"
 
@@ -100,7 +100,12 @@ export default async function ClienteDetalhesPage({
           </div>
         </div>
         
-        <EditCustomerDialog customer={customer} />
+        <UpdateCustomerDialog customer={customer}>
+          <Button variant="outline" size="sm">
+            <Pencil className="mr-2 h-4 w-4" />
+            Editar Dados
+          </Button>
+        </UpdateCustomerDialog>
       </div>
 
       <Separator />
