@@ -96,16 +96,6 @@ export function LoginForm() {
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isLogin ? 'Entrar no Sistema' : 'Criar Conta')}
           </Button>
-          <p className="text-sm text-center text-muted-foreground">
-            {isLogin ? "Ainda não usa o Eliza? " : "Já possui cadastro? " }
-            <button 
-              type="button" 
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-primary hover:underline font-medium"
-            >
-              {isLogin ? "Criar conta" : "Fazer Login"}
-            </button>
-          </p>
         </CardFooter>
       </form>
     </Card>
