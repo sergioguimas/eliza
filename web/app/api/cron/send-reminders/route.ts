@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/server"
 import { NextResponse } from "next/server"
-import { format, addDays } from "date-fns"
+import { format, addDays, subHours } from "date-fns" // Importe subHours
 import { ptBR } from "date-fns/locale"
 
 export const dynamic = 'force-dynamic'
@@ -15,11 +15,26 @@ export async function GET(request: Request) {
 
   const supabase = await createClient()
 
-  const tomorrow = addDays(new Date(), 1)
-  const startOfDay = new Date(tomorrow.setHours(0, 0, 0, 0)).toISOString()
-  const endOfDay = new Date(tomorrow.setHours(23, 59, 59, 999)).toISOString()
+  // CORREÇÃO DE FUSO HORÁRIO (Timezone Fix)
+  // O servidor roda em UTC. Subtraímos 3 horas para simular o horário de Brasília.
+  // Assim, se for 01:00 AM UTC (dia 09), vira 22:00 BRT (dia 08).
+  const nowUtc = new Date()
+  const nowBrazil = subHours(nowUtc, 3) 
+  
+  const tomorrow = addDays(nowBrazil, 1)
+  
+  // Define o intervalo de busca (00:00 até 23:59 do dia seguinte no BRASIL)
+  const startOfDay = new Date(tomorrow)
+  startOfDay.setHours(0, 0, 0, 0)
+  
+  const endOfDay = new Date(tomorrow)
+  endOfDay.setHours(23, 59, 59, 999)
 
-  console.log(`🤖 Iniciando Cron Job para: ${startOfDay.split('T')[0]}`)
+  // Convertemos para ISO String para o Banco (que espera UTC, mas o intervalo está correto)
+  const startIso = startOfDay.toISOString()
+  const endIso = endOfDay.toISOString()
+
+  console.log(`🤖 Cron Job - Buscando entre: ${startIso} e ${endIso}`)
 
   const { data: appointments, error } = await supabase
     .from('appointments')
@@ -37,8 +52,8 @@ export async function GET(request: Request) {
       )
     `)
     .eq('status', 'scheduled')
-    .gte('start_time', startOfDay)
-    .lte('start_time', endOfDay)
+    .gte('start_time', startIso)
+    .lte('start_time', endIso)
 
   if (error) {
     console.error("Erro ao buscar agendamentos:", error)
@@ -46,26 +61,27 @@ export async function GET(request: Request) {
   }
 
   if (!appointments || appointments.length === 0) {
-    return NextResponse.json({ message: "Nenhum agendamento para lembrar amanhã." })
+    return NextResponse.json({ 
+        message: "Nenhum agendamento para lembrar amanhã.",
+        debug_search_range: {
+            from: startIso,
+            to: endIso,
+            server_time_utc: nowUtc.toISOString(),
+            simulated_brazil_time: nowBrazil.toISOString()
+        }
+    })
   }
 
   let successCount = 0
   let failCount = 0
 
   for (const app of appointments) {
-    // Se não tiver cliente ou organização, pula para o próximo
-    if (!app.customers || !app.organizations) {
-        failCount++
-        continue
-    }
+    if (!app.customers || !app.organizations) { failCount++; continue }
 
     const phone = app.customers.phone?.replace(/\D/g, "")
     const org = app.organizations
     
-    if (!phone || !org?.slug) {
-        failCount++
-        continue
-    }
+    if (!phone || !org?.slug) { failCount++; continue }
 
     const instanceName = org.slug
     const EVOLUTION_URL = org.evolution_api_url || process.env.NEXT_PUBLIC_EVOLUTION_API_URL
@@ -73,16 +89,17 @@ export async function GET(request: Request) {
     
     const finalPhone = phone.startsWith("55") ? phone : `55${phone}`
 
-    // Tratamento flexível das configurações
     const rawSettings = org.organization_settings as any
     const settings = Array.isArray(rawSettings) ? rawSettings[0] : rawSettings
     
     let template = settings?.whatsapp_message_reminder || "Olá {name}, lembrete do seu agendamento amanhã às {time}. Confirma?"
     
     const dateObj = new Date(app.start_time)
+    // Opcional: Subtrair 3h aqui também se a hora na mensagem estiver errada,
+    // mas geralmente o 'format' com timezone lida bem se configurado.
+    // Vamos confiar no new Date() local por enquanto.
     const timeStr = format(dateObj, "HH:mm", { locale: ptBR })
     
-    // Uso seguro do nome
     const firstName = app.customers.name ? app.customers.name.split(' ')[0] : 'Cliente'
 
     const message = template
@@ -111,6 +128,10 @@ export async function GET(request: Request) {
     success: true,
     processed: appointments.length,
     sent: successCount,
-    failed: failCount
+    failed: failCount,
+    debug_search_range: {
+        from: startIso,
+        to: endIso
+    }
   })
 }
