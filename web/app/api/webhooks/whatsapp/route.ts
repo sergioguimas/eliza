@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { addDays, format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
 // Variáveis de ambiente como Fallback (caso a org não tenha configurado)
 const DEFAULT_EVOLUTION_URL = process.env.NEXT_PUBLIC_EVOLUTION_API_URL
@@ -153,7 +154,17 @@ export async function POST(request: Request) {
         // 3. Pega Mensagem Personalizada
         let messageText = settings?.whatsapp_message_canceled || "Agendamento cancelado."
         
-        // Se a mensagem tiver a tag {{horarios_livres}}, a gente insere
+        const firstName = customer.name.split(' ')[0]
+        const dateObj = new Date(appointment.start_time)
+        // Precisamos importar 'format' e 'ptBR' lá em cima se não tiver
+        const dateStr = format(dateObj, "dd/MM", { locale: ptBR }) 
+        const timeStr = format(dateObj, "HH:mm", { locale: ptBR })
+
+        messageText = messageText
+            .replace(/{name}/g, firstName)
+            .replace(/{date}/g, dateStr)
+            .replace(/{time}/g, timeStr)
+        // -------------------------------------------------------
         // Se não tiver, adicionamos no final se houver horários
         const slotsString = freeSlots.length > 0 
             ? `\n\nHorários livres amanhã:\n` + freeSlots.map(h => `▪️ ${h}`).join('\n')
