@@ -1,15 +1,10 @@
-import { AppSidebar } from "@/components/app-sidebar"
-import { redirect } from "next/navigation"
 import { createClient } from "@/utils/supabase/server"
-import { Menu } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-  SheetTitle,
-} from "@/components/ui/sheet"
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
+import { redirect } from "next/navigation"
+import { AppSidebar } from "@/components/app-sidebar"
+import { getDictionary } from "@/lib/get-dictionary"
+import { KeckleonProvider } from "@/providers/keckleon-provider"
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar" // <--- Novo import
+import { Separator } from "@/components/ui/separator"
 
 export default async function AppLayout({
   children,
@@ -19,50 +14,47 @@ export default async function AppLayout({
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect("/login")
+  if (!user) return redirect('/login')
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('organizations(name)')
+    .select('*, organizations(*)')
     .eq('id', user.id)
     .single()
 
-  // @ts-ignore
-  const clinicName = profile?.organizations?.name || "Eliza"
+  const organization = profile?.organizations
+  
+  // Keckleon Logic
+  const niche = organization?.niche || 'generico'
+  const dict = getDictionary(niche)
+  const themeClass = `theme-${niche}`
 
   return (
-    <div className="flex min-h-screen bg-background flex-col md:flex-row">
-      {/* Sidebar para Desktop */}
-      <aside className="hidden md:block w-64 fixed inset-y-0 z-50 border-r border-sidebar-border bg-sidebar">
-        <AppSidebar clinicName={clinicName} />
-      </aside>
-
-      {/* Mobile Header */}
-      <div className="md:hidden flex items-center justify-between p-4 border-b border-border bg-background sticky top-0 z-50">
-        <div className="flex items-center gap-2">
-           <span className="font-bold text-foreground">Eliza</span>
-        </div>
-
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-muted-foreground">
-              <Menu className="h-6 w-6" />
-            </Button>
-          </SheetTrigger>
+    // 1. Injeta o Tema CSS
+    <div className={`h-full ${themeClass}`}> 
+      {/* 2. Injeta o Dicionário */}
+      <KeckleonProvider dictionary={dict} niche={niche}>
+        {/* 3. Injeta a Lógica do Sidebar */}
+        <SidebarProvider>
+          <AppSidebar user={user} organization={organization} />
           
-          <SheetContent side="left" className="p-0 bg-sidebar border-sidebar-border w-72 text-sidebar-foreground">
-            <VisuallyHidden>
-              <SheetTitle>Menu de Navegação</SheetTitle>
-            </VisuallyHidden>
-            <AppSidebar clinicName={clinicName} />
-          </SheetContent>
-        </Sheet>
-      </div>
+          {/* Conteúdo Principal */}
+          <main className="flex-1 w-full">
+            {/* Header com botão para abrir/fechar sidebar */}
+            <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
+              <SidebarTrigger className="-ml-1" />
+              <Separator orientation="vertical" className="mr-2 h-4" />
+              <h1 className="text-sm font-medium">
+                {organization?.name || "Dashboard"}
+              </h1>
+            </header>
 
-      {/* Conteúdo Principal */}
-      <main className="flex-1 md:ml-64 p-4 md:p-8 pt-6">
-        {children}
-      </main>
+            <div className="p-4">
+              {children}
+            </div>
+          </main>
+        </SidebarProvider>
+      </KeckleonProvider>
     </div>
   )
 }

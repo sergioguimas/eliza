@@ -1,102 +1,69 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
-import { revalidatePath } from 'next/cache'
+import { createClient } from "@/utils/supabase/server"
+import { revalidatePath } from "next/cache"
 
 export async function updateSettings(formData: FormData) {
   const supabase = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Não autorizado' }
+  // Captura os dados
+  const org_id = formData.get('org_id') as string
+  const name = formData.get('name') as string
+  const document = formData.get('document') as string
+  const phone = formData.get('phone') as string
+  const email = formData.get('email') as string
+  const address = formData.get('address') as string
+  
+  // NOVO CAMPO: NICHO
+  const niche = formData.get('niche') as string 
 
-  // Sanitização do ID da Org
-  let orgId = formData.get('org_id') as string
-  if (orgId === 'undefined' || orgId === 'null') orgId = ''
+  // Validação Básica
+  if (!org_id) {
+    return { error: "ID da organização não encontrado." }
+  }
+
+  // Se veio full_name ou crm, é atualização de perfil (não mexemos aqui na org)
+  const full_name = formData.get('full_name') as string
+  const crm = formData.get('crm') as string
 
   try {
-    // === CENÁRIO 1: CRIAR NOVA CLÍNICA (Primeiro Acesso) ===
-    const orgName = formData.get('name') as string
-    
-    if (!orgId && orgName) {
-      const { data: newId, error: rpcError } = await supabase.rpc('create_new_organization' as any, {
-        org_name: orgName,
-        org_document: formData.get('document') as string,
-        org_phone: formData.get('phone') as string,
-        org_email: formData.get('email') as string,
-        org_address: formData.get('address') as string,
-        org_evolution_url: formData.get('evolution_url') as string,
-        org_evolution_key: formData.get('evolution_apikey') as string
-      })
-
-      if (rpcError) {
-        console.error('Erro RPC Create:', rpcError)
-        return { error: 'Erro ao criar organização: ' + rpcError.message }
-      }
-      orgId = newId
-    } 
-    
-    // === CENÁRIO 2: ATUALIZAR CLÍNICA EXISTENTE (Proteção contra Abas Ocultas) ===
-    else if (orgId) {
-      // Criamos um objeto dinâmico apenas com os campos que NÃO são nulos
-      const orgUpdates: any = {onboarding_completed: true}
-      
-      const addIfPresent = (key: string, formKey: string) => {
-        const value = formData.get(formKey)
-        // Se value for null, o input não estava na tela. Se for string vazia '', o usuário limpou.
-        if (value !== null) orgUpdates[key] = value
-      }
-
-      addIfPresent('name', 'name')
-      addIfPresent('document', 'document')
-      addIfPresent('phone', 'phone')
-      addIfPresent('email', 'email')
-      addIfPresent('address', 'address')
-      addIfPresent('evolution_api_url', 'evolution_url')
-      addIfPresent('evolution_api_key', 'evolution_apikey')
-
-      // Só roda o update se tivermos algum campo para atualizar
-      if (Object.keys(orgUpdates).length > 0) {
-        const { error: updateError } = await supabase
-          .from('organizations')
-          .update(orgUpdates)
-          .eq('id', orgId)
-
-        if (updateError) {
-          console.error('Erro Update Org:', updateError)
-          return { error: 'Erro ao atualizar dados da clínica: ' + updateError.message }
-        }
+    // 1. Atualiza Perfil (Se houver dados)
+    if (full_name || crm) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await supabase.from('profiles').update({ full_name, crm }).eq('id', user.id)
       }
     }
 
-    // === ATUALIZAR DADOS PESSOAIS (MÉDICO) ===
-    const profileUpdates: any = {}
+    // 2. Atualiza Organização (Se houver dados)
+    // Se o nicho vier vazio (ex: edição posterior), não sobrescreve com null
+    const orgUpdateData: any = { name, document, phone, email, address }
     
-    const addProfileField = (key: string) => {
-        const val = formData.get(key)
-        if (val !== null) profileUpdates[key] = val
+    if (niche) {
+      orgUpdateData.niche = niche
     }
 
-    addProfileField('full_name')
-    addProfileField('crm')
+    // Detecta se é o setup inicial (se todos os campos essenciais estão preenchidos)
+    if (name && phone) {
+      orgUpdateData.onboarding_completed = true
+    }
 
-    if (Object.keys(profileUpdates).length > 0) {
-        const { error: profileError } = await supabase
-        .from('profiles')
-        .update(profileUpdates)
-        .eq('id', user.id)
+    const { error } = await supabase
+      .from('organizations')
+      .update(orgUpdateData)
+      .eq('id', org_id)
 
-        if (profileError) {
-        console.error('Erro Update Profile:', profileError)
-        return { error: 'Erro ao atualizar seu perfil.' }
-        }
+    if (error) {
+      console.error(error)
+      return { error: "Erro ao atualizar dados da empresa." }
     }
 
     revalidatePath('/configuracoes')
     revalidatePath('/setup')
+    
     return { success: true }
-
-  } catch (error: any) {
-    console.error('Erro Geral:', error)
-    return { error: error.message }
+    
+  } catch (err) {
+    return { error: "Erro interno no servidor." }
   }
 }

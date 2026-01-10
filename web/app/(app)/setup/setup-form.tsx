@@ -1,25 +1,45 @@
 'use client'
 
 import { useState, useTransition } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { useRouter } from "next/navigation"
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle, 
+  CardFooter 
+} from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { updateSettings } from "@/app/actions/update-settings"
 import { toast } from "sonner"
-import { Loader2, ArrowRight, ArrowLeft, Check, Building2, MapPin } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { 
+  Loader2, 
+  ArrowRight, 
+  ArrowLeft, 
+  Check 
+} from "lucide-react"
+import { cn } from "@/lib/utils"
+
+// Importações do nosso sistema
+import { updateSettings } from "@/app/actions/update-settings"
+import { getNicheOptions, nicheConfig } from "@/lib/niche-config"
 
 export function SetupForm({ organization }: { organization: any }) {
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
   
-  // Controle de Passos (0 = Dados Básicos, 1 = Endereço/Contato)
+  // Controle de Passos (0 = Nicho, 1 = Dados, 2 = Localização)
   const [step, setStep] = useState(0)
 
-  // Estado Local para segurar os dados entre os passos
+  // Carrega as opções do arquivo de configuração
+  const nicheOptions = getNicheOptions()
+
+  // Estado dos Dados do Formulário
   const [formData, setFormData] = useState({
+    niche: organization?.niche || 'generico',
     name: organization?.name || '',
     document: organization?.document || '',
     phone: organization?.phone || '',
@@ -27,19 +47,20 @@ export function SetupForm({ organization }: { organization: any }) {
     address: organization?.address || ''
   })
 
-  // Atualiza o estado conforme o usuário digita
+  // Helper para pegar o label do nicho atual (Ex: "Barbearia") para usar nos textos
+  const currentNicheLabel = nicheConfig[formData.niche]?.label.split('/')[0] || 'Empresa'
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  // Envio Final (Só acontece no último passo)
   const handleFinish = async () => {
     startTransition(async () => {
-      // Converte nosso objeto state para FormData (formato que a Server Action espera)
       const dataToSend = new FormData()
       dataToSend.append('org_id', organization.id)
       
+      // Adiciona todos os campos no FormData
       Object.entries(formData).forEach(([key, value]) => {
         dataToSend.append(key, value)
       })
@@ -49,8 +70,7 @@ export function SetupForm({ organization }: { organization: any }) {
       if (result?.error) {
         toast.error(result.error)
       } else {
-        toast.success("Setup concluído com sucesso!")
-        // Força o redirecionamento para o dashboard
+        toast.success("Setup concluído! Bem-vindo.")
         router.push('/dashboard') 
         router.refresh()
       }
@@ -59,34 +79,73 @@ export function SetupForm({ organization }: { organization: any }) {
 
   return (
     <div className="max-w-xl mx-auto">
-      {/* Indicador de Progresso Visual */}
-      <div className="flex items-center justify-center mb-8 space-x-4">
-        <div className={`flex items-center space-x-2 ${step >= 0 ? 'text-primary' : 'text-muted-foreground'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${step >= 0 ? 'border-primary bg-primary text-primary-foreground' : 'border-muted'}`}>1</div>
-          <span className="font-medium">Empresa</span>
-        </div>
-        <div className="w-12 h-0.5 bg-border" />
-        <div className={`flex items-center space-x-2 ${step >= 1 ? 'text-primary' : 'text-muted-foreground'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${step >= 1 ? 'border-primary bg-primary text-primary-foreground' : 'border-muted'}`}>2</div>
-          <span className="font-medium">Localização</span>
-        </div>
+      {/* Indicador de Progresso (Bolinhas 1, 2, 3) */}
+      <div className="flex items-center justify-center mb-8 space-x-2 sm:space-x-4">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="flex items-center">
+             <div className={cn(
+               "w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors",
+               step >= i ? "border-primary bg-primary text-primary-foreground" : "border-muted text-muted-foreground"
+             )}>
+               {i + 1}
+             </div>
+             {i < 2 && <div className={cn("w-8 sm:w-16 h-0.5 mx-2", step > i ? "bg-primary" : "bg-muted")} />}
+          </div>
+        ))}
       </div>
 
       <Card className="border-border bg-card shadow-lg">
-        {/* === PASSO 1: DADOS BÁSICOS === */}
+        
+        {/* === PASSO 1: ESCOLHA DO NICHO === */}
         {step === 0 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Building2 className="w-5 h-5"/> Dados da Clínica</CardTitle>
-              <CardDescription>Comece informando os dados principais da sua organização.</CardDescription>
+              <CardTitle>Qual o seu ramo?</CardTitle>
+              <CardDescription>Vamos personalizar o sistema para o seu tipo de negócio.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Gera os botões baseados no arquivo niche-config.ts */}
+              {nicheOptions.map((item) => (
+                <div 
+                  key={item.id}
+                  onClick={() => setFormData(prev => ({ ...prev, niche: item.id }))}
+                  className={cn(
+                    "cursor-pointer rounded-lg border-2 p-4 flex flex-col items-center text-center gap-3 transition-all hover:bg-muted/50",
+                    formData.niche === item.id ? "border-primary bg-primary/5" : "border-muted"
+                  )}
+                >
+                  <div className={cn("p-2 rounded-full bg-muted", formData.niche === item.id && "bg-primary text-primary-foreground")}>
+                    <item.icon className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">{item.label}</h3>
+                    <p className="text-xs text-muted-foreground">{item.description}</p>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+            <CardFooter className="flex justify-end border-t pt-6">
+              <Button onClick={() => setStep(1)}>
+                Continuar <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
+            </CardFooter>
+          </div>
+        )}
+
+        {/* === PASSO 2: DADOS BÁSICOS === */}
+        {step === 1 && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+            <CardHeader>
+              <CardTitle>Dados da Empresa</CardTitle>
+              <CardDescription>Como você gostaria de chamar sua organização?</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Nome da Clínica <span className="text-red-500">*</span></Label>
+                <Label htmlFor="name">Nome da {currentNicheLabel}</Label>
                 <Input 
                   id="name" name="name" 
                   value={formData.name} onChange={handleChange} 
-                  placeholder="Ex: Clínica Saúde Vida" 
+                  placeholder={`Ex: Minha ${currentNicheLabel} Inc.`}
                   autoFocus
                 />
               </div>
@@ -99,20 +158,23 @@ export function SetupForm({ organization }: { organization: any }) {
                 />
               </div>
             </CardContent>
-            <CardFooter className="flex justify-end border-t pt-6">
-              <Button onClick={() => setStep(1)} disabled={!formData.name}>
+            <CardFooter className="flex justify-between border-t pt-6">
+              <Button variant="outline" onClick={() => setStep(0)}>
+                <ArrowLeft className="mr-2 w-4 h-4" /> Voltar
+              </Button>
+              <Button onClick={() => setStep(2)} disabled={!formData.name}>
                 Próximo <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
             </CardFooter>
           </div>
         )}
 
-        {/* === PASSO 2: CONTATO E ENDEREÇO === */}
-        {step === 1 && (
+        {/* === PASSO 3: ENDEREÇO E CONTATO === */}
+        {step === 2 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><MapPin className="w-5 h-5"/> Contato & Endereço</CardTitle>
-              <CardDescription>Como seus pacientes podem te encontrar?</CardDescription>
+              <CardTitle>Contato & Endereço</CardTitle>
+              <CardDescription>Como seus clientes te encontram?</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -129,7 +191,7 @@ export function SetupForm({ organization }: { organization: any }) {
                   <Input 
                     id="email" name="email" 
                     value={formData.email} onChange={handleChange} 
-                    placeholder="contato@clinica.com" 
+                    placeholder="contato@empresa.com" 
                   />
                 </div>
               </div>
@@ -144,10 +206,9 @@ export function SetupForm({ organization }: { organization: any }) {
               </div>
             </CardContent>
             <CardFooter className="flex justify-between border-t pt-6">
-              <Button variant="outline" onClick={() => setStep(0)}>
+              <Button variant="outline" onClick={() => setStep(1)}>
                 <ArrowLeft className="mr-2 w-4 h-4" /> Voltar
               </Button>
-              
               <Button onClick={handleFinish} disabled={isPending}>
                 {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
                 Finalizar Setup
