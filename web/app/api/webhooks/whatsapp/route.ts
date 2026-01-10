@@ -3,7 +3,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { addDays, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
-// Variáveis de ambiente como Fallback (caso a org não tenha configurado)
+// Variáveis de ambiente como Fallback (caso o cliente não tenha configurado)
 const DEFAULT_EVOLUTION_URL = process.env.NEXT_PUBLIC_EVOLUTION_API_URL
 const GLOBAL_API_KEY = process.env.EVOLUTION_API_KEY
 

@@ -94,11 +94,9 @@ export async function GET(request: Request) {
     
     let template = settings?.whatsapp_message_reminder || "Olá {name}, lembrete do seu agendamento amanhã às {time}. Confirma?"
     
-    const dateObj = new Date(app.start_time)
-    // Opcional: Subtrair 3h aqui também se a hora na mensagem estiver errada,
-    // mas geralmente o 'format' com timezone lida bem se configurado.
-    // Vamos confiar no new Date() local por enquanto.
-    const timeStr = format(dateObj, "HH:mm", { locale: ptBR })
+    const dateObjUtc = new Date(app.start_time)
+    const dateBrazil = subHours(dateObjUtc, 3) 
+    const timeStr = format(dateBrazil, "HH:mm", { locale: ptBR })
     
     const firstName = app.customers.name ? app.customers.name.split(' ')[0] : 'Cliente'
 

@@ -2,8 +2,8 @@
 
 import { createClient } from "@/utils/supabase/server"
 
-const DEFAULT_EVOLUTION_URL = process.env.NEXT_PUBLIC_EVOLUTION_API_URL || "http://127.0.0.1:8082"
-const GLOBAL_API_KEY = process.env.EVOLUTION_API_KEY || "medagenda123"
+const DEFAULT_EVOLUTION_URL = process.env.NEXT_PUBLIC_EVOLUTION_API_URL
+const GLOBAL_API_KEY = process.env.EVOLUTION_API_KEY
 
 export async function sendWhatsappMessage(phone: string, message: string) {
   const supabase = await createClient()
