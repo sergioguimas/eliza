@@ -98,6 +98,7 @@ export function SettingsForm({ profile, organization }: any) {
       {/* SUB-ABA 2: PERFIL */}
       <TabsContent value="profile">
         <form action={handleSaveProfile}>
+          <input type="hidden" name="org_id" value={organization.id} />
           <Card className="border-border bg-card">
             <CardHeader>
               <CardTitle>Seu Perfil</CardTitle>

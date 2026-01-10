@@ -41,6 +41,7 @@ export function SetupForm({ organization }: { organization: any }) {
   const [formData, setFormData] = useState({
     niche: organization?.niche || 'generico',
     name: organization?.name || '',
+    full_name: '',
     document: organization?.document || '',
     phone: organization?.phone || '',
     email: organization?.email || '',
@@ -141,6 +142,15 @@ export function SetupForm({ organization }: { organization: any }) {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
+                <Label htmlFor="full_name">Seu Nome Completo</Label>
+                <Input 
+                  id="full_name" name="full_name" 
+                  value={formData.full_name} onChange={handleChange} 
+                  placeholder="Como você quer ser chamado?" 
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="name">Nome da {currentNicheLabel}</Label>
                 <Input 
                   id="name" name="name" 
@@ -162,7 +172,7 @@ export function SetupForm({ organization }: { organization: any }) {
               <Button variant="outline" onClick={() => setStep(0)}>
                 <ArrowLeft className="mr-2 w-4 h-4" /> Voltar
               </Button>
-              <Button onClick={() => setStep(2)} disabled={!formData.name}>
+              <Button onClick={() => setStep(2)} disabled={!formData.name || !formData.full_name}>
                 Próximo <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
             </CardFooter>
