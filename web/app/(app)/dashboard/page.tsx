@@ -15,6 +15,7 @@ import { AppointmentContextMenu } from "@/components/appointment-context-menu"
 import { cn } from "@/lib/utils"
 import { AppointmentCardActions } from "@/components/appointment-card-actions"
 import { RealtimeAppointments } from '@/components/realtime-appointments'
+import { nicheConfig } from '@/lib/niche-config'
 
 // --- 1. FUNÇÃO DE DATA (BRASIL) ---
 function getBrazilDayRange() {
@@ -36,10 +37,12 @@ export default async function DashboardPage() {
     .from('profiles')
     .select(`
       *,
-      organizations:organization_id (name)
+      organizations(*)
     `)
     .eq('id', user.id)
     .single() as any
+
+  const organization = profile?.organizations
 
   if (!profile?.organization_id) redirect('/configuracoes')
 
@@ -105,6 +108,9 @@ export default async function DashboardPage() {
   // 7. Pega o primeiro nome do perfil ou fallback seguro
   const doctorName = profile?.full_name ? profile.full_name.split(' ')[0] : "Doutor"
 
+  const niche = organization?.niche || 'generico'
+  const NicheIcon = nicheConfig[niche]?.icon || nicheConfig['generico'].icon
+
   return (
     <div className="space-y-8">
       <RealtimeAppointments />
@@ -149,7 +155,7 @@ export default async function DashboardPage() {
                 <h2 className="text-2xl font-bold tracking-tight text-foreground">{totalServices}</h2>
               </div>
               <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
-                <Stethoscope className="h-4 w-4 text-blue-500" />
+                <NicheIcon className="h-4 w-4 text-blue-500" />
               </div>
             </CardContent>
           </Card>

@@ -107,6 +107,15 @@ export function AppSidebar({ user, organization }: AppSidebarProps) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <a href="/servicos">
+                    <Sparkles />
+                    <span>Meus {dict.label_servico}s</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
