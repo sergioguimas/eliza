@@ -24,6 +24,14 @@ export const dictionaries = {
     msg_boas_vindas: "Bem-vindo ao salão",
     icon_set: "beauty"
   },
+  advocacia: {
+    label_cliente: "Cliente",
+    label_profissional: "Advogado",
+    label_prontuario: "Processo/Caso",
+    label_servico: "Processos",
+    msg_boas_vindas: "Bem-vindo ao escritório de advocacia",
+    icon_set: "legal"
+  },
   generico: {
     label_cliente: "Cliente",
     label_profissional: "Profissional",

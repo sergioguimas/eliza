@@ -1,10 +1,11 @@
 import { 
-  Stethoscope, 
-  Scissors, 
-  Sparkles, 
-  Briefcase, 
-  Dog, // Já deixei pronto para o futuro Petshop
-  Dumbbell // Exemplo para Academia
+  Stethoscope, // Clínica Médica
+  Scissors, // Barbearia
+  Sparkles, // Salão de Beleza
+  Briefcase, // Genérico
+  Dog, // Petshop
+  Dumbbell, // Academia
+  Scale  // Advocacia
 } from "lucide-react"
 
 // Definimos o tipo para garantir que todo nicho tenha tudo que precisa
@@ -35,6 +36,12 @@ export const nicheConfig: Record<string, NicheMetadata> = {
     label: 'Salão de Beleza',
     description: 'Para cabeleireiros, manicures e estética.',
     icon: Sparkles
+  },
+  advocacia: {
+    id: 'advocacia',
+    label: 'Advocacia / Juridico',
+    description: 'Para escritórios de advocacia e consultoria jurídica.',
+    icon: Scale
   },
   generico: {
     id: 'generico',
