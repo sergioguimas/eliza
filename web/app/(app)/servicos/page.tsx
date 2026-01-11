@@ -1,14 +1,31 @@
 import { Metadata } from "next"
 import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
-import { Stethoscope } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { CreateServiceDialog } from "@/components/create-service-dialog"
 import { DeleteServiceButton } from "@/components/delete-service-button"
+import { getDictionary } from "@/lib/get-dictionary" 
+import { CategoryIcon } from "@/components/category-icon"
 
-export const metadata: Metadata = {
-  title: "Procedimentos | Eliza",
+export async function generateMetadata(): Promise<Metadata> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) return { title: "Eliza" }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('organizations(niche)')
+    .eq('id', user.id)
+    .single() as any
+
+  const niche = profile?.organizations?.niche || 'generico'
+  const dict = getDictionary(niche)
+
+  return {
+    title: `${dict.label_servico}s | Eliza`,
+  }
 }
 
 export default async function ProcedimentosPage() {
@@ -31,14 +48,21 @@ export default async function ProcedimentosPage() {
     .eq('organization_id', profile.organization_id)
     .order('title') 
 
+  const { data: organization } = await supabase
+    .from('organizations')
+    .select('niche')
+    .eq('id', profile.organization_id)
+    .single() as any
+  const niche = organization?.niche || 'generico'
+  const dict = getDictionary(niche)
+
   return (
-    // CORREÇÃO: Fundo removido, texto usando variáveis de tema
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Procedimentos</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">{dict.label_servico}s</h1>
           <p className="text-muted-foreground text-sm">
-            Gerencie o catálogo de serviços e especialidades da sua clínica.
+            Gerencie o catálogo de {dict.label_servico}s.
           </p>
         </div>
 
@@ -48,7 +72,6 @@ export default async function ProcedimentosPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {services?.map((service: any) => (
             <Card key={service.id} className={cn(
-              // CORREÇÃO: Card usando bg-card e border-border
               "bg-card border-border transition-all border-l-4 hover:bg-accent/50",
               !service.is_active && "opacity-60" 
             )}
@@ -57,7 +80,7 @@ export default async function ProcedimentosPage() {
             <CardContent className="p-6">
               <div className="flex justify-between items-start mb-4">
                 <div className="p-2 bg-primary/10 rounded-lg">
-                  <Stethoscope className="h-5 w-5 text-primary" />
+                  <CategoryIcon name="servico" className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex gap-2">
                   <CreateServiceDialog 
@@ -84,7 +107,7 @@ export default async function ProcedimentosPage() {
 
         {services?.length === 0 && (
           <div className="col-span-full py-20 text-center border-2 border-dashed border-border rounded-xl">
-            <p className="text-muted-foreground">Nenhum procedimento cadastrado ainda.</p>
+            <p className="text-muted-foreground">Nenhum {dict.label_servico}s cadastrado ainda.</p>
           </div>
         )}
       </div>

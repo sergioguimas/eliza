@@ -10,9 +10,26 @@ import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { CreateCustomerDialog } from "@/components/create-customer-dialog"
+import { getDictionary } from "@/lib/get-dictionary"
 
-export const metadata: Metadata = {
-  title: "Pacientes | Eliza",
+export async function generateMetadata(): Promise<Metadata> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) return { title: "Eliza" }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('organizations(niche)')
+    .eq('id', user.id)
+    .single() as any
+
+  const niche = profile?.organizations?.niche || 'generico'
+  const dict = getDictionary(niche)
+
+  return {
+    title: `${dict.label_cliente}s | Eliza`,
+  }
 }
 
 export default async function ClientesPage({

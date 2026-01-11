@@ -4,13 +4,7 @@ import {
   Calendar, 
   Home, 
   Settings, 
-  LogOut, 
-  User, 
-  Stethoscope, 
-  Scissors, 
-  Briefcase, 
-  Sparkles,
-  Users
+  LogOut
 } from "lucide-react"
 
 import {
@@ -26,6 +20,7 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar"
 import { useKeckleon } from "@/providers/keckleon-provider"
+import { CategoryIcon } from "@/components/category-icon"
 import { createClient } from "@/utils/supabase/client"
 import { useRouter } from "next/navigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -41,12 +36,7 @@ export function AppSidebar({ user, organization }: AppSidebarProps) {
   const router = useRouter()
   const { dict, niche } = useKeckleon() // <--- O Keckleon entra em ação aqui!
   const supabase = createClient()
-
-  // 1. Lógica do Ícone Principal (Logo)
-  // Se for barbearia usa Tesoura, se for clínica usa Estetoscópio, senão usa Maleta
-  const MainIcon = niche === 'barbearia' ? Scissors : 
-                   niche === 'clinica' ? Stethoscope : Briefcase
-
+  
   async function handleSignOut() {
     await supabase.auth.signOut()
     router.refresh()
@@ -62,7 +52,7 @@ export function AppSidebar({ user, organization }: AppSidebarProps) {
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <MainIcon className="size-4" />
+            <CategoryIcon name="servico" className="size-4" />
           </div>
           <div className="grid flex-1 text-left text-sm leading-tight">
             <span className="truncate font-semibold">{organization?.name || "Eliza SaaS"}</span>
@@ -100,8 +90,7 @@ export function AppSidebar({ user, organization }: AppSidebarProps) {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <a href="/clientes">
-                    <Users />
-                    {/* AQUI ESTÁ A MÁGICA: O texto muda sozinho */}
+                    <CategoryIcon name="cliente" className="size-4" />
                     <span>Meus {dict.label_cliente}s</span>
                   </a>
                 </SidebarMenuButton>
@@ -110,7 +99,7 @@ export function AppSidebar({ user, organization }: AppSidebarProps) {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <a href="/servicos">
-                    <Sparkles />
+                    <CategoryIcon name="servico" className="size-4" />
                     <span>Meus {dict.label_servico}s</span>
                   </a>
                 </SidebarMenuButton>
@@ -154,7 +143,7 @@ export function AppSidebar({ user, organization }: AppSidebarProps) {
                     <span className="truncate font-semibold">{user?.email}</span>
                     <span className="truncate text-xs">{dict.label_profissional}</span>
                   </div>
-                  <User className="ml-auto size-4" />
+                  <CategoryIcon name="cliente" className="ml-auto size-4" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent

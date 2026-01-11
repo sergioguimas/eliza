@@ -12,7 +12,7 @@ export const dictionaries = {
     label_cliente: "Cliente",
     label_profissional: "Barbeiro",
     label_prontuario: "Histórico de Cortes",
-    label_servico: "Serviço",
+    label_servico: "Procedimento",
     msg_boas_vindas: "Bem-vindo à barbearia",
     icon_set: "grooming"
   },
@@ -20,7 +20,7 @@ export const dictionaries = {
     label_cliente: "Cliente",
     label_profissional: "Profissional",
     label_prontuario: "Ficha Técnica",
-    label_servico: "Serviço",
+    label_servico: "Procedimento",
     msg_boas_vindas: "Bem-vindo ao salão",
     icon_set: "beauty"
   },
@@ -28,7 +28,7 @@ export const dictionaries = {
     label_cliente: "Cliente",
     label_profissional: "Advogado",
     label_prontuario: "Processo/Caso",
-    label_servico: "Processos",
+    label_servico: "Processo",
     msg_boas_vindas: "Bem-vindo ao escritório de advocacia",
     icon_set: "legal"
   },
