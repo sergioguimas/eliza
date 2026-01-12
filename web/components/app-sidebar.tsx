@@ -4,7 +4,8 @@ import {
   Calendar, 
   Home, 
   Settings, 
-  LogOut
+  LogOut,
+  Users
 } from "lucide-react"
 
 import {
@@ -118,6 +119,14 @@ export function AppSidebar({ user, organization }: AppSidebarProps) {
                   <a href="/configuracoes">
                     <Settings />
                     <span>Configurações</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <a href="/configuracoes/equipe">
+                    <Users />
+                    <span>Minha Equipe</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
