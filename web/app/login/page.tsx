@@ -1,8 +1,9 @@
 import { Metadata } from "next"
 import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
-import { LoginForm } from "@/components/login-form" // Importe o componente novo
+import { LoginForm } from "@/components/login-form"
 import { Stethoscope } from "lucide-react"
+import { Suspense } from "react"
 
 export const metadata: Metadata = {
   title: "Login | Eliza",
@@ -19,15 +20,15 @@ export default async function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative">
-      
-      {/* Logo Flutuante */}
       <div className="absolute top-8 left-8 flex items-center gap-2 text-primary font-bold text-xl">
         <Stethoscope className="h-6 w-6" />
         Eliza
       </div>
 
-      {/* Componente do Formulário */}
-      <LoginForm />
+      {/* ENVOLVA O FORMULÁRIO COM SUSPENSE */}
+      <Suspense fallback={<div>Carregando...</div>}>
+        <LoginForm />
+      </Suspense>
       
     </div>
   )

@@ -32,14 +32,19 @@ export default async function middleware(request: NextRequest) {
   const isAuthPage = pathname === '/login'
   const isSetupPage = pathname === '/setup'
   const isPublicRoute = pathname === '/'
+  // Rota de convite é especial (precisa ser acessada sem org)
+  const isInviteRoute = pathname.startsWith('/convite') 
 
   if (!user) {
     // Se não está logado e tenta acessar área privada
     if (!isAuthPage && !isPublicRoute) {
-      return NextResponse.redirect(new URL('/login', request.url))
+      const loginUrl = new URL('/login', request.url)
+      // Avisa para onde voltar depois do login
+      loginUrl.searchParams.set('next', pathname)
+      return NextResponse.redirect(loginUrl)
     }
   } else {
-    // === LÓGICA DE ONBOARDING ATUALIZADA ===
+    // === LÓGICA DE ONBOARDING ===
     let isOnboardingCompleted = false
     let hasOrganization = false
     
@@ -55,10 +60,8 @@ export default async function middleware(request: NextRequest) {
         .eq('id', user.id)
         .single()
       
-      // Verifica se tem org vinculada
       if (profile?.organization_id) {
         hasOrganization = true
-        // Verifica se a flag está true no banco
         // @ts-ignore
         isOnboardingCompleted = !!profile.organizations?.onboarding_completed
       }
@@ -67,19 +70,18 @@ export default async function middleware(request: NextRequest) {
       console.error("Middleware Error:", error)
     }
 
-    // REGRA 1: Usuário sem Organização (Erro de sistema ou convite pendente) -> Manda pro Setup (ou tela de erro)
-    if (!hasOrganization && !isSetupPage && !isPublicRoute) {
-       // Se a ideia é que APENAS o admin crie orgs, aqui talvez devesse ser uma página de "Contate o Suporte".
-       // Mas mantendo a lógica de setup:
+    // Se for rota de convite, NÃO redireciona para setup (deixa passar para aceitar)
+    // REGRA 1: Usuário sem Organização -> Setup (exceto se estiver aceitando convite)
+    if (!hasOrganization && !isSetupPage && !isPublicRoute && !isInviteRoute) {
        return NextResponse.redirect(new URL('/setup', request.url))
     }
 
-    // REGRA 2: Tem organização, mas NÃO completou o cadastro -> Força o Setup
+    // REGRA 2: Tem organização, mas incompleto -> Setup
     if (hasOrganization && !isOnboardingCompleted && !isSetupPage) {
        return NextResponse.redirect(new URL('/setup', request.url))
     }
 
-    // REGRA 3: Já completou tudo e tenta voltar pro Login ou Setup -> Manda pro Dashboard
+    // REGRA 3: Já completou tudo e tenta voltar pro Login/Setup -> Dashboard
     if (isOnboardingCompleted && (isAuthPage || isSetupPage)) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
