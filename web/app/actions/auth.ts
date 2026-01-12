@@ -5,10 +5,20 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 
+// Helper para pegar o destino ou usar o padrão
+function getRedirectUrl(formData: FormData, defaultUrl: string) {
+  const next = formData.get('redirectTo') as string
+  if (next && next.startsWith('/')) { // Segurança básica para evitar open redirect
+    return next
+  }
+  return defaultUrl
+}
+
 // Função de Login
 export async function signIn(formData: FormData) {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
+  const redirectTo = getRedirectUrl(formData, '/dashboard') // <--- Pega o destino (ex: /convite/...)
   
   const supabase = await createClient()
 
@@ -21,18 +31,18 @@ export async function signIn(formData: FormData) {
     return { error: 'Credenciais inválidas.' }
   }
 
-  redirect('/dashboard')
+  redirect(redirectTo) // Redireciona para o convite se houver
 }
 
 // Função de Cadastro
 export async function signUp(formData: FormData) {
   const headersList = await headers() 
   const origin = headersList.get('origin')
-
   const email = formData.get('email') as string
   const password = formData.get('password') as string
   const fullName = formData.get('fullName') as string
-  
+  const redirectTo = getRedirectUrl(formData, '/setup') // <--- Pega o destino
+
   const supabase = await createClient()
 
   const { error } = await supabase.auth.signUp({
@@ -42,7 +52,8 @@ export async function signUp(formData: FormData) {
       data: {
         full_name: fullName,
       },
-      emailRedirectTo: `${origin}/auth/callback`,
+      // Passamos o next também para o email de confirmação (se precisar confirmar)
+      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
     },
   })
 
@@ -50,7 +61,13 @@ export async function signUp(formData: FormData) {
     return { error: error.message }
   }
 
-  redirect('/setup')
+  // Se o Supabase estiver com "Auto Confirm" (comum em dev), já loga e redireciona
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session) {
+    redirect(redirectTo)
+  }
+
+  return { success: 'Verifique seu email para confirmar o cadastro.' }
 }
 
 // Função de Criar Empresa
@@ -118,5 +135,5 @@ export async function createCompany(formData: FormData) {
 export async function signOut() {
   const supabase = await createClient()
   await supabase.auth.signOut()
-  return redirect('/auth/login')
+  return redirect('/login') // Corrigi para /login (sem /auth)
 }

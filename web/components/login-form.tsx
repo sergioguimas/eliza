@@ -6,14 +6,16 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { signIn, signUp } from '@/app/actions/auth' // Ajuste o import conforme sua estrutura
-import { useRouter } from 'next/navigation'
+import { signIn, signUp } from '@/app/actions/auth'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 
 export function LoginForm() {
   const [isLogin, setIsLogin] = useState(true)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const next = searchParams.get('next') || undefined
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -57,6 +59,7 @@ export function LoginForm() {
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
+        <input type="hidden" name="redirectTo" value={next || (isLogin ? '/dashboard' : '/setup')} />
         <CardContent className="space-y-4">
           {!isLogin && (
             <div className="space-y-2">

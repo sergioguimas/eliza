@@ -19,7 +19,7 @@ export async function generateInviteLink() {
   const isAllowed = profile?.role === 'admin' || profile?.role === 'owner'
 
   if (!profile || !profile.organization_id || !isAllowed) {
-    return { error: "Apenas proprietários podem convidar membros." }
+    return { error: "Apenas administradores podem convidar membros." }
   }
 
   // 2. Gerar um código curto (Ex: a4f1b2)

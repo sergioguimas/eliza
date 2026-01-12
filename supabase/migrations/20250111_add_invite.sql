@@ -13,12 +13,12 @@ CREATE TABLE invitations (
 ALTER TABLE invitations ENABLE ROW LEVEL SECURITY;
 
 -- Regra: Apenas ADMINS podem ver/criar convites da própria empresa
-CREATE POLICY "Admins manage invitations" ON invitations
+CREATE POLICY "Admins and Owners manage invitations" ON invitations
   FOR ALL
   USING (
     organization_id IN (
       SELECT organization_id FROM profiles 
-      WHERE id = auth.uid() AND role = 'admin'
+      WHERE id = auth.uid() AND role IN ('admin', 'owner') -- Agora aceita os dois!
     )
   );
 
