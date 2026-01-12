@@ -32,7 +32,6 @@ export default async function middleware(request: NextRequest) {
   const isAuthPage = pathname === '/login'
   const isSetupPage = pathname === '/setup'
   const isPublicRoute = pathname === '/'
-  // Rota de convite é especial (precisa ser acessada sem org)
   const isInviteRoute = pathname.startsWith('/convite') 
 
   if (!user) {
@@ -47,6 +46,7 @@ export default async function middleware(request: NextRequest) {
     // === LÓGICA DE ONBOARDING ===
     let isOnboardingCompleted = false
     let hasOrganization = false
+    let isSuspended = false
     
     try {
       const { data: profile } = await supabase
@@ -64,24 +64,29 @@ export default async function middleware(request: NextRequest) {
         hasOrganization = true
         // @ts-ignore
         isOnboardingCompleted = !!profile.organizations?.onboarding_completed
+        // @ts-ignore
+        isSuspended = profile.organizations?.status === 'suspended'
       }
 
     } catch (error) {
       console.error("Middleware Error:", error)
     }
 
-    // Se for rota de convite, NÃO redireciona para setup (deixa passar para aceitar)
-    // REGRA 1: Usuário sem Organização -> Setup (exceto se estiver aceitando convite)
-    if (!hasOrganization && !isSetupPage && !isPublicRoute && !isInviteRoute) {
+    // === KILL SWITCH ===
+    // Se a empresa está suspensa, manda para a página de bloqueio imediatamente
+    if (isSuspended && !pathname.startsWith('/suspended')) {
+      return NextResponse.redirect(new URL('/suspended', request.url))
+    }
+
+    // Fluxo normal de Onboarding
+    if (!hasOrganization && !isSetupPage && !isPublicRoute && !isInviteRoute && !isSuspended) {
        return NextResponse.redirect(new URL('/setup', request.url))
     }
 
-    // REGRA 2: Tem organização, mas incompleto -> Setup
-    if (hasOrganization && !isOnboardingCompleted && !isSetupPage) {
+    if (hasOrganization && !isOnboardingCompleted && !isSetupPage && !isSuspended) {
        return NextResponse.redirect(new URL('/setup', request.url))
     }
 
-    // REGRA 3: Já completou tudo e tenta voltar pro Login/Setup -> Dashboard
     if (isOnboardingCompleted && (isAuthPage || isSetupPage)) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
