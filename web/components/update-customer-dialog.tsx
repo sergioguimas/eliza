@@ -18,6 +18,7 @@ import { Pencil, Loader2 } from "lucide-react"
 import { useState, useTransition, useEffect } from "react"
 import { updateCustomer } from "@/app/actions/update-customer"
 import { toast } from "sonner"
+import { useKeckleon } from "@/providers/keckleon-provider"
 
 // Interface define que podemos receber um botão personalizado (children)
 interface UpdateCustomerDialogProps {
@@ -51,6 +52,8 @@ export function UpdateCustomerDialog({
   const [city, setCity] = useState("")
   const [state, setState] = useState("")
   const [loadingCep, setLoadingCep] = useState(false)
+
+  const { dict } = useKeckleon()
 
   // Popula dados ao abrir
   useEffect(() => {
@@ -124,7 +127,6 @@ export function UpdateCustomerDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {/* SEGREDO: Se passar 'children' usa ele, senão usa o ícone padrão */}
       {controlledOpen === undefined && (
         <DialogTrigger asChild>
           {children ? children : (
@@ -137,7 +139,7 @@ export function UpdateCustomerDialog({
       
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Editar Cliente</DialogTitle>
+          <DialogTitle>Editar {dict.label_cliente}</DialogTitle>
           <DialogDescription>Atualize os dados cadastrais.</DialogDescription>
         </DialogHeader>
         

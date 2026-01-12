@@ -17,10 +17,13 @@ import { PlusCircle, Loader2, Search } from "lucide-react"
 import { useState, useTransition } from "react"
 import { createCustomer } from "@/app/actions/create-customer"
 import { toast } from "sonner"
+import { useKeckleon } from "@/providers/keckleon-provider"
 
 export function CreateCustomerDialog() {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
+
+  const { dict } = useKeckleon()
   
   // States para os campos controlados (Máscaras e CEP)
   const [dateMask, setDateMask] = useState("")
@@ -107,12 +110,12 @@ export function CreateCustomerDialog() {
       <DialogTrigger asChild>
         <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Novo Paciente
+          Novo {dict.label_cliente}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Novo Paciente</DialogTitle>
+          <DialogTitle>Novo {dict.label_cliente}</DialogTitle>
           <DialogDescription>
             Preencha os dados completos. Use o CEP para preencher o endereço automaticamente.
           </DialogDescription>

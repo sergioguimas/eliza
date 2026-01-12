@@ -16,6 +16,7 @@ import { toast } from "sonner"
 import { signMedicalRecord } from "@/app/actions/sign-medical-record"
 import { updateMedicalRecord } from "@/app/actions/update-medical-record"
 import { deleteMedicalRecord } from "@/app/actions/delete-medical-record"
+import { useKeckleon } from "@/providers/keckleon-provider"
 
 type MedicalRecord = {
   id: string
@@ -23,12 +24,14 @@ type MedicalRecord = {
   created_at: string | null
   status: 'draft' | 'signed' | string | null
   signed_at: string | null
+  professional: { full_name: string | null}
 }
 
 export function MedicalRecordList({ records, customerId }: { records: any[], customerId: string }) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editContent, setEditContent] = useState("")
   const [loading, setLoading] = useState(false)
+  const { dict } = useKeckleon()
 
   // --- HANDLERS ---
 
@@ -72,7 +75,6 @@ export function MedicalRecordList({ records, customerId }: { records: any[], cus
   async function handleSign(recordId: string) {
     if (!confirm("Atenção: Ao finalizar, este documento será travado permanentemente.")) return
     
-    // Opcional: Salvar antes de assinar se estiver editando
     if (editingId === recordId) {
       await updateMedicalRecord(recordId, editContent)
     }
@@ -87,13 +89,12 @@ export function MedicalRecordList({ records, customerId }: { records: any[], cus
   }
 
   function handlePrint(record: MedicalRecord) {
-    // Hack MVP: Abre uma janela nova limpa apenas com o texto para impressão
     const printWindow = window.open('', '_blank')
     if (printWindow) {
       printWindow.document.write(`
         <html>
           <head>
-            <title>Prontuário - ${format(new Date(), 'dd/MM/yyyy')}</title>
+            <title>${dict.label_prontuario} - ${format(new Date(), 'dd/MM/yyyy')}</title>
             <style>
               body { font-family: sans-serif; padding: 40px; color: #333; }
               .header { border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px; }
@@ -104,11 +105,11 @@ export function MedicalRecordList({ records, customerId }: { records: any[], cus
           </head>
           <body>
             <div class="header">
-              <h1>Registro Clínico</h1>
+              <h1>${dict.label_prontuario}</h1>
               <p>Paciente ID: ${customerId}</p>
             </div>
             <div class="meta">
-              <p><strong>Médico:</strong> Dr. Padrão</p>
+              <p><strong>${dict.label_profissional}:</strong> ${record.professional?.full_name || "Padrão"}</p>
               <p><strong>Data Original:</strong> ${record.created_at ? format(parseISO(record.created_at), "dd/MM/yyyy HH:mm") : '-'}</p>
               <p><strong>Assinado eletronicamente em:</strong> ${record.signed_at ? format(parseISO(record.signed_at), "dd/MM/yyyy HH:mm") : 'Não assinado'}</p>
             </div>
@@ -205,7 +206,7 @@ export function MedicalRecordList({ records, customerId }: { records: any[], cus
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-zinc-400 hover:text-blue-400 hover:bg-blue-900/20"
-                    title="Imprimir Prontuário"
+                    title={`Imprimir ${dict.label_prontuario}`}
                     onClick={() => window.open(`/print/record/${record.id}`, '_blank')} // Abre em nova aba
                   >
                     <Printer className="h-4 w-4" />

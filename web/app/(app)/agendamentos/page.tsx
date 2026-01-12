@@ -3,6 +3,7 @@ import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
 import { CalendarView } from "@/components/calendar-view"
 import { RealtimeAppointments } from "@/components/realtime-appointments"
+import { getDictionary } from "@/lib/get-dictionary"
 
 export const metadata: Metadata = {
   title: "Agenda | Eliza",
@@ -18,7 +19,7 @@ export default async function AgendamentosPage() {
   // 2. Busca perfil
   const { data: profile } = await supabase
     .from('profiles')
-    .select('organization_id')
+    .select('organization_id, organizations(niche)')
     .eq('id', user.id)
     .single() as any
 
@@ -27,6 +28,8 @@ export default async function AgendamentosPage() {
   }
 
   const orgId = profile.organization_id
+  const niche = profile?.organizations?.niche || 'generico'
+  const dict = getDictionary(niche)
 
   // 3. Busca em paralelo
   const [customersRes, servicesRes, staffRes, appointmentsRes] = await Promise.all([
@@ -76,7 +79,7 @@ export default async function AgendamentosPage() {
     <div className="space-y-8">
       <RealtimeAppointments />
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Agenda Médica</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Agenda de {dict.label_servicos}</h1>
         <p className="text-muted-foreground text-sm">Visualize e gerencie os atendimentos.</p>
       </div>
 

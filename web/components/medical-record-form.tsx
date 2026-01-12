@@ -9,6 +9,7 @@ import { toast } from "sonner"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Loader2, Save, CheckCircle, Printer, Trash2, Lock, FileText, Calendar } from "lucide-react"
+import { useKeckleon } from "@/providers/keckleon-provider"
 
 interface MedicalRecordFormProps {
   customer_id: string
@@ -19,6 +20,7 @@ interface MedicalRecordFormProps {
 export function MedicalRecordForm({ customer_id, record, professionalName }: MedicalRecordFormProps) {
   const [content, setContent] = useState(record?.content || "")
   const [isPending, startTransition] = useTransition()
+  const { dict } = useKeckleon()
   
   const isNew = !record?.id
   const isSigned = record?.status === 'signed'
@@ -72,7 +74,6 @@ export function MedicalRecordForm({ customer_id, record, professionalName }: Med
 
   return (
     <Card className={`mb-3 border shadow-sm ${borderClass}`}>
-      {/* HEADER: Compacto mas com fonte normal */}
       <CardHeader className="p-3 pb-1 flex flex-row items-center justify-between space-y-0">
         <div className="flex items-center gap-2">
             {isSigned ? (
@@ -82,7 +83,7 @@ export function MedicalRecordForm({ customer_id, record, professionalName }: Med
             )}
             
             <span className="text-sm font-semibold text-foreground">
-                {isNew ? "Nova Anotação" : format(new Date(record.created_at), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
+                {isNew ? `Novo(a) ${dict.label_prontuario}` : format(new Date(record.created_at), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
             </span>
         </div>
 
@@ -94,7 +95,6 @@ export function MedicalRecordForm({ customer_id, record, professionalName }: Med
         )}
       </CardHeader>
       
-      {/* CONTENT: Espaçamento reduzido (p-3) mas texto legível (text-sm) */}
       <CardContent className="p-3 pt-1">
         {isSigned ? (
           <div className="text-sm text-foreground bg-muted/40 p-3 rounded-md whitespace-pre-wrap leading-relaxed border-0">
@@ -104,7 +104,7 @@ export function MedicalRecordForm({ customer_id, record, professionalName }: Med
           <Textarea 
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Escreva aqui os detalhes do atendimento..."
+            placeholder={`Escreva aqui os detalhes do(a) ${dict.label_prontuario}...`}
             className="min-h-[100px] text-sm bg-background resize-y"
           />
         )}

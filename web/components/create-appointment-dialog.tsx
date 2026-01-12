@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label"
 import { CalendarPlus, Loader2 } from "lucide-react"
 import { createAppointment } from "@/app/actions/create-appointment"
 import { toast } from "sonner"
+import { useKeckleon } from "@/providers/keckleon-provider"
 
 type Props = {
   customers: { id: string; name: string }[]
@@ -33,6 +34,7 @@ type Props = {
 export function CreateAppointmentDialog({ customers, services, staff, organization_id }: Props) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const { dict } = useKeckleon()
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -59,7 +61,6 @@ export function CreateAppointmentDialog({ customers, services, staff, organizati
         </Button>
       </DialogTrigger>
       
-      {/* Mantendo o visual corrigido (bg-card para contraste) */}
       <DialogContent className="bg-card border border-border text-card-foreground shadow-xl sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Novo Agendamento</DialogTitle>
@@ -67,10 +68,10 @@ export function CreateAppointmentDialog({ customers, services, staff, organizati
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           
           <div className="space-y-2">
-            <Label>Paciente</Label>
+            <Label>{dict.label_cliente}</Label>
             <Select name="customer_id" required>
               <SelectTrigger className="bg-background border-input">
-                <SelectValue placeholder="Selecione o paciente" />
+                <SelectValue placeholder={`Selecione o ${dict.label_cliente}`} />
               </SelectTrigger>
               <SelectContent className="bg-popover border-border text-popover-foreground">
                 {customers.map(c => (
@@ -81,10 +82,10 @@ export function CreateAppointmentDialog({ customers, services, staff, organizati
           </div>
 
           <div className="space-y-2">
-            <Label>Profissional</Label>
+            <Label>{dict.label_profissional}</Label>
             <Select name="staff_id">
               <SelectTrigger className="bg-background border-input">
-                <SelectValue placeholder="Selecione o médico (Opcional)" />
+                <SelectValue placeholder={`Selecione o ${dict.label_profissional} (Opcional)`} />
               </SelectTrigger>
               <SelectContent className="bg-popover border-border text-popover-foreground">
                 {staff?.map(s => (
@@ -95,10 +96,10 @@ export function CreateAppointmentDialog({ customers, services, staff, organizati
           </div>
 
           <div className="space-y-2">
-            <Label>Procedimento</Label>
+            <Label>{dict.label_servico}</Label>
             <Select name="service_id" required>
               <SelectTrigger className="bg-background border-input">
-                <SelectValue placeholder="Selecione o procedimento" />
+                <SelectValue placeholder={`Selecione o ${dict.label_servico}`} />
               </SelectTrigger>
               <SelectContent className="bg-popover border-border text-popover-foreground">
                 {services.map(s => (

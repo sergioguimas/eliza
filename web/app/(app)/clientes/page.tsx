@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { CreateCustomerDialog } from "@/components/create-customer-dialog"
 import { getDictionary } from "@/lib/get-dictionary"
+import { CategoryIcon } from "@/components/category-icon"
 
 export async function generateMetadata(): Promise<Metadata> {
   const supabase = await createClient()
@@ -65,13 +66,19 @@ export default async function ClientesPage({
 
   const { data: customers } = await customerQuery as any;
 
+  const niche = profile?.organizations?.niche || 'generico'
+  const dict = getDictionary(niche)
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Pacientes</h1>
+          {/* TÍTULO DINÂMICO */}
+          <h1 className="text-3xl font-bold tracking-tight text-foreground capitalize">
+            {dict.label_cliente}s
+          </h1>
           <p className="text-muted-foreground text-sm">
-            Gerencie o cadastro e histórico clínico dos seus pacientes.
+            Gerencie o cadastro e histórico dos seus {dict.label_cliente}s.
           </p>
         </div>
         <CreateCustomerDialog />
@@ -83,7 +90,7 @@ export default async function ClientesPage({
         <form method="GET">
           <Input 
             name="q"
-            placeholder="Buscar por nome..." 
+            placeholder={`Buscar ${dict.label_cliente}...`} // Placeholder dinâmico
             defaultValue={query}
             className="pl-10 bg-background border-input focus:ring-ring"
           />
@@ -101,7 +108,6 @@ export default async function ClientesPage({
               prefetch={false}
               className="block group"
             >
-              {/* Card usando variáveis de tema */}
               <Card className={cn(
                 "bg-card border-border hover:bg-accent/50 transition-all cursor-pointer relative overflow-hidden",
                 !isActive && "opacity-75 border-destructive/20"
@@ -115,17 +121,19 @@ export default async function ClientesPage({
 
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-4">
+                    {/* ÍCONE DE PERFIL (Avatar) */}
                     <div className={cn(
                       "h-12 w-12 rounded-full flex items-center justify-center border transition-colors",
                       isActive 
                         ? "bg-primary/10 border-primary/20" 
                         : "bg-muted border-border"
                     )}>
+                      {/* Aqui mantemos a inicial, é elegante e genérico */}
                       <span className={cn(
                         "font-bold text-lg",
                         isActive ? "text-primary" : "text-muted-foreground"
                       )}>
-                        {customer.name?.charAt(0).toUpperCase() || "P"}
+                        {customer.name?.charAt(0).toUpperCase() || "C"}
                       </span>
                     </div>
 
@@ -143,18 +151,12 @@ export default async function ClientesPage({
                         <span className="flex items-center gap-1">
                           <Phone className="h-3 w-3" /> {customer.phone || 'Sem telefone'}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <FileText className="h-3 w-3" /> {customer.document || 'Sem CPF'}
-                        </span>
+                        {/* Removemos o CPF da listagem rápida para limpar o visual, ou mantenha se for vital */}
                       </div>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-4">
-                    <div className="hidden md:flex flex-col items-end text-xs text-muted-foreground">
-                      <span>Paciente desde</span>
-                      <span>{customer.created_at ? new Date(customer.created_at).toLocaleDateString('pt-BR') : 'N/D'}</span>
-                    </div>
                     <ChevronRight className={cn(
                       "h-5 w-5 transition-colors",
                       isActive ? "text-muted-foreground group-hover:text-foreground" : "text-muted"
@@ -168,8 +170,11 @@ export default async function ClientesPage({
 
         {customers?.length === 0 && (
           <div className="py-20 text-center border-2 border-dashed border-border rounded-xl">
-            <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">Nenhum paciente encontrado.</p>
+            {/* ÍCONE DE EMPTY STATE DINÂMICO */}
+            <div className="flex justify-center mb-4">
+               <CategoryIcon name="cliente" className="h-12 w-12 text-muted-foreground/50" />
+            </div>
+            <p className="text-muted-foreground">Nenhum {dict.label_cliente} encontrado.</p>
           </div>
         )}
       </div>
