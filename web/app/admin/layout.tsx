@@ -6,13 +6,16 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  // Como o Admin é uma área técnica, usamos o nicho padrão "generico"
+  // Define o nicho padrão para o admin
   const niche = 'generico'
   const dict = getDictionary(niche)
+  
+  // A classe mágica que carrega as variáveis de cor (roxo, cinza, etc)
+  const themeClass = `theme-${niche}`
 
   return (
     <KeckleonProvider dictionary={dict} niche={niche}>
-      <div className="min-h-screen bg-slate-50">
+      <div className={`${themeClass} min-h-screen bg-background text-foreground`}>
         {children}
       </div>
     </KeckleonProvider>
