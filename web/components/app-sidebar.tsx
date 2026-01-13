@@ -5,8 +5,11 @@ import {
   Home, 
   Settings, 
   LogOut,
-  Users
+  Users,
+  ShieldAlert
 } from "lucide-react"
+
+import Link from "next/link"
 
 import {
   Sidebar,
@@ -25,7 +28,7 @@ import { CategoryIcon } from "@/components/category-icon"
 import { createClient } from "@/utils/supabase/client"
 import { useRouter } from "next/navigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 // Tipagem das props que o Layout está enviando
 interface AppSidebarProps {
@@ -35,8 +38,11 @@ interface AppSidebarProps {
 
 export function AppSidebar({ user, organization }: AppSidebarProps) {
   const router = useRouter()
-  const { dict, niche } = useKeckleon() // <--- O Keckleon entra em ação aqui!
+  const { dict, niche } = useKeckleon()
   const supabase = createClient()
+  
+  // Verifica se é o Super Admin baseado na variável pública
+  const isSuperAdmin = user?.email === process.env.NEXT_PUBLIC_GOD_EMAIL
   
   async function handleSignOut() {
     await supabase.auth.signOut()
@@ -72,37 +78,37 @@ export function AppSidebar({ user, organization }: AppSidebarProps) {
               
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <a href="/dashboard">
+                  <Link href="/dashboard">
                     <Home />
                     <span>Dashboard</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <a href="/agendamentos">
+                  <Link href="/agendamentos">
                     <Calendar />
                     <span>Agendamentos</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <a href="/clientes">
+                  <Link href="/clientes">
                     <CategoryIcon name="cliente" className="size-4" />
                     <span>Meus {dict.label_cliente}s</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <a href="/servicos">
+                  <Link href="/servicos">
                     <CategoryIcon name="servico" className="size-4" />
                     <span>Meus {dict.label_servico}s</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
@@ -116,18 +122,18 @@ export function AppSidebar({ user, organization }: AppSidebarProps) {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <a href="/configuracoes">
+                  <Link href="/configuracoes">
                     <Settings />
                     <span>Configurações</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <a href="/configuracoes/equipe">
+                  <Link href="/configuracoes/equipe">
                     <Users />
                     <span>Minha Equipe</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -152,7 +158,8 @@ export function AppSidebar({ user, organization }: AppSidebarProps) {
                     <span className="truncate font-semibold">{user?.email}</span>
                     <span className="truncate text-xs">{dict.label_profissional}</span>
                   </div>
-                  <CategoryIcon name="cliente" className="ml-auto size-4" />
+                  {/* Ícone de seta para indicar menu */}
+                  <CategoryIcon name="cliente" className="ml-auto size-4 rotate-90" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -161,7 +168,19 @@ export function AppSidebar({ user, organization }: AppSidebarProps) {
                 align="end"
                 sideOffset={4}
               >
-                <DropdownMenuItem onClick={handleSignOut} className="text-red-500 cursor-pointer">
+                {isSuperAdmin && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin" className="cursor-pointer font-medium text-purple-600 flex items-center w-full">
+                        <ShieldAlert className="mr-2 h-4 w-4" />
+                        Painel Super Admin
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+
+                <DropdownMenuItem onClick={handleSignOut} className="text-destructive cursor-pointer focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
                   Sair do Sistema
                 </DropdownMenuItem>

@@ -12,7 +12,8 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { toggleOrgStatus } from "./actions"
-import { Ban, CheckCircle, ShieldAlert } from "lucide-react"
+import { Ban, CheckCircle, ShieldAlert, Plus } from "lucide-react"
+import Link from "next/link"
 
 export default async function AdminDashboard() {
   const supabase = await createClient()
@@ -20,12 +21,10 @@ export default async function AdminDashboard() {
 
   const godEmail = process.env.GOD_EMAIL
 
-  // 1. Segurança: Se não for você, tchau.
-  if (!user || user.email !== godEmail) {
+  if (!godEmail || !user || user.email !== godEmail) {
     return redirect('/dashboard')
   }
 
-  // 2. Busca TODAS as organizações (usando Admin Client para ignorar RLS)
   const supabaseAdmin = createAdminClient()
   const { data: orgs } = await supabaseAdmin
     .from('organizations')
@@ -34,6 +33,8 @@ export default async function AdminDashboard() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">
+      
+      {/* CABEÇALHO DO PAINEL */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-primary/10 rounded-full">
@@ -41,12 +42,21 @@ export default async function AdminDashboard() {
           </div>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Super Admin</h1>
-            <p className="text-muted-foreground">Gestão global de assinantes e status.</p>
+            <p className="text-muted-foreground">Gestão global de assinantes.</p>
           </div>
         </div>
-        <div className="bg-card border p-4 rounded-lg shadow-sm">
-          <span className="text-2xl font-bold block">{orgs?.length || 0}</span>
-          <span className="text-xs text-muted-foreground uppercase font-bold">Total Empresas</span>
+
+        <div className="flex gap-4 items-center">
+            <div className="bg-card border px-4 py-2 rounded-lg shadow-sm text-right">
+                <span className="text-2xl font-bold block leading-none">{orgs?.length || 0}</span>
+                <span className="text-[10px] text-muted-foreground uppercase font-bold">Total Empresas</span>
+            </div>
+            <Button asChild>
+                <Link href="/admin/new">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Nova Organização
+                </Link>
+            </Button>
         </div>
       </div>
 

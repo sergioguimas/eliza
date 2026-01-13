@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
-import { TenantForm } from "@/components/tenant-form" // Mantemos seu componente
+import { TenantForm } from "@/components/tenant-form"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
