@@ -1,141 +1,135 @@
-import { createClient } from "@/utils/supabase/server"
 import { createAdminClient } from "@/utils/supabase/admin"
+import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { CheckCircle2, XCircle, ArrowRight, LogIn } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ShieldAlert, Plus, Ban, CheckCircle } from "lucide-react"
 import Link from "next/link"
+import { format } from "date-fns"
 
-export default async function InvitePage({ params }: { params: Promise<{ code: string }> }) {
-  const resolvedParams = await params
-  const { code } = resolvedParams
+export default async function AdminPage() {
   const supabase = await createClient()
-  
-  // 1. Verifica Usuário Logado
+
+  // 1. Verificação de Segurança (Dupla checagem)
   const { data: { user } } = await supabase.auth.getUser()
-
-  // 2. Busca o convite (Usando AdminClient para ler dados da Org mesmo sem ser membro ainda)
-  const supabaseAdmin = createAdminClient()
   
-  const { data: invite } = await supabaseAdmin
-    .from('invitations')
-    .select('*, organizations(name, niche)')
-    .eq('code', code)
-    .single() as any
-
-  // 3. Validação: Se não existe ou expirou
-  if (!invite || new Date(invite.expires_at) < new Date()) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-muted/20 p-4">
-        <Card className="w-full max-w-md border-destructive/50 shadow-lg">
-          <CardHeader className="text-center">
-            <div className="mx-auto bg-destructive/10 p-3 rounded-full w-fit mb-4">
-               <XCircle className="h-8 w-8 text-destructive" />
-            </div>
-            <CardTitle className="text-destructive">Convite Inválido ou Expirado</CardTitle>
-            <CardDescription>
-              Este link não está mais disponível. Peça um novo convite ao administrador.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center">
-             <Button asChild variant="outline">
-                <Link href="/">Voltar ao Início</Link>
-             </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  // === SERVER ACTION DE ACEITE ===
-  async function acceptInvite() {
-    'use server'
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) return redirect('/login') // Redundância
-
-    // 1. Atualiza o perfil do usuário
-    const { error } = await supabase
-        .from('profiles')
-        .update({ 
-            organization_id: invite.organization_id,
-            role: invite.role // <--- APLICA O CARGO DEFINIDO NO CONVITE
-        })
-        .eq('id', user.id)
-
-    if (error) {
-        console.error("Erro ao aceitar:", error)
-        return // Tratar erro visualmente se necessário
-    }
-
-    // 2. Marca convite como usado ou deleta
-    await supabaseAdmin.from('invitations').delete().eq('code', code) 
-    
-    // 3. Redireciona para o Dashboard
+  if (!user || user.email !== process.env.NEXT_PUBLIC_GOD_EMAIL) {
     redirect('/dashboard')
   }
 
-  return (
-    <div className="h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md text-center shadow-2xl border-primary/20">
-        <CardHeader>
-          <div className="mx-auto bg-primary/10 p-4 rounded-full w-fit mb-4 animate-bounce">
-            <CheckCircle2 className="h-10 w-10 text-primary" />
-          </div>
-          <CardTitle className="text-2xl font-bold">Convite para Equipe</CardTitle>
-          <CardDescription className="text-base mt-2">
-            Você foi convidado para integrar a equipe de:
-            <br />
-            <strong className="text-foreground text-xl block mt-1">{invite.organizations?.name}</strong>
-            <span className="text-xs bg-muted px-2 py-1 rounded-full mt-2 inline-block capitalize">
-                Função: {invite.role === 'professional' ? 'Profissional' : 'Secretaria/Staff'}
-            </span>
-          </CardDescription>
-        </CardHeader>
-        
-        <CardContent className="space-y-6">
-          
-          {user ? (
-              // SE JÁ ESTÁ LOGADO
-              <>
-                <div className="flex items-center gap-3 p-4 border rounded-lg bg-muted/30 text-left">
-                    <Avatar>
-                    <AvatarFallback>{user.email?.[0].toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                    <p className="text-sm font-medium text-foreground">Entrando como:</p>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
-                    </div>
-                </div>
+  // 2. Busca todas as organizações usando o Admin Client (bypassa RLS)
+  const supabaseAdmin = createAdminClient()
+  
+  const { data: organizations, error } = await supabaseAdmin
+    .from('organizations')
+    .select('*')
+    .order('created_at', { ascending: false })
 
-                <form action={acceptInvite}>
-                    <Button className="w-full font-bold h-12 text-lg" size="lg">
-                    Aceitar e Acessar Painel <ArrowRight className="ml-2 h-5 w-5" />
-                    </Button>
-                </form>
-              </>
-          ) : (
-              // SE NÃO ESTÁ LOGADO
-              <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                      Para aceitar o convite, você precisa entrar ou criar uma conta.
-                  </p>
-                  <Button asChild className="w-full" size="lg">
-                      <Link href={`/login?next=/convite/${code}`}>
-                        <LogIn className="mr-2 h-4 w-4" />
-                        Entrar ou Criar Conta
-                      </Link>
-                  </Button>
-              </div>
-          )}
-          
-          <p className="text-xs text-muted-foreground px-4">
-            Ao aceitar, você terá acesso imediato aos dados e agenda desta organização conforme sua função.
-          </p>
-        </CardContent>
-      </Card>
+  return (
+    <div className="min-h-screen bg-slate-50 p-8">
+      <div className="max-w-6xl mx-auto space-y-8">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-purple-600 p-2 rounded-lg">
+                <ShieldAlert className="h-6 w-6 text-white" />
+            </div>
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900">Painel Super Admin</h1>
+                <p className="text-slate-500">Visão geral de todos os tenants do sistema.</p>
+            </div>
+          </div>
+          <Button asChild className="bg-purple-600 hover:bg-purple-700">
+            <Link href="/admin/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Criar Nova Organização
+            </Link>
+          </Button>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Total de Clínicas</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{organizations?.length || 0}</div>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Ativas</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold text-green-600">
+                        {organizations?.filter((o: any) => o.status === 'active').length || 0}
+                    </div>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Suspensas</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold text-red-600">
+                        {organizations?.filter((o: any) => o.status !== 'active').length || 0}
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+
+        {/* Tabela de Tenants */}
+        <div className="bg-white rounded-lg border shadow-sm">
+            <Table>
+            <TableHeader>
+                <TableRow>
+                <TableHead>Nome da Organização</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Nicho</TableHead>
+                <TableHead>Criado em</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {organizations?.map((org: any) => (
+                <TableRow key={org.id}>
+                    <TableCell className="font-medium">
+                        {org.name || "Sem Nome"}
+                        <div className="text-xs text-muted-foreground font-mono mt-0.5">{org.id}</div>
+                    </TableCell>
+                    <TableCell>
+                        <Badge variant={org.status === 'active' ? 'default' : 'destructive'}>
+                            {org.status === 'active' ? 'Ativo' : 'Suspenso'}
+                        </Badge>
+                    </TableCell>
+                    <TableCell className="capitalize text-muted-foreground">
+                        {org.niche || "Genérico"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                        {format(new Date(org.created_at), 'dd/MM/yyyy')}
+                    </TableCell>
+                    <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" asChild>
+                            <Link href={`/admin/org/${org.id}`}>Gerenciar</Link>
+                        </Button>
+                    </TableCell>
+                </TableRow>
+                ))}
+            </TableBody>
+            </Table>
+        </div>
+      </div>
     </div>
   )
 }
