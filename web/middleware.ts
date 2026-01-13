@@ -62,16 +62,8 @@ export default async function middleware(request: NextRequest) {
         .eq('id', user.id)
         .single()
       
-      // TRUQUE: Normaliza o dado antes de usar
-      // Se vier como Array [{status...}], pega o primeiro item. Se vier Objeto, usa ele mesmo.
       const orgRaw = profile?.organizations as any
       const orgData = Array.isArray(orgRaw) ? orgRaw[0] : orgRaw
-
-      // === LOGS DE DEBUG (Agora usando a variável normalizada) ===
-      console.log("Middleware Check:")
-      console.log("Profile Error:", error)
-      console.log("Status Lido:", orgData?.status) 
-      // =====================
       
       if (profile?.organization_id) {
         hasOrganization = true
@@ -88,16 +80,15 @@ export default async function middleware(request: NextRequest) {
     if (isSuspended && !pathname.startsWith('/suspended')) {
       return NextResponse.redirect(new URL('/suspended', request.url))
     }
-
-    // Fluxo normal de Onboarding
+    // Se for primeiro acesso, manda pra setup
     if (!hasOrganization && !isSetupPage && !isPublicRoute && !isInviteRoute && !isSuspended) {
        return NextResponse.redirect(new URL('/setup', request.url))
     }
-
+    // Se não completou o onboarding, manda pra setup
     if (hasOrganization && !isOnboardingCompleted && !isSetupPage && !isSuspended) {
        return NextResponse.redirect(new URL('/setup', request.url))
     }
-
+    // Se já completou o onboarding, não deixa voltar para login ou setup
     if (isOnboardingCompleted && (isAuthPage || isSetupPage)) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }

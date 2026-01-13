@@ -19,10 +19,10 @@ export async function createTenant(formData: FormData) {
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   
-  // SEU EMAIL DE ADMIN
-  const MY_EMAIL = 'adm@adm.com' 
+  const godEmail = process.env.GOD_EMAIL
   
-  if (!user || user.email !== MY_EMAIL) {
+  // 1. Segurança: Se não for você, tchau.
+  if (!user || user.email !== godEmail) {
     return { error: 'Não autorizado.' }
   }
 
