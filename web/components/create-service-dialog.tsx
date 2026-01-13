@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, Pencil, Palette } from "lucide-react"
 import { upsertService } from "@/app/actions/create-service"
 import { toast } from "sonner"
+import { useKeckleon } from "@/providers/keckleon-provider"
 
 const COLORS = [
   { name: 'Azul', value: '#3b82f6' },
@@ -21,6 +22,7 @@ const COLORS = [
 export function CreateServiceDialog({ organization_id, serviceToEdit }: { organization_id: string, serviceToEdit?: any }) {
   const [open, setOpen] = useState(false)
   const [selectedColor, setSelectedColor] = useState(serviceToEdit?.color || COLORS[0].value)
+  const { dict } = useKeckleon()
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -40,15 +42,15 @@ export function CreateServiceDialog({ organization_id, serviceToEdit }: { organi
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {serviceToEdit ? (
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-white">
+          <Button>
             <Pencil className="h-4 w-4" />
           </Button>
         ) : (
-          <Button className="bg-blue-600 hover:bg-blue-700"><Plus className="mr-2 h-4 w-4" /> Novo Procedimento</Button>
+          <Button className="bg-blue-600 hover:bg-blue-700"><Plus className="mr-2 h-4 w-4" /> Novo {dict.label_servico}</Button>
         )}
       </DialogTrigger>
       <DialogContent className="bg-background border-border text-white">
-        <DialogHeader><DialogTitle>{serviceToEdit ? 'Editar' : 'Novo'} Procedimento</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{serviceToEdit ? 'Editar' : 'Novo'} {dict.label_servico}</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input type="hidden" name="organization_id" value={organization_id} />
           {serviceToEdit && (
@@ -56,14 +58,18 @@ export function CreateServiceDialog({ organization_id, serviceToEdit }: { organi
           )}
           <div>
             <Label>Nome</Label>
+            <br></br>
             <Input name="name" defaultValue={serviceToEdit?.title || serviceToEdit?.name} required className="bg-zinc-950 border-border" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Duração (min)</Label>
+              <br></br>
               <Input name="duration" type="number" defaultValue={serviceToEdit?.duration_minutes} className="bg-zinc-950 border-border" />
             </div>
-            <div><Label>Preço (R$)</Label><Input name="price" type="number" step="0.01" defaultValue={serviceToEdit?.price} className="bg-zinc-950 border-border" /></div>
+            <div><Label>Preço (R$)</Label>
+            <br></br>
+            <Input name="price" type="number" step="0.01" defaultValue={serviceToEdit?.price} className="bg-zinc-950 border-border" /></div>
           </div>
           <div>
             <Label className="flex items-center gap-2 mb-2"><Palette className="h-4 w-4" /> Cor na Agenda</Label>

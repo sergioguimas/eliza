@@ -151,7 +151,7 @@ export function MedicalRecordList({ records, customerId }: { records: any[], cus
                   <Avatar className="h-6 w-6">
                     <AvatarFallback className="text-[10px] bg-blue-900 text-blue-200">DR</AvatarFallback>
                   </Avatar>
-                  <span className="text-xs font-bold text-zinc-300">Dr. Padrão</span>
+                  <span className="text-xs font-bold text-zinc-300">Padrão</span>
                   
                   {isSigned ? (
                     <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 text-[10px] h-5 gap-1">

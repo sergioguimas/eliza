@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils"
 import { AppointmentCardActions } from "@/components/appointment-card-actions"
 import { RealtimeAppointments } from '@/components/realtime-appointments'
 
+
 // --- 1. FUNÇÃO DE DATA (BRASIL) ---
 function getBrazilDayRange() {
   const brazilDateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
@@ -152,7 +153,7 @@ export default async function DashboardPage() {
           <Card className="bg-card border-border group-hover:bg-accent/20 group-hover:border-primary/50 transition-all cursor-pointer h-full">
             <CardContent className="p-4 flex justify-between items-start">
               <div className="space-y-1">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">Procedimentos</p>
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">{dict.label_servico}s</p>
                 <h2 className="text-2xl font-bold tracking-tight text-foreground">{totalServices}</h2>
               </div>
               <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
@@ -166,7 +167,7 @@ export default async function DashboardPage() {
           <Card className="bg-card border-border group-hover:bg-accent/20 group-hover:border-primary/50 transition-all cursor-pointer h-full">
             <CardContent className="p-4 flex justify-between items-start">
               <div className="space-y-1">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">Pacientes</p>
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">{dict.label_cliente}s</p>
                 <h2 className="text-2xl font-bold tracking-tight text-foreground">{totalCustomers}</h2>
               </div>
               <div className="p-2 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">

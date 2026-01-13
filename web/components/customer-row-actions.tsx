@@ -15,6 +15,7 @@ import {
 import { deleteCustomer } from "@/app/actions/delete-customer"
 import { UpdateCustomerDialog } from "./update-customer-dialog"
 import { toast } from "sonner"
+import { useKeckleon } from "@/providers/keckleon-provider"
 
 interface CustomerRowActionsProps {
   customer: {
@@ -30,10 +31,11 @@ interface CustomerRowActionsProps {
 export function CustomerRowActions({ customer }: CustomerRowActionsProps) {
   const [loading, setLoading] = useState(false)
   
-  // 1. AQUI ESTAVA FALTANDO: O estado que controla o modal
   const [showEditDialog, setShowEditDialog] = useState(false)
   
   const router = useRouter()
+
+  const { dict } = useKeckleon()
 
   function handleCopyId() {
     navigator.clipboard.writeText(customer.id)
@@ -51,7 +53,6 @@ export function CustomerRowActions({ customer }: CustomerRowActionsProps) {
 
   return (
     <>
-      {/* 2. O COMPONENTE DO DIALOG (Invisível até abrir) */}
       <UpdateCustomerDialog customer={customer}>
         <Button variant="outline" size="sm">
           <Pencil className="mr-2 h-4 w-4" />
@@ -70,7 +71,7 @@ export function CustomerRowActions({ customer }: CustomerRowActionsProps) {
           <DropdownMenuLabel>Ações</DropdownMenuLabel>
           
           <DropdownMenuItem onClick={() => router.push(`/clientes/${customer.id}`)} className="cursor-pointer focus:bg-zinc-800">
-            <FileText className="mr-2 h-4 w-4" /> Ver Prontuário
+            <FileText className="mr-2 h-4 w-4" /> Ver {dict.label_prontuario}
           </DropdownMenuItem>
 
           {/* 3. O BOTÃO QUE ABRE O MODAL */}
@@ -85,7 +86,7 @@ export function CustomerRowActions({ customer }: CustomerRowActionsProps) {
           <DropdownMenuSeparator className="bg-zinc-800" />
           
           <DropdownMenuItem onClick={handleDelete} className="text-red-500 focus:bg-red-950/30 focus:text-red-400 cursor-pointer">
-            <Trash2 className="mr-2 h-4 w-4" /> Excluir Paciente
+            <Trash2 className="mr-2 h-4 w-4" /> Excluir {dict.label_paciente}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

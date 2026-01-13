@@ -117,22 +117,22 @@
 
 .theme-barbearia {
   --primary: 30 100% 50%; /* Laranja */
-  --radius: 4px; /* Bordas quadradas, estilo rústico */
+  --radius: 4px;
 }
 
 .theme-clinica {
   --primary: 220 90% 60%; /* Azul Suave */
-  --radius: 10px; /* Bordas redondinhas, estilo amigável */
+  --radius: 10px;
 }
 
 .theme-salao {
   --primary: 330 100% 70%; /* Rosa Vibrante */
-  --radius: 12px; /* Bordas bem arredondadas, estilo elegante */
+  --radius: 12px;
 }
 
 .theme-advocacia {
   --primary: 210 15% 40%; /* Azul Escuro */
-  --radius: 4px; /* Bordas levemente arredondadas, estilo profissional */
+  --radius: 8px;
 }
 
 @layer base {

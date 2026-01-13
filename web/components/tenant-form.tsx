@@ -6,9 +6,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { useRef } from "react"
+import { useKeckleon } from "@/providers/keckleon-provider"
 
 export function TenantForm() {
   const formRef = useRef<HTMLFormElement>(null)
+  const { dict } = useKeckleon()
 
   // Esta função wrapper resolve o erro de tipagem e permite usar o Toast
   async function handleSubmit(formData: FormData) {
@@ -27,7 +29,7 @@ export function TenantForm() {
   return (
     <form ref={formRef} action={handleSubmit} className="space-y-4">
       <div>
-        <Label htmlFor="orgName">Nome da Clínica</Label>
+        <Label htmlFor="orgName">Nome da {dict.label_clinica}</Label>
         <br></br>
         <Input id="orgName" name="orgName" placeholder="Ex: Clínica Saúde Vida" required />
       </div>
