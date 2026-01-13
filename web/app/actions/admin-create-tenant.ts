@@ -3,25 +3,32 @@
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/utils/supabase/server'
 
-// Usamos o admin client diretamente
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-)
-
 export async function createTenant(formData: FormData) {
+  // 1. Verificação de Ambiente (Fail Fast)
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const godEmail = process.env.NEXT_PUBLIC_GOD_EMAIL
+  if (!serviceRoleKey || !supabaseUrl) {
+    console.error("ERRO CRÍTICO: Variáveis de ambiente do Supabase ausentes no servidor.")
+    return { error: 'Erro interno de configuração do servidor (Service Role Key).' }
+  }
+
+  // 2. Cria o cliente Admin do Supabase
+  const supabaseAdmin = createClient(
+    supabaseUrl,
+    serviceRoleKey,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
+
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   
-  const godEmail = process.env.GOD_EMAIL
-  
-  // 1. Segurança: Se não for você, tchau.
+  // 3. Segurança: Se não for você, tchau.
   if (!user || user.email !== godEmail) {
     return { error: 'Não autorizado.' }
   }
@@ -35,7 +42,7 @@ export async function createTenant(formData: FormData) {
   }
 
   try {
-    // 1. Criar Usuário
+    // 4. Criar Usuário
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -46,7 +53,7 @@ export async function createTenant(formData: FormData) {
     if (authError) throw authError
     if (!authUser.user) throw new Error("Falha ao criar usuário Auth")
 
-    // 2. Criar Organização
+    // 5. Criar Organização
     // Gera um slug único simples
     const slug = orgName.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Math.random().toString(36).substring(2, 7)
     
@@ -63,9 +70,7 @@ export async function createTenant(formData: FormData) {
 
     if (orgError) throw orgError
 
-    // 3. Vincular (CORREÇÃO: UPSERT em vez de UPDATE)
-    // Isso resolve a Race Condition. Se o trigger ainda não rodou, nós criamos o perfil agora.
-    // Se o trigger já rodou, nós atualizamos.
+    // 6. Vincular (UPSERT para evitar Race Conditions de Triggers)
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .upsert({
@@ -73,7 +78,6 @@ export async function createTenant(formData: FormData) {
         organization_id: org.id,
         role: 'owner',
         full_name: `Admin ${orgName}`,
-        // Campos opcionais que o trigger preencheria, garantimos aqui:
         created_at: new Date().toISOString() 
       })
 
@@ -83,6 +87,6 @@ export async function createTenant(formData: FormData) {
 
   } catch (error: any) {
     console.error('Erro ao criar tenant:', error)
-    return { error: error.message }
+    return { error: error.message || 'Erro desconhecido ao criar organização.' }
   }
 }
