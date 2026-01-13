@@ -19,7 +19,7 @@ export default async function AgendamentosPage() {
   // 2. Busca perfil
   const { data: profile } = await supabase
     .from('profiles')
-    .select('organization_id, organizations(niche)')
+    .select('organization_id, role, organizations(niche)')
     .eq('id', user.id)
     .single() as any
 
@@ -49,10 +49,12 @@ export default async function AgendamentosPage() {
       .eq('is_active', true),
       
     // Staff (Médicos/Profissionais)
+    // Trazemos apenas quem pode atender (Role owner ou professional)
     supabase
       .from('profiles')
-      .select('id, full_name')
-      .eq('organization_id', orgId),
+      .select('id, full_name, role')
+      .eq('organization_id', orgId)
+      .in('role', ['owner', 'professional']), 
 
     // Agendamentos
     supabase
@@ -62,8 +64,10 @@ export default async function AgendamentosPage() {
         start_time, 
         end_time, 
         status, 
+        professional_id,
         customers ( name ), 
-        services ( title, color )
+        services ( title, color ),
+        profiles ( full_name )
       `)
       .eq('organization_id', orgId)
       .neq('status', 'canceled') // Esconde cancelados
@@ -80,7 +84,7 @@ export default async function AgendamentosPage() {
       <RealtimeAppointments />
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Agenda de {dict.label_servicos}</h1>
-        <p className="text-muted-foreground text-sm">Visualize e gerencie os atendimentos.</p>
+        <p className="text-muted-foreground text-sm">Visualize e gerencie os atendimentos da clínica.</p>
       </div>
 
       <CalendarView 
@@ -89,6 +93,7 @@ export default async function AgendamentosPage() {
         services={services as any}
         staff={staff as any}
         organization_id={orgId}
+        currentUser={profile} // Passamos o usuário atual para saber se ele é médico ou secretária
       />
     </div>
   )

@@ -1,127 +1,264 @@
 'use client'
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { CalendarPlus, Loader2 } from "lucide-react"
 import { createAppointment } from "@/app/actions/create-appointment"
 import { toast } from "sonner"
-import { useKeckleon } from "@/providers/keckleon-provider"
+import { Loader2, CalendarIcon, Clock, User, Plus, Search } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 
-type Props = {
-  customers: { id: string; name: string }[]
-  services: { id: string; title: string }[] 
-  staff: { id: string; full_name: string }[]
+// Interface completa para alinhar com o CalendarView
+interface CreateAppointmentDialogProps {
+  customers?: any[] // Lista de clientes para o select
+  services?: any[]  // Lista de serviços para o select
+  professionals?: any[] // Lista de médicos
+  staff?: any[] // Caso venha com nome de staff (alias para professionals)
   organization_id: string
+  currentUser: any
+  preselectedDate?: Date | null // Data clicada no calendário
 }
 
-// CORREÇÃO: Usando 'export function' (Named Export) para casar com o import do CalendarView
-export function CreateAppointmentDialog({ customers, services, staff, organization_id }: Props) {
+export function CreateAppointmentDialog({ 
+  customers = [], 
+  services = [], 
+  professionals = [],
+  staff = [], // Fallback
+  currentUser,
+  preselectedDate
+}: CreateAppointmentDialogProps) {
+  
   const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const { dict } = useKeckleon()
+  const [isLoading, setIsLoading] = useState(false)
+  
+  // Unifica a lista de profissionais
+  const team = professionals.length > 0 ? professionals : staff
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setLoading(true)
-    const formData = new FormData(event.currentTarget)
-    formData.append('organization_id', organization_id)
+  // States do formulário
+  const [customerId, setCustomerId] = useState("new") // 'new' ou ID do cliente
+  const [customerName, setCustomerName] = useState("") // Usado se for cliente novo
+  const [customerPhone, setCustomerPhone] = useState("")
+  
+  const [serviceId, setServiceId] = useState("")
+  const [date, setDate] = useState("")
+  const [time, setTime] = useState("")
+  const [notes, setNotes] = useState("")
+  const [selectedProfessionalId, setSelectedProfessionalId] = useState<string>("")
+
+  // Quando o modal abre, reseta ou configura defaults
+  useEffect(() => {
+    if (open) {
+      // 1. Data e Hora
+      if (preselectedDate) {
+        setDate(preselectedDate.toISOString().split('T')[0])
+        // Se quiser setar a hora atual arredondada, pode fazer aqui
+      } else {
+        setDate(new Date().toISOString().split('T')[0])
+      }
+      
+      // 2. Profissional Padrão
+      if (currentUser?.role === 'professional' || currentUser?.role === 'owner') {
+        setSelectedProfessionalId(currentUser.id)
+      } else if (team.length > 0 && !selectedProfessionalId) {
+        setSelectedProfessionalId(team[0].id)
+      }
+    }
+  }, [open, preselectedDate, currentUser, team])
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    
+    // Validação básica
+    const finalCustomerName = customerId === 'new' ? customerName : customers.find(c => c.id === customerId)?.name
+    
+    if (!date || !time || !finalCustomerName || !selectedProfessionalId) {
+      toast.error("Preencha data, hora, paciente e profissional.")
+      return
+    }
+
+    setIsLoading(true)
+
+    const formData = new FormData()
+    // Se for cliente existente, mandamos o ID. Se for novo, mandamos os dados.
+    if (customerId !== 'new') {
+        formData.append('customer_id', customerId)
+    } else {
+        formData.append('customer_name', customerName)
+        formData.append('customer_phone', customerPhone)
+    }
+
+    formData.append('date', date)
+    formData.append('time', time)
+    formData.append('notes', notes)
+    formData.append('professional_id', selectedProfessionalId)
+    
+    if (serviceId) {
+        formData.append('service_id', serviceId)
+    }
 
     const result = await createAppointment(formData)
 
-    if (result.error) {
+    if (result?.error) {
       toast.error(result.error)
     } else {
-      toast.success("Agendamento criado!")
+      toast.success("Agendamento criado com sucesso!")
       setOpen(false)
+      // Limpa campos críticos
+      setCustomerName("")
+      setCustomerPhone("")
+      setNotes("")
     }
-    setLoading(false)
+    
+    setIsLoading(false)
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-          <CalendarPlus className="mr-2 h-4 w-4" /> Novo Agendamento
+        <Button size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Agendamento
         </Button>
       </DialogTrigger>
       
-      <DialogContent className="bg-card border border-border text-card-foreground shadow-xl sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Novo Agendamento</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+        
+        <form onSubmit={handleSubmit} className="space-y-4 py-2">
           
+          {/* 1. SELEÇÃO DE PROFISSIONAL (Obrigatório no Multi-Profissional) */}
           <div className="space-y-2">
-            <Label>{dict.label_cliente}</Label>
-            <Select name="customer_id" required>
-              <SelectTrigger className="bg-background border-input">
-                <SelectValue placeholder={`Selecione o ${dict.label_cliente}`} />
-              </SelectTrigger>
-              <SelectContent className="bg-popover border-border text-popover-foreground">
-                {customers.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
+            <Label className="flex items-center gap-2 text-xs font-bold uppercase text-muted-foreground">
+                <User className="w-3 h-3" />
+                Profissional
+            </Label>
+            <Select 
+                value={selectedProfessionalId} 
+                onValueChange={setSelectedProfessionalId}
+                disabled={currentUser?.role === 'professional'} 
+            >
+                <SelectTrigger className="bg-muted/20">
+                    <SelectValue placeholder="Selecione o especialista" />
+                </SelectTrigger>
+                <SelectContent>
+                    {team.map(prof => (
+                        <SelectItem key={prof.id} value={prof.id}>
+                            {prof.full_name || prof.email}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
             </Select>
           </div>
 
+          <div className="border-t my-2" />
+
+          {/* 2. CLIENTE (Existente ou Novo) */}
           <div className="space-y-2">
-            <Label>{dict.label_profissional}</Label>
-            <Select name="staff_id">
-              <SelectTrigger className="bg-background border-input">
-                <SelectValue placeholder={`Selecione o ${dict.label_profissional} (Opcional)`} />
-              </SelectTrigger>
-              <SelectContent className="bg-popover border-border text-popover-foreground">
-                {staff?.map(s => (
-                  <SelectItem key={s.id} value={s.id}>{s.full_name || 'Sem nome'}</SelectItem>
-                ))}
-              </SelectContent>
+            <Label>Paciente</Label>
+            <Select value={customerId} onValueChange={setCustomerId}>
+                <SelectTrigger>
+                    <SelectValue placeholder="Selecione ou digite novo" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="new" className="font-bold text-primary">
+                        + Novo Paciente
+                    </SelectItem>
+                    {customers.map(c => (
+                        <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+
+            {customerId === 'new' && (
+                <div className="grid grid-cols-2 gap-2 mt-2 animate-in slide-in-from-top-2">
+                    <Input 
+                        placeholder="Nome Completo" 
+                        value={customerName} 
+                        onChange={e => setCustomerName(e.target.value)}
+                        required={customerId === 'new'}
+                    />
+                    <Input 
+                        placeholder="Telefone / WhatsApp" 
+                        value={customerPhone} 
+                        onChange={e => setCustomerPhone(e.target.value)} 
+                    />
+                </div>
+            )}
+          </div>
+
+          {/* 3. SERVIÇO */}
+          <div className="space-y-2">
+            <Label>Procedimento / Serviço</Label>
+            <Select value={serviceId} onValueChange={setServiceId}>
+                <SelectTrigger>
+                    <SelectValue placeholder="Selecione o serviço (Opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                    {services.map(s => (
+                        <SelectItem key={s.id} value={s.id}>
+                            <div className="flex items-center gap-2">
+                                {s.color && (
+                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: s.color }} />
+                                )}
+                                {s.title}
+                            </div>
+                        </SelectItem>
+                    ))}
+                </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>{dict.label_servico}</Label>
-            <Select name="service_id" required>
-              <SelectTrigger className="bg-background border-input">
-                <SelectValue placeholder={`Selecione o ${dict.label_servico}`} />
-              </SelectTrigger>
-              <SelectContent className="bg-popover border-border text-popover-foreground">
-                {services.map(s => (
-                  <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* 4. DATA E HORA */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+                Data
+              </Label>
+              <Input 
+                type="date" 
+                value={date} 
+                onChange={e => setDate(e.target.value)}
+                required 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                Horário
+              </Label>
+              <Input 
+                type="time" 
+                value={time} 
+                onChange={e => setTime(e.target.value)}
+                required 
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Data e Hora</Label>
-            <Input 
-              name="start_time" 
-              type="datetime-local" 
-              required 
-              className="bg-background border-input block" 
-            />
+             <Label>Observações</Label>
+             <Textarea 
+                placeholder="Ex: Primeira consulta, convênio, etc..." 
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                className="resize-none"
+             />
           </div>
 
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Confirmar Agendamento'}
-          </Button>
+          <div className="flex justify-end pt-2">
+            <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirmar Agendamento
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

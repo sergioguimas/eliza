@@ -1,60 +1,95 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { 
-  format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, 
+  format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, 
   isSameMonth, isSameDay, addMonths, subMonths, addDays, subDays, 
   isToday, parseISO, addWeeks, subWeeks
 } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2, Filter, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { CreateAppointmentDialog } from "@/components/create-appointment-dialog"
+import { UpdateAppointmentDialog } from "@/components/update-appointment-dialog"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AppointmentContextMenu } from "./appointment-context-menu"
 import { STATUS_CONFIG } from "@/lib/appointment-config"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-// Tipo alinhado com o Banco de Dados e com segurança de nulos
+// Paleta de cores suaves para os médicos
+const PROFESSIONAL_COLORS = [
+  { bg: '#dbeafe', border: '#3b82f6', text: '#1e3a8a' }, // Azul
+  { bg: '#dcfce7', border: '#22c55e', text: '#14532d' }, // Verde
+  { bg: '#fce7f3', border: '#ec4899', text: '#831843' }, // Rosa
+  { bg: '#f3e8ff', border: '#a855f7', text: '#581c87' }, // Roxo
+  { bg: '#ffedd5', border: '#f97316', text: '#7c2d12' }, // Laranja
+  { bg: '#ccfbf1', border: '#14b8a6', text: '#0f766e' }, // Teal
+]
+
 type Appointment = {
   id: string
   start_time: string
   end_time: string
   status: string | null
-  customers: { name: string } | null
-  services: { title: string; color?: string } | null
+  professional_id?: string
+  service_id?: string
+  notes?: string
+  customers: { id: string; name: string } | null
+  services: { id: string; title: string; color?: string } | null
+  profiles?: { id: string; full_name: string } | null
 }
 
 type Props = {
-  appointments?: Appointment[] // Opcional para evitar crash
+  appointments?: Appointment[]
   customers?: any[]
   services?: any[]
   staff?: any[]
   organization_id: string
+  currentUser?: any
 }
 
-// Função auxiliar segura para pegar a hora
 const getRawHour = (dateString: string) => {
   if (!dateString) return 0;
   return new Date(dateString).getUTCHours();
 };
 
 export function CalendarView({ 
-  appointments = [], // Valor padrão: lista vazia para não quebrar
+  appointments = [], 
   customers = [], 
   services = [], 
   staff = [], 
-  organization_id 
+  organization_id,
+  currentUser
 }: Props) {
   const [date, setDate] = useState(new Date())
   const [view, setView] = useState<'month' | 'week' | 'day'>('month')
   
-  // --- BLINDAGEM CONTRA ERRO DE HIDRATAÇÃO ---
-  const [isMounted, setIsMounted] = useState(false)
+  // Estado para abrir o modal de edição
+  const [isUpdateOpen, setIsUpdateOpen] = useState(false)
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
+  
+  // Estado do Filtro
+  const [filterId, setFilterId] = useState<string>('all')
 
+  const [isMounted, setIsMounted] = useState(false)
   useEffect(() => {
     setIsMounted(true)
-  }, [])
+    if (currentUser?.role === 'professional' && currentUser?.id) {
+        setFilterId(currentUser.id)
+    }
+  }, [currentUser])
+
+  const getProfessionalColor = (profId?: string) => {
+    if (!profId) return PROFESSIONAL_COLORS[0]
+    const index = profId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    return PROFESSIONAL_COLORS[index % PROFESSIONAL_COLORS.length]
+  }
+
+  const filteredAppointments = useMemo(() => {
+    if (filterId === 'all') return appointments
+    return appointments.filter(apt => apt.professional_id === filterId)
+  }, [appointments, filterId])
 
   if (!isMounted) {
     return (
@@ -63,7 +98,6 @@ export function CalendarView({
       </div>
     )
   }
-  // ---------------------------------------------
 
   function next() {
     if (view === 'month') setDate(addMonths(date, 1))
@@ -81,30 +115,56 @@ export function CalendarView({
     setDate(new Date())
   }
   
+  // === FUNÇÃO PARA ABRIR O UPDATE ===
+  function handleEventClick(e: React.MouseEvent, appointment: Appointment) {
+    e.stopPropagation() // Evita bugs de clique
+    setSelectedAppointment(appointment)
+    setIsUpdateOpen(true)
+  }
+
   function AppointmentCard({ appointment }: { appointment: Appointment }) {
     const status = appointment.status || 'scheduled'
     const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG['scheduled']
-    // Proteção: usa optional chaining (?.) para não quebrar se services for null
-    const serviceColor = appointment.services?.color || '#3b82f6'
     const isScheduled = status === 'scheduled'
+    const isPanorama = filterId === 'all'
+    
+    let cardStyle = {}
+    let profColors = null
+
+    if (isScheduled) {
+        if (isPanorama && appointment.professional_id) {
+            profColors = getProfessionalColor(appointment.professional_id)
+            cardStyle = {
+                backgroundColor: profColors.bg,
+                borderLeft: `3px solid ${profColors.border}`,
+                color: profColors.text
+            }
+        } else {
+            const serviceColor = appointment.services?.color || '#3b82f6'
+            cardStyle = {
+                backgroundColor: `${serviceColor}15`,
+                borderLeft: `3px solid ${serviceColor}`,
+                color: '#e4e4e7'
+            }
+        }
+    } else {
+       cardStyle = {
+         color: config.color ? config.color.replace('text-', '') : undefined 
+       }
+    }
 
     return (
       <AppointmentContextMenu appointmentId={appointment.id}>
         <div 
+          onClick={(e) => handleEventClick(e, appointment)}
           className={cn(
-            "px-2 py-1 rounded border text-[10px] md:text-xs font-medium h-full flex flex-col justify-center gap-0.5 transition-all hover:brightness-110 shadow-sm overflow-hidden text-zinc-200 cursor-pointer",
-            !isScheduled && config.color
+            "px-2 py-1 rounded border text-[10px] md:text-xs font-medium h-full flex flex-col justify-center gap-0.5 transition-all hover:brightness-95 shadow-sm overflow-hidden cursor-pointer",
+            !isScheduled && "bg-zinc-800 border-zinc-700"
           )}
-          style={isScheduled ? {
-            backgroundColor: `${serviceColor}15`,
-            borderLeft: `3px solid ${serviceColor}`,
-            borderTop: `1px solid ${serviceColor}30`,
-            borderRight: `1px solid ${serviceColor}30`,
-            borderBottom: `1px solid ${serviceColor}30`,
-          } : {}}
+          style={cardStyle}
         >
           <div className="flex justify-between items-center w-full">
-            <span className="truncate font-bold max-w-[85%]">
+            <span className="truncate font-bold max-w-[90%] leading-tight">
               {appointment.customers?.name || 'Sem nome'}
             </span>
             {!isScheduled && (
@@ -112,13 +172,21 @@ export function CalendarView({
             )}
           </div>
           
-          <div className="flex justify-between items-center opacity-70 text-[10px]">
-            <span className="truncate max-w-[60%]">{appointment.services?.title || "Serviço"}</span>
-            <span>
+          <div className="flex justify-between items-center opacity-80 text-[10px] gap-2">
+            <div className="truncate flex items-center gap-1">
+                {isPanorama && appointment.profiles?.full_name ? (
+                     <span className="uppercase font-bold tracking-tighter opacity-75">
+                        {appointment.profiles.full_name.split(' ')[0]}
+                     </span>
+                ) : (
+                    <span>{appointment.services?.title || "Serviço"}</span>
+                )}
+            </div>
+            
+            <span className="whitespace-nowrap font-mono text-[9px]">
               {new Date(appointment.start_time).toLocaleTimeString('pt-BR', { 
                 hour: '2-digit', 
                 minute: '2-digit',
-                // Mantendo sua lógica de UTC se for assim que salva no banco
                 timeZone: 'UTC' 
               })}
             </span>
@@ -133,8 +201,6 @@ export function CalendarView({
     const monthEnd = endOfMonth(monthStart)
     const startDate = startOfWeek(monthStart)
     const endDate = endOfWeek(monthEnd)
-
-    const safeAppointments = Array.isArray(appointments) ? appointments : []
 
     const weeks = []
     let days = []
@@ -163,10 +229,10 @@ export function CalendarView({
           {weeks.map((week, i) => (
             <div key={i} className="grid grid-cols-7">
               {week.map((day, j) => {
-                const dayAppointments = safeAppointments.filter(apt => 
+                const dayAppointments = filteredAppointments.filter(apt => 
                   apt.start_time &&
                   isSameDay(parseISO(apt.start_time), day) &&
-                  apt.status !== 'canceled' && apt.status !== 'cancelled'
+                  apt.status !== 'canceled'
                 ).sort((a, b) => a.start_time.localeCompare(b.start_time))
 
                 return (
@@ -180,7 +246,7 @@ export function CalendarView({
                   >
                     <span className={cn(
                       "text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full mb-1",
-                      isToday(day) ? "bg-blue-600 text-white" : "text-zinc-400 group-hover:text-zinc-200"
+                      isToday(day) ? "bg-primary text-primary-foreground" : "text-zinc-400 group-hover:text-zinc-200"
                     )}>
                       {format(day, 'd')}
                     </span>
@@ -204,16 +270,15 @@ export function CalendarView({
 
   function renderDayView() {
     const hours = Array.from({ length: 14 }, (_, i) => i + 7);
-    const safeAppointments = Array.isArray(appointments) ? appointments : []
 
     return (
       <div className="rounded-md border border-zinc-800 bg-zinc-900 overflow-hidden flex flex-col h-[700px]">
         <div className="flex-1 overflow-y-auto">
           {hours.map(hour => {
-            const hourAppointments = safeAppointments.filter(apt => {
+            const hourAppointments = filteredAppointments.filter(apt => {
               if (!apt.start_time) return false;
               const aptDate = new Date(apt.start_time);
-              return isSameDay(aptDate, date) && getRawHour(apt.start_time) === hour && apt.status !== 'canceled' && apt.status !== 'cancelled';
+              return isSameDay(aptDate, date) && getRawHour(apt.start_time) === hour && apt.status !== 'canceled';
             });
 
             return (
@@ -242,7 +307,8 @@ export function CalendarView({
   return (
     <div className="space-y-4">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+        
+        <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center rounded-md border border-zinc-800 bg-zinc-900 p-1">
             <Button variant="ghost" size="icon" onClick={previous} className="h-8 w-8 text-zinc-400">
               <ChevronLeft className="h-4 w-4" />
@@ -254,34 +320,74 @@ export function CalendarView({
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <h2 className="text-xl font-bold text-zinc-100 capitalize min-w-[200px]">
+
+          <h2 className="text-xl font-bold text-zinc-100 capitalize min-w-[150px]">
             {view === 'day' 
               ? format(date, "d 'de' MMMM", { locale: ptBR }) 
               : format(date, 'MMMM yyyy', { locale: ptBR })}
           </h2>
+
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-md">
+                <Filter className="w-3.5 h-3.5 text-zinc-400" />
+                <Select value={filterId} onValueChange={setFilterId}>
+                    <SelectTrigger className="w-[180px] h-7 border-0 bg-transparent focus:ring-0 p-0 text-xs text-zinc-200">
+                        <SelectValue placeholder="Todos os profissionais" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">
+                            <span className="font-semibold">Todos (Panorama)</span>
+                        </SelectItem>
+                        {staff.map(prof => (
+                            <SelectItem key={prof.id} value={prof.id}>
+                                <div className="flex items-center gap-2">
+                                    <div 
+                                        className="w-2 h-2 rounded-full" 
+                                        style={{ backgroundColor: getProfessionalColor(prof.id).border }} 
+                                    />
+                                    {prof.full_name}
+                                </div>
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <Tabs value={view} onValueChange={(v) => setView(v as any)} className="w-[200px]">
+          <Tabs value={view} onValueChange={(v) => setView(v as any)} className="w-[180px]">
             <TabsList className="grid w-full grid-cols-3 bg-zinc-950">
               <TabsTrigger value="month">Mês</TabsTrigger>
               <TabsTrigger value="week" disabled className="opacity-50">Sem</TabsTrigger>
               <TabsTrigger value="day">Dia</TabsTrigger>
             </TabsList>
           </Tabs>
+          
           <div className="h-6 w-px bg-zinc-800 mx-2 hidden md:block" />
           
           <CreateAppointmentDialog 
-            customers={Array.isArray(customers) ? customers : []} 
-            services={Array.isArray(services) ? services : []} 
-            staff={Array.isArray(staff) ? staff : []} 
+            customers={customers} 
+            services={services} 
+            professionals={staff}
             organization_id={organization_id} 
+            preselectedDate={date}
+            currentUser={currentUser}
           />
         </div>
       </div>
 
       {view === 'month' && renderMonthView()}
       {view === 'day' && renderDayView()}
+
+      <UpdateAppointmentDialog
+        appointment={selectedAppointment}
+        open={isUpdateOpen}
+        onOpenChange={setIsUpdateOpen}
+        professionals={staff}
+        services={services}
+        currentUser={currentUser}
+      />
     </div>
   )
 }
