@@ -1,123 +1,141 @@
-import { createAdminClient } from "@/utils/supabase/admin"
 import { createClient } from "@/utils/supabase/server"
+import { createAdminClient } from "@/utils/supabase/admin"
 import { redirect } from "next/navigation"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { toggleOrgStatus } from "./actions"
-import { Ban, CheckCircle, ShieldAlert, Plus } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { CheckCircle2, XCircle, ArrowRight, LogIn } from "lucide-react"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import Link from "next/link"
 
-export default async function AdminDashboard() {
+export default async function InvitePage({ params }: { params: Promise<{ code: string }> }) {
+  const resolvedParams = await params
+  const { code } = resolvedParams
   const supabase = await createClient()
+  
+  // 1. Verifica Usuário Logado
   const { data: { user } } = await supabase.auth.getUser()
 
-  const godEmail = process.env.GOD_EMAIL
+  // 2. Busca o convite (Usando AdminClient para ler dados da Org mesmo sem ser membro ainda)
+  const supabaseAdmin = createAdminClient()
+  
+  const { data: invite } = await supabaseAdmin
+    .from('invitations')
+    .select('*, organizations(name, niche)')
+    .eq('code', code)
+    .single() as any
 
-  if (!godEmail || !user || user.email !== godEmail) {
-    return redirect('/dashboard')
+  // 3. Validação: Se não existe ou expirou
+  if (!invite || new Date(invite.expires_at) < new Date()) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-muted/20 p-4">
+        <Card className="w-full max-w-md border-destructive/50 shadow-lg">
+          <CardHeader className="text-center">
+            <div className="mx-auto bg-destructive/10 p-3 rounded-full w-fit mb-4">
+               <XCircle className="h-8 w-8 text-destructive" />
+            </div>
+            <CardTitle className="text-destructive">Convite Inválido ou Expirado</CardTitle>
+            <CardDescription>
+              Este link não está mais disponível. Peça um novo convite ao administrador.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+             <Button asChild variant="outline">
+                <Link href="/">Voltar ao Início</Link>
+             </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
-  const supabaseAdmin = createAdminClient()
-  const { data: orgs } = await supabaseAdmin
-    .from('organizations')
-    .select('*')
-    .order('created_at', { ascending: false })
+  // === SERVER ACTION DE ACEITE ===
+  async function acceptInvite() {
+    'use server'
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) return redirect('/login') // Redundância
+
+    // 1. Atualiza o perfil do usuário
+    const { error } = await supabase
+        .from('profiles')
+        .update({ 
+            organization_id: invite.organization_id,
+            role: invite.role // <--- APLICA O CARGO DEFINIDO NO CONVITE
+        })
+        .eq('id', user.id)
+
+    if (error) {
+        console.error("Erro ao aceitar:", error)
+        return // Tratar erro visualmente se necessário
+    }
+
+    // 2. Marca convite como usado ou deleta
+    await supabaseAdmin.from('invitations').delete().eq('code', code) 
+    
+    // 3. Redireciona para o Dashboard
+    redirect('/dashboard')
+  }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
-      
-      {/* CABEÇALHO DO PAINEL */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-primary/10 rounded-full">
-            <ShieldAlert className="h-8 w-8 text-primary" />
+    <div className="h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md text-center shadow-2xl border-primary/20">
+        <CardHeader>
+          <div className="mx-auto bg-primary/10 p-4 rounded-full w-fit mb-4 animate-bounce">
+            <CheckCircle2 className="h-10 w-10 text-primary" />
           </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Super Admin</h1>
-            <p className="text-muted-foreground">Gestão global de assinantes.</p>
-          </div>
-        </div>
+          <CardTitle className="text-2xl font-bold">Convite para Equipe</CardTitle>
+          <CardDescription className="text-base mt-2">
+            Você foi convidado para integrar a equipe de:
+            <br />
+            <strong className="text-foreground text-xl block mt-1">{invite.organizations?.name}</strong>
+            <span className="text-xs bg-muted px-2 py-1 rounded-full mt-2 inline-block capitalize">
+                Função: {invite.role === 'professional' ? 'Profissional' : 'Secretaria/Staff'}
+            </span>
+          </CardDescription>
+        </CardHeader>
+        
+        <CardContent className="space-y-6">
+          
+          {user ? (
+              // SE JÁ ESTÁ LOGADO
+              <>
+                <div className="flex items-center gap-3 p-4 border rounded-lg bg-muted/30 text-left">
+                    <Avatar>
+                    <AvatarFallback>{user.email?.[0].toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                    <p className="text-sm font-medium text-foreground">Entrando como:</p>
+                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                    </div>
+                </div>
 
-        <div className="flex gap-4 items-center">
-            <div className="bg-card border px-4 py-2 rounded-lg shadow-sm text-right">
-                <span className="text-2xl font-bold block leading-none">{orgs?.length || 0}</span>
-                <span className="text-[10px] text-muted-foreground uppercase font-bold">Total Empresas</span>
-            </div>
-            <Button asChild>
-                <Link href="/admin/new">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Nova Organização
-                </Link>
-            </Button>
-        </div>
-      </div>
-
-      <div className="border rounded-lg bg-card shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Empresa</TableHead>
-              <TableHead>Plano</TableHead>
-              <TableHead>Nicho</TableHead>
-              <TableHead>Criado em</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {orgs?.map((org: any) => (
-              <TableRow key={org.id}>
-                <TableCell className="font-medium">
-                  {org.name}
-                  <div className="text-xs text-muted-foreground font-mono">{org.id.slice(0, 8)}...</div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="uppercase text-[10px]">
-                    {org.plan}
-                  </Badge>
-                </TableCell>
-                <TableCell className="capitalize">{org.niche}</TableCell>
-                <TableCell>{new Date(org.created_at).toLocaleDateString('pt-BR')}</TableCell>
-                <TableCell>
-                  {org.status === 'active' ? (
-                    <Badge className="bg-green-500/15 text-green-700 hover:bg-green-500/25 border-green-500/20">
-                      Ativo
-                    </Badge>
-                  ) : (
-                    <Badge variant="destructive">Suspenso</Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <form action={async () => {
-                    'use server'
-                    await toggleOrgStatus(org.id, org.status)
-                  }}>
-                    {org.status === 'active' ? (
-                      <Button size="sm" variant="destructive" className="h-8">
-                        <Ban className="w-4 h-4 mr-2" />
-                        Bloquear
-                      </Button>
-                    ) : (
-                      <Button size="sm" variant="outline" className="h-8 border-green-600 text-green-600 hover:text-green-700 hover:bg-green-50">
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Ativar
-                      </Button>
-                    )}
-                  </form>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+                <form action={acceptInvite}>
+                    <Button className="w-full font-bold h-12 text-lg" size="lg">
+                    Aceitar e Acessar Painel <ArrowRight className="ml-2 h-5 w-5" />
+                    </Button>
+                </form>
+              </>
+          ) : (
+              // SE NÃO ESTÁ LOGADO
+              <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                      Para aceitar o convite, você precisa entrar ou criar uma conta.
+                  </p>
+                  <Button asChild className="w-full" size="lg">
+                      <Link href={`/login?next=/convite/${code}`}>
+                        <LogIn className="mr-2 h-4 w-4" />
+                        Entrar ou Criar Conta
+                      </Link>
+                  </Button>
+              </div>
+          )}
+          
+          <p className="text-xs text-muted-foreground px-4">
+            Ao aceitar, você terá acesso imediato aos dados e agenda desta organização conforme sua função.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   )
 }
