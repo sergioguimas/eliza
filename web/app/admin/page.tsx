@@ -80,6 +80,12 @@ export default async function AdminDashboard() {
                     Nova Organização
                 </Link>
             </Button>
+            <Button asChild>
+                <Link href="/dashboard">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Voltar ao Dashboard
+                </Link>
+            </Button>
         </div>
       </div>
 
