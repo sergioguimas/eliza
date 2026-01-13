@@ -1,9 +1,24 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { LockKeyhole } from "lucide-react"
+import { LockKeyhole, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { createClient } from "@/utils/supabase/server"
+import { redirect } from "next/navigation"
 
 export default function SuspendedPage() {
+
+  // === AÇÃO DE LOGOUT (Server Action) ===
+  async function logout() {
+    'use server'
+    const supabase = await createClient()
+    
+    // 1. Apaga o cookie de sessão
+    await supabase.auth.signOut()
+    
+    // 2. Manda pro login
+    redirect('/login')
+  }
+
   return (
     <div className="h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md border-destructive/50 shadow-2xl">
@@ -24,15 +39,18 @@ export default function SuspendedPage() {
           
           <div className="flex flex-col gap-2">
             <Button asChild className="w-full font-semibold" variant="default">
-                {/* Aqui você colocará seu Link do WhatsApp depois */}
               <Link href="https://wa.me/5533999791305" target="_blank">
                 Falar com Financeiro
               </Link>
             </Button>
             
-            <Button asChild variant="ghost" className="w-full">
-              <Link href="/login">Voltar para Login</Link>
-            </Button>
+            <form action={logout}>
+                <Button variant="ghost" className="w-full hover:text-destructive hover:bg-destructive/10">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sair e Voltar ao Login
+                </Button>
+            </form>
+
           </div>
         </CardContent>
       </Card>
