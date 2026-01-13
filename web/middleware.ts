@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import error from 'next/error'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export default async function middleware(request: NextRequest) {
@@ -49,23 +50,33 @@ export default async function middleware(request: NextRequest) {
     let isSuspended = false
     
     try {
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from('profiles')
         .select(`
           organization_id, 
           organizations (
-            onboarding_completed
+            onboarding_completed,
+            status 
           )
         `)
         .eq('id', user.id)
         .single()
       
+      // TRUQUE: Normaliza o dado antes de usar
+      // Se vier como Array [{status...}], pega o primeiro item. Se vier Objeto, usa ele mesmo.
+      const orgRaw = profile?.organizations as any
+      const orgData = Array.isArray(orgRaw) ? orgRaw[0] : orgRaw
+
+      // === LOGS DE DEBUG (Agora usando a variável normalizada) ===
+      console.log("Middleware Check:")
+      console.log("Profile Error:", error)
+      console.log("Status Lido:", orgData?.status) 
+      // =====================
+      
       if (profile?.organization_id) {
         hasOrganization = true
-        // @ts-ignore
-        isOnboardingCompleted = !!profile.organizations?.onboarding_completed
-        // @ts-ignore
-        isSuspended = profile.organizations?.status === 'suspended'
+        isOnboardingCompleted = !!orgData?.onboarding_completed
+        isSuspended = orgData?.status === 'suspended'
       }
 
     } catch (error) {
