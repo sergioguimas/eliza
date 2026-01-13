@@ -6,7 +6,9 @@ import {
   Settings, 
   LogOut,
   Users,
-  ShieldAlert
+  ShieldAlert,
+  User,
+  BriefcaseMedical
 } from "lucide-react"
 
 import Link from "next/link"
@@ -30,18 +32,23 @@ import { useRouter } from "next/navigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
-// Tipagem das props que o Layout está enviando
+// Tipagem das props atualizada
 interface AppSidebarProps {
   user: any
   organization: any
+  profile: any
 }
 
-export function AppSidebar({ user, organization }: AppSidebarProps) {
+export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
   const router = useRouter()
   const { dict, niche } = useKeckleon()
   const supabase = createClient()
   
-  // Verifica se é o Super Admin baseado na variável pública
+  // === LÓGICA DE PERMISSÕES ===
+  const role = profile?.role || 'staff' // Se não tiver role, assume o menor nível
+  const isOwner = role === 'owner' // Só o dono vê configurações da clínica
+  
+  // Super Admin do Sistema (God Mode)
   const isSuperAdmin = user?.email === process.env.NEXT_PUBLIC_GOD_EMAIL
   
   async function handleSignOut() {
@@ -49,10 +56,10 @@ export function AppSidebar({ user, organization }: AppSidebarProps) {
     router.refresh()
   }
 
-  // Define iniciais para o Avatar
-  const initials = organization?.name 
-    ? organization.name.substring(0, 2).toUpperCase() 
-    : "EL"
+  // Iniciais para o avatar
+  const userInitials = profile?.full_name 
+    ? profile.full_name.substring(0, 2).toUpperCase() 
+    : user?.email?.substring(0, 2).toUpperCase()
 
   return (
     <Sidebar>
@@ -71,8 +78,9 @@ export function AppSidebar({ user, organization }: AppSidebarProps) {
       </SidebarHeader>
 
       <SidebarContent>
+        {/* GRUPO 1: ACESSÍVEL PARA TODOS (Staff, Profissional, Owner) */}
         <SidebarGroup>
-          <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
+          <SidebarGroupLabel>Operacional</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               
@@ -106,7 +114,7 @@ export function AppSidebar({ user, organization }: AppSidebarProps) {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <Link href="/servicos">
-                    <CategoryIcon name="servico" className="size-4" />
+                    <BriefcaseMedical className="h-4 w-4" />
                     <span>Meus {dict.label_servico}s</span>
                   </Link>
                 </SidebarMenuButton>
@@ -116,29 +124,35 @@ export function AppSidebar({ user, organization }: AppSidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Sistema</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/configuracoes">
-                    <Settings />
-                    <span>Configurações</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/configuracoes/equipe">
-                    <Users />
-                    <span>Minha Equipe</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* GRUPO 2: GESTÃO (SÓ PARA O DONO) */}
+        {isOwner && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Gestão da Clínica</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <Link href="/configuracoes">
+                      <Settings />
+                      <span>Configurações</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <Link href="/configuracoes/equipe">
+                      <Users />
+                      <span>Minha Equipe</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter>
@@ -151,14 +165,16 @@ export function AppSidebar({ user, organization }: AppSidebarProps) {
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
                   <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage src={user?.user_metadata?.avatar_url} />
-                    <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
+                    <AvatarImage src={profile?.avatar_url || user?.user_metadata?.avatar_url} />
+                    <AvatarFallback className="rounded-lg">{userInitials}</AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">{user?.email}</span>
-                    <span className="truncate text-xs">{dict.label_profissional}</span>
+                    <span className="truncate font-semibold">{profile?.full_name || "Usuário"}</span>
+                    {/* Exibe o cargo de forma amigável */}
+                    <span className="truncate text-xs capitalize text-muted-foreground">
+                        {role === 'owner' ? 'Administrador' : role === 'professional' ? 'Profissional' : 'Equipe'}
+                    </span>
                   </div>
-                  {/* Ícone de seta para indicar menu */}
                   <CategoryIcon name="cliente" className="ml-auto size-4 rotate-90" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
@@ -168,6 +184,7 @@ export function AppSidebar({ user, organization }: AppSidebarProps) {
                 align="end"
                 sideOffset={4}
               >
+                
                 {isSuperAdmin && (
                   <>
                     <DropdownMenuItem asChild>
@@ -179,6 +196,14 @@ export function AppSidebar({ user, organization }: AppSidebarProps) {
                     <DropdownMenuSeparator />
                   </>
                 )}
+                
+                {/* Link para o próprio perfil (todos podem ver) */}
+                <DropdownMenuItem asChild>
+                    <Link href="/configuracoes" className="cursor-pointer flex items-center">
+                        <User className="mr-2 h-4 w-4" />
+                        Meu Perfil
+                    </Link>
+                </DropdownMenuItem>
 
                 <DropdownMenuItem onClick={handleSignOut} className="text-destructive cursor-pointer focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
