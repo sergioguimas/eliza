@@ -2,7 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server"
 
-// --- TIPO PADRONIZADO PARA PARAR O ERRO DO TS ---
+// --- TIPAGEM ---
 export type WhatsappResponse = {
   success?: boolean
   error?: string
@@ -11,142 +11,196 @@ export type WhatsappResponse = {
   status?: string
 }
 
-// Fallbacks de segurança
 const DEFAULT_EVOLUTION_URL = process.env.NEXT_PUBLIC_EVOLUTION_API_URL
 const GLOBAL_API_KEY = process.env.EVOLUTION_API_KEY
 
+// Helper para esperar (usado no fallback)
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 export async function createWhatsappInstance(): Promise<WhatsappResponse> {
+  console.log("--- [DEBUG] INICIANDO PROCESSO DE CONEXÃO WHATSAPP ---")
+  
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
-  if (!user) return { error: "Usuário não autenticado" }
+  if (!user) {
+    console.error("[DEBUG ERROR] Usuário não autenticado")
+    return { error: "Usuário não autenticado" }
+  }
 
   // 1. Busca dados da Organização
+  console.log("[DEBUG STEP 1] Buscando perfil e organização...")
   const { data: profile } = await supabase
     .from('profiles')
     .select('organization_id, organizations:organization_id(slug, evolution_api_url, evolution_api_key)')
     .eq('id', user.id)
     .single() as any
 
-  if (!profile?.organization_id || !profile?.organizations?.slug) {
+  if (!profile?.organizations?.slug) {
+    console.error("[DEBUG ERROR] Organização não encontrada para o usuário")
     return { error: "Organização não encontrada." }
   }
 
   const instanceName = profile.organizations.slug
+  // Prioridade: Banco de dados > Variável de Ambiente
   const EVOLUTION_URL = profile.organizations.evolution_api_url || DEFAULT_EVOLUTION_URL
   const API_KEY = profile.organizations.evolution_api_key || GLOBAL_API_KEY
 
-  if (!EVOLUTION_URL) return { error: "URL da API não configurada." }
-  
-  console.log(`🔌 Conectando instância: ${instanceName}`)
+  console.log(`[DEBUG STEP 2] Configuração definida:`)
+  console.log(`- Instance Name: ${instanceName}`)
+  console.log(`- URL Alvo: ${EVOLUTION_URL}`)
+  console.log(`- API Key (final): ${API_KEY ? '***' + API_KEY.slice(-3) : 'NÃO DEFINIDA'}`)
 
+  if (!EVOLUTION_URL) return { error: "URL da API não configurada" }
+
+  // 2. Verifica se a instância JÁ EXISTE antes de tentar criar
+  console.log("[DEBUG STEP 3] Verificando se instância já existe na API...")
   try {
-    // 2. Tenta CRIAR a instância
+      const checkRes = await fetch(`${EVOLUTION_URL}/instance/connectionState/${instanceName}`, {
+          method: 'GET',
+          headers: { 'apikey': API_KEY! },
+          cache: 'no-store'
+      })
+
+      if (checkRes.ok) {
+          console.log("[DEBUG STEP 3.1] Instância já existe! Pulando criação e buscando QR Code...")
+          return connectWhatsappInstance(instanceName, EVOLUTION_URL, API_KEY!)
+      } else {
+          console.log(`[DEBUG STEP 3.2] Instância não encontrada (Status ${checkRes.status}). Vamos criar.`)
+      }
+  } catch (error) {
+      console.log("[DEBUG STEP 3.3] Erro ao checar status (pode ser firewall ou url errada):", error)
+  }
+
+  // 3. Tenta Criar a Instância (Com Timeout Estendido)
+  try {
+    console.log("[DEBUG STEP 4] Enviando comando /instance/create...")
+    
+    // Aumentamos o tempo limite para 50 segundos
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 50000)
-    const createResponse = await fetch(`${EVOLUTION_URL}/instance/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': API_KEY! },
-        body: JSON.stringify({
-            instanceName: instanceName,
-            qrcode: true,
-            integration: "WHATSAPP-BAILEYS"
-        }),
-        signal: controller.signal
+
+    const response = await fetch(`${EVOLUTION_URL}/instance/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': API_KEY!
+      },
+      body: JSON.stringify({
+        instanceName: instanceName,
+        token: Math.random().toString(36).substring(7),
+        qrcode: true, // Já pede o QR na resposta
+        integration: "WHATSAPP-BAILEYS" 
+      }),
+      signal: controller.signal
     })
 
-    const createData = await createResponse.json()
-    clearTimeout(timeoutId)
-    
-    // Detecção robusta se "Já Existe"
-    let isAlreadyExists = false
-    const msg = JSON.stringify(createData).toLowerCase()
-    if (msg.includes("already in use") || msg.includes("already exists")) {
-      isAlreadyExists = true
+    clearTimeout(timeoutId) // Cancela o timer se respondeu a tempo
+
+    const data = await response.json()
+    console.log("[DEBUG STEP 5] Resposta da criação recebida:", JSON.stringify(data, null, 2))
+
+    // Tratamento de "Já existe"
+    if (response.status === 403 || (data.error && data.error.includes('already exists'))) {
+        console.log("[DEBUG STEP 5.1] API disse que já existe. Tentando conectar...")
+        return connectWhatsappInstance(instanceName, EVOLUTION_URL, API_KEY!)
     }
 
-    if (!createResponse.ok && !isAlreadyExists) {
-        console.error("Erro Evolution:", createData)
-        return { error: "Erro ao criar instância na API." }
+    if (!response.ok) {
+        return { error: data.message || "Erro ao criar instância na API" }
     }
 
-    // 3. Se já existe ou acabou de criar, busca o QR Code
-    const result = await fetchQrCodeLoop(instanceName, EVOLUTION_URL, API_KEY!)
+    // Sucesso direto com QR Code
+    if (data.qrcode && data.qrcode.base64) {
+        console.log("[DEBUG SUCCESS] QR Code recebido na criação!")
+        return { 
+            success: true, 
+            qrcode: data.qrcode.base64,
+            status: 'qrcode'
+        }
+    }
 
-    return result
+    // Sucesso mas sem QR Code no corpo (vamos buscar manualmente)
+    console.log("[DEBUG STEP 6] Instância criada, mas sem QR no corpo. Buscando separadamente...")
+    return connectWhatsappInstance(instanceName, EVOLUTION_URL, API_KEY!)
 
   } catch (error: any) {
-    console.error("❌ Erro Crítico:", error)
-    return { error: `Falha de conexão: ${error.message}` }
+    console.error("[DEBUG ERROR] Erro fatal no fetch de criação:", error)
+    
+    // FALLBACK OTIMISTA: Se deu Timeout, pode ser que a AWS criou mas demorou pra responder.
+    // Vamos tentar buscar o QR Code mesmo assim.
+    if (error.name === 'AbortError' || error.cause?.code === 'ECONNRESET') {
+        console.log("[DEBUG STEP 7] Timeout detectado! Tentando recuperar QR Code caso tenha criado no background...")
+        await delay(2000) // Espera 2s para a API respirar
+        return connectWhatsappInstance(instanceName, EVOLUTION_URL, API_KEY!)
+    }
+
+    return { error: "Falha na conexão com a API (Timeout ou Rede)." }
   }
 }
 
-// Função Auxiliar de Loop
-async function fetchQrCodeLoop(instanceName: string, url: string, apiKey: string): Promise<WhatsappResponse> {
-    let attempts = 0
-    const maxAttempts = 10 
+// --- FUNÇÃO AUXILIAR: BUSCAR QR CODE ---
+async function connectWhatsappInstance(instanceName: string, url: string, key: string) {
+     console.log(`[DEBUG CONNECT] Buscando QR Code em: ${url}/instance/connect/${instanceName}`)
+     try {
+        const res = await fetch(`${url}/instance/connect/${instanceName}`, {
+            headers: { 'apikey': key },
+            cache: 'no-store'
+        })
+        
+        const data = await res.json()
+        console.log("[DEBUG CONNECT] Resposta:", data.base64 ? "QR Code Base64 Recebido" : JSON.stringify(data))
 
-    while (attempts < maxAttempts) {
-        attempts++
-        try {
-            const response = await fetch(`${url}/instance/connect/${instanceName}`, {
-                method: 'GET',
-                headers: { 'apikey': apiKey }
-            })
-            
-            const data = await response.json()
-
-            // Caso 1: Retorna QR Code (Base64)
-            if (data.base64 || data.qrcode?.base64) { 
-                return { success: true, qrcode: data.base64 || data.qrcode?.base64 }
-            }
-            
-            // Caso 2: Já conectado
-            const state = data.instance?.state || data.instance?.status
-            if (state === 'open' || state === 'connected') {
-                return { success: true, connected: true }
-            }
-            
-            await delay(1500) 
-        } catch (e) {
-            await delay(1000)
+        if (data.base64) {
+            return { success: true, qrcode: data.base64, status: 'qrcode' }
         }
-    }
-    return { error: "Tempo esgotado. Tente clicar novamente." }
+        
+        // Se vier "instance already connected", retornamos sucesso sem QR
+        if (data.instance && data.instance.state === 'open') {
+             return { success: true, status: 'connected' }
+        }
+
+        return { success: true } // Retorna sucesso genérico para não travar a UI
+     } catch (e) {
+         console.error("[DEBUG CONNECT ERROR]", e)
+         return { error: "Erro ao recuperar QR Code. Tente atualizar a página." }
+     }
 }
 
-// 4. Função para Desconectar
-export async function deleteWhatsappInstance(): Promise<WhatsappResponse> {
+// --- DELETAR INSTÂNCIA (RESET) ---
+export async function deleteWhatsappInstance() {
+    console.log("[DEBUG DELETE] Iniciando reset...")
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { error: "Auth required" }
     
+    if (!user) return { error: "Não autorizado" }
+
     const { data: profile } = await supabase
         .from('profiles')
-        .select('organization_id, organizations:organization_id(slug, evolution_api_url, evolution_api_key)')
+        .select('organizations(slug, evolution_api_url, evolution_api_key)')
         .eq('id', user.id)
         .single() as any
-        
-    const instanceName = profile?.organizations?.slug
-    const EVOLUTION_URL = profile?.organizations?.evolution_api_url || DEFAULT_EVOLUTION_URL
-    const API_KEY = profile?.organizations?.evolution_api_key || GLOBAL_API_KEY
-    
-    if(instanceName && EVOLUTION_URL) {
-        try {
-            await fetch(`${EVOLUTION_URL}/instance/logout/${instanceName}`, {
-                method: 'DELETE', headers: { 'apikey': API_KEY! }
-            })
-            return { success: true }
-        } catch (e) { 
-            return { error: "Erro ao desconectar" }
-        }
+
+    const org = profile?.organizations
+    if (!org) return { error: "Org não encontrada" }
+
+    const instanceName = org.slug
+    const EVOLUTION_URL = org.evolution_api_url || DEFAULT_EVOLUTION_URL
+    const API_KEY = org.evolution_api_key || GLOBAL_API_KEY
+
+    try {
+        await fetch(`${EVOLUTION_URL}/instance/delete/${instanceName}`, {
+            method: 'DELETE',
+            headers: { 'apikey': API_KEY! }
+        })
+        console.log("[DEBUG DELETE] Instância deletada com sucesso.")
+        return { success: true }
+    } catch (e) { 
+        return { error: "Erro ao desconectar" }
     }
-    return { error: "Dados inválidos" }
 }
 
-// 5. Verifica Status (Para rodar ao carregar a página)
+// --- CHECAR STATUS ---
 export async function getWhatsappStatus(): Promise<WhatsappResponse> {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -165,6 +219,8 @@ export async function getWhatsappStatus(): Promise<WhatsappResponse> {
     const EVOLUTION_URL = org.evolution_api_url || DEFAULT_EVOLUTION_URL
     const API_KEY = org.evolution_api_key || GLOBAL_API_KEY
 
+    // console.log("[DEBUG STATUS] Verificando status...") 
+
     try {
         const response = await fetch(`${EVOLUTION_URL}/instance/connectionState/${instanceName}`, {
             method: 'GET',
@@ -175,9 +231,17 @@ export async function getWhatsappStatus(): Promise<WhatsappResponse> {
         if(response.status === 404) return { status: 'disconnected' } 
         
         const data = await response.json()
-        const state = data.instance?.state || 'disconnected'
-        return { status: state === 'open' ? 'connected' : 'disconnected' }
-    } catch (e) {
+        
+        if (data.instance && data.instance.state === 'open') {
+            return { status: 'connected' }
+        }
+        
+        if (data.instance && data.instance.state === 'connecting') {
+             return { status: 'disconnected' } // Ainda precisa ler QR
+        }
+
+        return { status: 'disconnected' }
+    } catch (error) {
         return { status: 'error' }
     }
 }
