@@ -141,30 +141,47 @@ export async function createWhatsappInstance(): Promise<WhatsappResponse> {
 
 // --- FUNÇÃO AUXILIAR: BUSCAR QR CODE ---
 async function connectWhatsappInstance(instanceName: string, url: string, key: string) {
-     console.log(`[DEBUG CONNECT] Buscando QR Code em: ${url}/instance/connect/${instanceName}`)
-     try {
-        const res = await fetch(`${url}/instance/connect/${instanceName}`, {
-            headers: { 'apikey': key },
-            cache: 'no-store'
-        })
-        
-        const data = await res.json()
-        console.log("[DEBUG CONNECT] Resposta:", data.base64 ? "QR Code Base64 Recebido" : JSON.stringify(data))
+     console.log(`[DEBUG CONNECT] Iniciando busca persistente de QR Code...`)
+     
+     let attempts = 0
+     const maxAttempts = 10 // Tenta por 20 segundos (10 x 2s)
 
-        if (data.base64) {
-            return { success: true, qrcode: data.base64, status: 'qrcode' }
-        }
+     while (attempts < maxAttempts) {
+        attempts++
+        console.log(`[DEBUG CONNECT] Tentativa ${attempts}/${maxAttempts} buscando em: ${url}/instance/connect/${instanceName}`)
         
-        // Se vier "instance already connected", retornamos sucesso sem QR
-        if (data.instance && data.instance.state === 'open') {
-             return { success: true, status: 'connected' }
-        }
+        try {
+            const res = await fetch(`${url}/instance/connect/${instanceName}`, {
+                headers: { 'apikey': key },
+                cache: 'no-store'
+            })
+            
+            const data = await res.json()
 
-        return { success: true } // Retorna sucesso genérico para não travar a UI
-     } catch (e) {
-         console.error("[DEBUG CONNECT ERROR]", e)
-         return { error: "Erro ao recuperar QR Code. Tente atualizar a página." }
+            // 1. SUCESSO: QR Code Chegou!
+            if (data.base64) {
+                console.log("[DEBUG SUCCESS] QR Code encontrado na tentativa " + attempts)
+                return { success: true, qrcode: data.base64, status: 'qrcode' }
+            }
+            
+            // 2. SUCESSO: Já conectou (Você leu o QR rápido)
+            if (data.instance && data.instance.state === 'open') {
+                 console.log("[DEBUG SUCCESS] Instância já conectada!")
+                 return { success: true, status: 'connected' }
+            }
+
+            // 3. AINDA NÃO: Resposta vazia ou count:0
+            console.log(`[DEBUG WAIT] Resposta foi ${JSON.stringify(data)}. Esperando 2 segundos...`)
+            await delay(2000) // Espera 2s antes de tentar de novo
+
+        } catch (e) {
+             console.error("[DEBUG CONNECT ERROR]", e)
+             await delay(2000) // Se der erro de rede, espera também
+        }
      }
+
+     console.error("[DEBUG FAIL] Desistindo após " + maxAttempts + " tentativas.")
+     return { error: "O servidor está demorando para gerar o QR Code. Atualize a página e clique em Gerar novamente." }
 }
 
 // --- DELETAR INSTÂNCIA (RESET) ---
