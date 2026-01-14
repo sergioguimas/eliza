@@ -44,6 +44,8 @@ export async function createWhatsappInstance(): Promise<WhatsappResponse> {
 
   try {
     // 2. Tenta CRIAR a instância
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 50000)
     const createResponse = await fetch(`${EVOLUTION_URL}/instance/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': API_KEY! },
@@ -51,10 +53,12 @@ export async function createWhatsappInstance(): Promise<WhatsappResponse> {
             instanceName: instanceName,
             qrcode: true,
             integration: "WHATSAPP-BAILEYS"
-        })
+        }),
+        signal: controller.signal
     })
 
     const createData = await createResponse.json()
+    clearTimeout(timeoutId)
     
     // Detecção robusta se "Já Existe"
     let isAlreadyExists = false
