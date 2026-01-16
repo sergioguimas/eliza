@@ -6,52 +6,84 @@ import { revalidatePath } from "next/cache"
 export async function createCustomer(formData: FormData) {
   const supabase = await createClient()
 
-  // 1. Busca o usuário e garante que ele existe
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user || !user.id) {
-    return { error: "Usuário não autenticado" }
-  }
-  
-  // 2. Busca o perfil para obter a organization_id
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('organization_id')
-    .eq('id', user.id) 
-    .single()
-
-  if (!profile?.organization_id) {
-    return { error: "Perfil sem organização vinculada" }
-  }
-
+  // 1. Captura e Tratamento de Dados
   const name = formData.get('name') as string
-  const phone = formData.get('phone') as string
-  const document = formData.get('document') as string
+  const phoneRaw = formData.get('phone') as string
+  const email = formData.get('email') as string || null
   
-  const email = formData.get('email') as string
-  const address = formData.get('address') as string
-  const notes = formData.get('notes') as string
-  const birth_date = formData.get('birth_date') as string 
+  // Dados extras
+  const document = formData.get('document') as string || null // CPF/CNPJ
+  const gender = formData.get('gender') as string || null
+  const address = formData.get('address') as string || null
+  const notes = formData.get('notes') as string || null
+  const birthDateRaw = formData.get('birth_date') as string || null
 
-  const formattedBirthDate = birth_date ? new Date(birth_date).toISOString() : null
-
-  const { error } = await supabase.from('customers').insert({
-    organization_id: profile.organization_id,
-    name,
-    phone,
-    document,
-    email: email || null,
-    address: address || null,
-    notes: notes || null,
-    birth_date: formattedBirthDate,
-    active: true
-  })
-
-  if (error) {
-    console.error("Erro ao criar cliente:", error)
-    return { error: "Erro ao criar cliente" }
+  // 2. Validações Fail-Fast
+  if (!name || !phoneRaw) {
+    return { error: "Nome e Telefone são obrigatórios." }
   }
 
-  revalidatePath('/clientes')
-  return { success: true }
+  // Sanitização simples do telefone (remove tudo que não é número)
+  const phone = phoneRaw.replace(/\D/g, '')
+
+  try {
+    // 3. Verifica Organização
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: "Usuário não autenticado." }
+
+    // Busca o ID da organização via Perfil
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('organization_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile?.organization_id) {
+      return { error: "Você não pertence a uma organização." }
+    }
+
+    // 4. Verificação de Duplicidade (Telefone ou Documento na mesma Org)
+    const query = supabase
+      .from('customers')
+      .select('id')
+      .eq('organization_id', profile.organization_id)
+      .or(`phone.eq.${phone}${document ? `,document.eq.${document}` : ''}`)
+    
+    const { data: existing } = await query
+
+    if (existing && existing.length > 0) {
+      return { error: "Já existe um cliente com este telefone ou documento." }
+    }
+
+    // 5. Inserção
+    const { error: insertError } = await supabase
+      .from('customers')
+      .insert({
+        organization_id: profile.organization_id,
+        name,
+        phone,
+        email,
+        document,
+        gender,
+        address,
+        notes,
+        birth_date: birthDateRaw ? new Date(birthDateRaw).toISOString() : null,
+        active: true
+      })
+
+    if (insertError) {
+      console.error("Erro Supabase:", insertError)
+      return { error: "Erro ao cadastrar cliente. Verifique os dados." }
+    }
+
+    // 6. Revalidação
+    revalidatePath('/clientes')
+    revalidatePath('/dashboard')
+
+    return { success: true, message: "Cliente cadastrado com sucesso!" }
+
+  } catch (err) {
+    console.error("Erro interno:", err)
+    return { error: "Erro inesperado no servidor." }
+  }
 }

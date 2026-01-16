@@ -13,11 +13,11 @@ export default async function PrintRecordPage({
 
   // 1. Busca segura do registro
   const { data: record } = await supabase
-    .from('medical_records')
+    .from('service_records')
     .select(`
       *,
       customers (name),
-      professional:profiles!professional_id (
+      professional:profiles!service_records_professional_id_fkey (
         full_name,
         organization_id
       )

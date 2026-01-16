@@ -1,29 +1,33 @@
 import { createClient } from "@/utils/supabase/server"
-import { notFound } from "next/navigation"
-import { ArrowLeft, Phone, Mail, MapPin, Calendar, Clock, FileText, User, ShieldAlert, Pencil } from "lucide-react"
+import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
+import { ArrowLeft, Phone, Mail, MapPin, Calendar, Clock, FileText, User, ShieldAlert, Pencil } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { UpdateCustomerDialog } from "@/components/update-customer-dialog"
-import { MedicalRecordForm } from "@/components/medical-record-form"
 import { Separator } from "@/components/ui/separator"
+
+import { UpdateCustomerDialog } from "@/components/update-customer-dialog"
+// Novos componentes "Keckleon"
+import { ServiceRecordForm } from "@/components/service-record-form"
+import { ServiceRecordList } from "@/components/service-record-list"
+
 import { getDictionary } from "@/lib/get-dictionary"
-import { CategoryIcon } from "@/components/category-icon"
-import { redirect } from "next/navigation"
 
 export default async function ClienteDetalhesPage({ 
   params 
 }: { 
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }> 
 }) {
-  const resolvedParams = await params
-  const id = resolvedParams.id
+  // 1. CORREÇÃO DO ERRO: Aguarda os parâmetros
+  const { id } = await params
+  
   const supabase = await createClient()
 
-  // 1. --- Busca o Usuário Logado para saber o Nicho ---
+  // 2. Busca o Usuário Logado para saber o Nicho
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
@@ -36,11 +40,10 @@ export default async function ClienteDetalhesPage({
     .eq('id', user.id)
     .single() as any
 
-  // Garante que é string ou cai no genérico
   const niche = profile?.organizations?.niche || 'generico'
   const dict = getDictionary(niche)
 
-  // 2. Busca dados do Cliente
+  // 3. Busca dados do Cliente
   const { data: customer, error } = await supabase
     .from('customers')
     .select('*')
@@ -51,21 +54,13 @@ export default async function ClienteDetalhesPage({
     notFound()
   }
 
-  // 3. Busca Agendamentos
+  // 4. Busca Agendamentos
   const { data: appointments } = await supabase
     .from('appointments')
     .select('*, services(title)')
     .eq('customer_id', id)
     .order('start_time', { ascending: false })
 
-  // 4. Busca Histórico
-  const { data: records } = await supabase
-    .from('medical_records')
-    .select('*, professional:profiles!professional_id(full_name)')
-    .eq('customer_id', id)
-    .order('created_at', { ascending: false })
-
-  const safeRecords = records as any[] || []
   const isActive = customer.active !== false
 
   // Helper para iniciais
@@ -136,41 +131,26 @@ export default async function ClienteDetalhesPage({
           <TabsTrigger value="dados" className="h-10">Perfil</TabsTrigger>
         </TabsList>
 
-        {/* ABA 1: HISTÓRICO */}
-        <TabsContent value="historico" className="space-y-6">
-            <div className="bg-background rounded-xl">
-              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2 text-foreground">
+        {/* ABA 1: HISTÓRICO (REFATORADO) */}
+        <TabsContent value="historico" className="space-y-8">
+            {/* Formulário de Criação */}
+            <div className="space-y-3">
+              <h2 className="text-lg font-semibold flex items-center gap-2 text-foreground">
                 <FileText className="h-5 w-5 text-primary" />
-                Novo {dict.label_prontuario}
+                Novo Registro
               </h2>
-              <MedicalRecordForm customer_id={id} />
+              {/* Note o uso correto de customerId (camelCase) */}
+              <ServiceRecordForm customerId={id} />
             </div>
 
+            <Separator className="my-6" />
+
+            {/* Lista de Histórico */}
             <div className="space-y-3">
-              <h2 className="text-lg font-semibold text-muted-foreground pl-1 mt-6">
-                Histórico de {dict.label_prontuario}s
+              <h2 className="text-lg font-semibold text-muted-foreground pl-1">
+                Histórico Completo
               </h2>
-              
-              {safeRecords.length > 0 ? (
-                safeRecords.map((rec) => (
-                  <MedicalRecordForm 
-                    key={rec.id} 
-                    customer_id={id} 
-                    record={rec} 
-                    professionalName={rec.professional?.full_name || ""}
-                  />
-                ))
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-center border rounded-xl bg-muted/10">
-                  <div className="bg-muted p-3 rounded-full mb-3">
-                    <FileText className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-base font-medium">Nenhum {dict.label_prontuario} encontrado</h3>
-                  <p className="text-xs text-muted-foreground max-w-sm mt-1">
-                    Inicie o histórico deste cliente criando uma anotação acima.
-                  </p>
-                </div>
-              )}
+              <ServiceRecordList customerId={id} />
             </div>
         </TabsContent>
 
