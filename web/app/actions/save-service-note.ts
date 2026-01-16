@@ -3,7 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-export async function saveMedicalNote(formData: FormData) {
+export async function saveServiceNote(formData: FormData) {
   const supabase = await createClient()
 
   const customer_id = formData.get('customer_id') as string

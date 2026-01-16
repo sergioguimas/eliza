@@ -3,7 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-export async function signMedicalRecord(recordId: string, customerId: string) {
+export async function signServiceRecord(recordId: string, customerId: string) {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()

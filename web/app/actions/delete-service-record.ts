@@ -2,7 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 
-export async function updateMedicalRecord(recordId: string, content: string) {
+export async function deleteServiceRecord(recordId: string) {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -10,13 +10,13 @@ export async function updateMedicalRecord(recordId: string, content: string) {
 
   const { error } = await supabase
     .from('service_notes')
-    .update({ content })
+    .delete()
     .eq('id', recordId)
     .eq('profile_id', user.id)
 
   if (error) {
-    console.error('Erro ao atualizar:', error)
-    return { error: 'Erro ao salvar alterações.' }
+    console.error('Erro ao excluir:', error)
+    return { error: 'Erro ao excluir anotação.' }
   }
 
   return { success: true }
