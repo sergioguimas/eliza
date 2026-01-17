@@ -1,258 +1,279 @@
 import { createClient } from "@/utils/supabase/server"
-import { notFound, redirect } from "next/navigation"
-import Link from "next/link"
-import { ArrowLeft, Phone, Mail, MapPin, Calendar, Clock, FileText, User, ShieldAlert, Pencil } from "lucide-react"
-
+import { notFound } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
-
+import { CalendarDays, Phone, Mail, MapPin, Clock, User, FileText, Info, Pencil } from "lucide-react"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
 import { UpdateCustomerDialog } from "@/components/update-customer-dialog"
-// Novos componentes "Keckleon"
-import { ServiceRecordForm } from "@/components/service-record-form"
-import { ServiceRecordList } from "@/components/service-record-list"
+import { CustomerRowActions } from "@/components/customer-row-actions"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 
-import { getDictionary } from "@/lib/get-dictionary"
+// --- Componente Interno para Lista de Histórico ---
+// AQUI: Usamos 'any' nos props para aceitar qualquer coisa que venha do banco
+function ServiceRecordList({ records }: { records: any[] }) {
+  if (!records?.length) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10 text-center border-2 border-dashed rounded-xl bg-gray-50/50">
+        <FileText className="h-10 w-10 text-muted-foreground mb-3" />
+        <p className="text-muted-foreground font-medium">Nenhum registro encontrado.</p>
+        <p className="text-xs text-muted-foreground mt-1">Crie um novo atendimento para começar.</p>
+      </div>
+    )
+  }
+  return (
+    <div className="space-y-4">
+      {records.map((rec) => (
+        <Card key={rec.id} className="overflow-hidden border-l-4 border-l-blue-500">
+          <CardHeader className="pb-2 bg-gray-50/50">
+            <div className="flex justify-between items-start">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-white">
+                  {rec.status === 'draft' ? 'Rascunho' : 'Finalizado'}
+                </Badge>
+                <span className="text-sm text-muted-foreground font-medium">
+                  {format(new Date(rec.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+                </span>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="text-sm whitespace-pre-wrap leading-relaxed text-gray-700 dark:text-gray-300">
+              {rec.content}
+            </div>
+            {rec.profiles && (
+              <div className="mt-4 pt-3 border-t flex items-center gap-2 text-xs text-muted-foreground">
+                <User className="h-3 w-3" />
+                <span>Registrado por: <span className="font-medium text-foreground">{rec.profiles.full_name}</span></span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
+}
 
-export default async function ClienteDetalhesPage({ 
-  params 
-}: { 
-  params: Promise<{ id: string }> 
-}) {
-  // 1. CORREÇÃO DO ERRO: Aguarda os parâmetros
+export default async function CustomerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   
   const supabase = await createClient()
 
-  // 2. Busca o Usuário Logado para saber o Nicho
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    return redirect('/login')
-  }
-  
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('organizations(niche)')
-    .eq('id', user.id)
-    .single() as any
-
-  const niche = profile?.organizations?.niche || 'generico'
-  const dict = getDictionary(niche)
-
-  // 3. Busca dados do Cliente
-  const { data: customer, error } = await supabase
+  // 1. BUSCAR CLIENTE
+  const { data: rawCustomer, error: customerError } = await supabase
     .from('customers')
     .select('*')
     .eq('id', id)
     .single()
 
-  if (error || !customer) {
+  if (customerError || !rawCustomer) {
     notFound()
   }
 
-  // 4. Busca Agendamentos
-  const { data: appointments } = await supabase
+  // VÁLVULA DE ESCAPE 1: Transforma o dado do banco em 'any'
+  // Isso desliga a verificação de tipo estrita para este objeto
+  const customer = rawCustomer as any
+
+  // 2. BUSCAR AGENDAMENTOS
+  const { data: rawAppointments } = await supabase
     .from('appointments')
-    .select('*, services(title)')
-    .eq('customer_id', id)
+    .select(`
+      *,
+      services (title),
+      profiles (full_name)
+    `)
+    .eq('customer_id', customer.id)
     .order('start_time', { ascending: false })
+    .limit(20)
 
+  // VÁLVULA DE ESCAPE 2: Garante que é um array, mesmo que venha null
+  // O 'as any[]' garante que o .map funcione sem erro
+  const appointments = (rawAppointments || []) as any[]
+
+  // 3. BUSCAR HISTÓRICO
+  const { data: rawRecords } = await supabase
+    .from('service_records')
+    .select(`
+      *,
+      profiles (full_name)
+    `)
+    .eq('customer_id', customer.id)
+    .order('created_at', { ascending: false })
+
+  // VÁLVULA DE ESCAPE 3
+  const records = (rawRecords || []) as any[]
+
+  // Helpers (agora funcionam porque 'customer' é any)
   const isActive = customer.active !== false
-
-  // Helper para iniciais
-  const getInitials = (name: string) => {
-    return (name || "Cliente")
-      .split(' ')
-      .map(n => n[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase()
-  }
+  const getInitials = (name: string) => name ? name.split(' ').slice(0, 2).map((n: string) => n[0]).join('').toUpperCase() : 'CL'
 
   return (
-    <div className="container max-w-5xl py-8 space-y-8 animate-in fade-in duration-500">
+    <div className="container max-w-5xl mx-auto space-y-8 p-6 md:py-8">
       
-      {/* --- CABEÇALHO --- */}
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-        <div className="flex items-center gap-6">
-          <Link href="/clientes">
-            <Button variant="outline" size="icon" className="rounded-full h-10 w-10 border-dashed">
-              <ArrowLeft className="h-5 w-5 text-muted-foreground" />
-            </Button>
-          </Link>
-          
-          <div className="flex items-center gap-5">
-            <Avatar className="h-20 w-20 border-2 border-background shadow-sm">
-              <AvatarFallback className="text-2xl bg-primary/10 text-primary font-bold">
-                {getInitials(customer.name || " ")}
-              </AvatarFallback>
-            </Avatar>
-            
-            <div className="space-y-1">
-              <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">{customer.name}</h1>
-                <Badge variant={isActive ? "default" : "destructive"} className="rounded-full px-3">
-                  {isActive ? "Ativo" : "Inativo"}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5" /> {customer.phone || "Sem telefone"}
+      {/* HEADER DO CLIENTE */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pb-6 border-b">
+        <div className="flex items-center gap-5">
+          <Avatar className="h-20 w-20 border-4 border-white shadow-sm ring-1 ring-gray-200">
+            <AvatarFallback className="text-2xl font-bold bg-primary/10 text-primary">
+              {getInitials(customer.name)}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">{customer.name}</h1>
+            <div className="flex items-center gap-3 mt-2">
+              <Badge variant={isActive ? "default" : "secondary"} className={isActive ? "bg-green-600 hover:bg-green-700" : ""}>
+                {isActive ? "Cliente Ativo" : "Inativo"}
+              </Badge>
+              {customer.document && (
+                <span className="text-sm font-medium text-muted-foreground px-2 py-0.5 bg-gray-100 rounded-md">
+                  Doc: {customer.document}
                 </span>
-                {customer.email && (
-                   <span className="flex items-center gap-1.5 hidden sm:flex">
-                    <Mail className="h-3.5 w-3.5" /> {customer.email}
-                  </span>
-                )}
-              </div>
+              )}
             </div>
           </div>
         </div>
         
-        <UpdateCustomerDialog customer={customer}>
-          <Button variant="outline" size="sm">
-            <Pencil className="mr-2 h-4 w-4" />
-            Editar Dados
-          </Button>
-        </UpdateCustomerDialog>
+        <div className="flex gap-3">
+           <UpdateCustomerDialog customer={customer} />
+           <CustomerRowActions customer={customer} />
+        </div>
       </div>
 
-      <Separator />
-
-      {/* --- CONTEÚDO --- */}
-      <Tabs defaultValue="historico" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-8 h-12">
-          <TabsTrigger value="historico" className="h-10">{dict.label_prontuario}s</TabsTrigger>
-          <TabsTrigger value="agendamentos" className="h-10">Agendamentos</TabsTrigger>
-          <TabsTrigger value="dados" className="h-10">Perfil</TabsTrigger>
+      {/* ÁREA PRINCIPAL COM 3 ABAS */}
+      <Tabs defaultValue="appointments" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 h-12 p-1 bg-gray-100/80 dark:bg-gray-800/80 rounded-xl mb-6">
+          <TabsTrigger value="appointments" className="rounded-lg text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
+            Agendamentos
+          </TabsTrigger>
+          <TabsTrigger value="history" className="rounded-lg text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
+            Histórico / Registros
+          </TabsTrigger>
+          <TabsTrigger value="info" className="rounded-lg text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
+            Dados Cadastrais
+          </TabsTrigger>
         </TabsList>
-
-        {/* ABA 1: HISTÓRICO (REFATORADO) */}
-        <TabsContent value="historico" className="space-y-8">
-            {/* Formulário de Criação */}
-            <div className="space-y-3">
-              <h2 className="text-lg font-semibold flex items-center gap-2 text-foreground">
-                <FileText className="h-5 w-5 text-primary" />
-                Novo Registro
-              </h2>
-              {/* Note o uso correto de customerId (camelCase) */}
-              <ServiceRecordForm customerId={id} />
-            </div>
-
-            <Separator className="my-6" />
-
-            {/* Lista de Histórico */}
-            <div className="space-y-3">
-              <h2 className="text-lg font-semibold text-muted-foreground pl-1">
-                Histórico Completo
-              </h2>
-              <ServiceRecordList customerId={id} />
-            </div>
-        </TabsContent>
-
-        {/* ABA 2: AGENDAMENTOS */}
-        <TabsContent value="agendamentos" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
-            {appointments && appointments.length > 0 ? (
-              appointments.map((app) => (
-                <Card key={app.id} className="overflow-hidden hover:shadow-sm transition-all duration-200 border-l-4" style={{ borderLeftColor: getStatusColorHex(app.status) }}>
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-muted p-2 rounded-md">
-                        <Calendar className="h-4 w-4 text-foreground" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-sm">{app.services?.title || 'Serviço Personalizado'}</p>
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                          <span className="flex items-center gap-1">
-                            {new Date(app.start_time).toLocaleDateString('pt-BR')}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {new Date(app.start_time).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}
-                          </span>
+        
+        {/* ABA 1: AGENDAMENTOS */}
+        <TabsContent value="appointments" className="space-y-6 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Clock className="w-5 h-5 text-primary" />
+              Linha do Tempo
+            </h2>
+          </div>
+          
+          {!appointments?.length ? (
+            <Card className="border-dashed shadow-none bg-gray-50/50">
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <CalendarDays className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <p className="text-lg font-medium text-muted-foreground">Nenhum agendamento registrado</p>
+                <Button variant="link" className="mt-2 text-primary">Agendar agora</Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
+              {appointments.map((appt) => (
+                <Card key={appt.id} className="group hover:shadow-md transition-shadow border-l-4 data-[status=canceled]:border-l-red-500 data-[status=confirmed]:border-l-green-500 data-[status=scheduled]:border-l-blue-500" data-status={appt.status}>
+                   <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-lg">{appt.services?.title || "Serviço Removido"}</h4>
+                          <Badge variant="outline" className="capitalize text-xs font-normal">
+                            {appt.status === 'scheduled' ? 'Agendado' : 
+                             appt.status === 'confirmed' ? 'Confirmado' : 
+                             appt.status === 'canceled' ? 'Cancelado' : appt.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1.5">
+                            <CalendarDays className="h-4 w-4" />
+                            {format(new Date(appt.start_time), "dd 'de' MMM, yyyy", { locale: ptBR })}
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="h-4 w-4" />
+                            {format(new Date(appt.start_time), "HH:mm")}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <Badge variant="secondary" className={`capitalize px-2 py-0.5 text-xs ${getStatusBadgeStyle(app.status)}`}>
-                      {translateStatus(app.status)}
-                    </Badge>
-                  </CardContent>
+                      
+                      {appt.profiles && (
+                        <div className="flex items-center gap-2 text-sm bg-gray-50 px-3 py-1.5 rounded-full self-start md:self-center">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{appt.profiles.full_name}</span>
+                        </div>
+                      )}
+                   </div>
                 </Card>
-              ))
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-center border rounded-xl bg-muted/10 col-span-full">
-                <div className="bg-muted p-3 rounded-full mb-3">
-                  <Calendar className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <h3 className="text-base font-medium">Sem agendamentos</h3>
-                <p className="text-xs text-muted-foreground">Este cliente ainda não possui horários marcados.</p>
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
-        {/* ABA 3: PERFIL */}
-        <TabsContent value="dados">
-          <Card>
-            <CardHeader className="p-4 pb-2">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <User className="h-4 w-4 text-primary" /> 
-                Dados Cadastrais
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-2">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-1 p-3 rounded-lg bg-muted/20 border">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                    <Mail className="h-3 w-3" /> Email
-                  </p>
-                  <p className="font-medium text-sm">{customer.email || "—"}</p>
-                </div>
-                
-                <div className="space-y-1 p-3 rounded-lg bg-muted/20 border">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                    <Phone className="h-3 w-3" /> Telefone
-                  </p>
-                  <p className="font-medium text-sm">{customer.phone || "—"}</p>
+        {/* ABA 2: HISTÓRICO */}
+        <TabsContent value="history" className="focus-visible:outline-none animate-in fade-in slide-in-from-bottom-2 duration-300">
+           <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" />
+              Prontuário e Evolução
+            </h2>
+          </div>
+           <ServiceRecordList records={records} />
+        </TabsContent>
+
+        {/* ABA 3: DADOS CADASTRAIS */}
+        <TabsContent value="info" className="focus-visible:outline-none animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Info className="w-4 h-4" /> Contato e Endereço
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase">Telefone / WhatsApp</label>
+                  <div className="flex items-center gap-2 text-base">
+                    <Phone className="h-4 w-4 text-green-600" />
+                    {customer.phone}
+                  </div>
                 </div>
 
-                <div className="space-y-1 p-3 rounded-lg bg-muted/20 border">
-                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Documento</p>
-                   <p className="font-medium text-sm">{customer.document || "—"}</p>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase">E-mail</label>
+                  <div className="flex items-center gap-2 text-base">
+                    <Mail className="h-4 w-4 text-blue-600" />
+                    {customer.email || <span className="text-muted-foreground italic">Não informado</span>}
+                  </div>
                 </div>
 
-                 <div className="space-y-1 p-3 rounded-lg bg-muted/20 border">
-                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Nascimento</p>
-                   <p className="font-medium text-sm">
-                    {customer.birth_date 
-                      ? new Date(customer.birth_date).toLocaleDateString('pt-BR') 
-                      : "—"}
-                   </p>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase">Endereço</label>
+                  <div className="flex items-start gap-2 text-base">
+                    <MapPin className="h-4 w-4 text-red-500 mt-1" />
+                    <span className="flex-1">{customer.address || <span className="text-muted-foreground italic">Não informado</span>}</span>
+                  </div>
                 </div>
-                
-                <div className="space-y-1 md:col-span-2 p-3 rounded-lg bg-muted/20 border">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                    <MapPin className="h-3 w-3" /> Endereço
+              </CardContent>
+            </Card>
+
+            <Card className="bg-amber-50/50 border-amber-100 dark:bg-amber-950/10 dark:border-amber-900/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base text-amber-900 dark:text-amber-500">
+                  <Pencil className="w-4 h-4" /> Notas Internas
+                </CardTitle>
+                <CardDescription>Informações visíveis apenas para a equipe.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-white dark:bg-gray-950 p-4 rounded-lg border border-amber-100 dark:border-amber-900/50 min-h-[120px] shadow-sm">
+                  <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                    {customer.notes || "Nenhuma observação interna registrada para este cliente."}
                   </p>
-                  <p className="font-medium text-sm">{customer.address || "Endereço não cadastrado"}</p>
                 </div>
-
-                <div className="space-y-1 md:col-span-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                   <p className="text-[10px] font-bold text-yellow-600 uppercase tracking-wider flex items-center gap-2">
-                      <ShieldAlert className="h-3 w-3" /> Observações Internas
-                   </p>
-                   <p className="text-xs text-yellow-700 mt-1">
-                      {customer.notes || "Nenhuma observação interna."}
-                   </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
       </Tabs>

@@ -22,8 +22,7 @@ export async function updateSettings(formData: FormData) {
       const full_name = formData.get('full_name') as string
       const crm = formData.get('crm') as string
 
-      const { error: profileError } = await supabase
-        .from('profiles')
+      const { error: profileError } = await (supabase.from('profiles') as any)
         .update({ 
           full_name, 
           crm 
@@ -67,8 +66,7 @@ export async function updateSettings(formData: FormData) {
         orgUpdateData.onboarding_completed = true
       }
 
-      const { error: orgError } = await supabase
-        .from('organizations')
+      const { error: orgError } = await (supabase.from('organizations') as any)
         .update(orgUpdateData)
         .eq('id', org_id)
         

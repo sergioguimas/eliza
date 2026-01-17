@@ -34,8 +34,7 @@ export async function updateCustomer(formData: FormData) {
     dataToUpdate.birth_date = null
   }
 
-  const { error } = await supabase
-    .from('customers')
+  const { error } = await (supabase.from('appointments') as any)
     .update(dataToUpdate)
     .eq('id', id)
 

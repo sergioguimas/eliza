@@ -5,15 +5,14 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 
 export default async function PrintRecordPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params // Correção do Next.js 15+
+  const { id } = await params
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect("/login")
 
-  // Busca na tabela NOVA (service_records)
-  const { data: record } = await supabase
-    .from('service_records')
+  // Busca na tabela service_records
+  const { data: record } = await (supabase.from('service_records') as any)
     .select(`
       *,
       customer:customers(name, document, birth_date, address),

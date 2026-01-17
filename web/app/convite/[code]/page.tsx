@@ -52,7 +52,7 @@ export default async function InvitePage({ params }: { params: Promise<{ code: s
     if (!user) return
     
     // 1. Vincula o usuário à organização
-    await sb.from('profiles').update({
+    await (sb.from('profiles') as any).update({
       organization_id: invite.organization_id,
       role: invite.role
     }).eq('id', user.id)

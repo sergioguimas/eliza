@@ -19,8 +19,7 @@ export async function updatePreferences(formData: FormData) {
   const whatsapp_message_reminder = formData.get('whatsapp_message_reminder') as string
   const whatsapp_message_canceled = formData.get('whatsapp_message_canceled') as string
 
-  const { error } = await supabase
-    .from('organization_settings')
+  const { error } = await (supabase.from('organization_settings') as any)
     .update({
       open_hours_start,
       open_hours_end,

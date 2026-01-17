@@ -8,8 +8,7 @@ export async function updateServiceRecord(recordId: string, content: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Não autorizado' }
 
-  const { error } = await supabase
-    .from('service_notes')
+  const { error } = await (supabase.from('service_notes') as any)
     .update({ content })
     .eq('id', recordId)
     .eq('profile_id', user.id)

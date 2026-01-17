@@ -36,8 +36,7 @@ export async function GET(request: Request) {
 
   console.log(`🤖 Cron Job - Buscando entre: ${startIso} e ${endIso}`)
 
-  const { data: appointments, error } = await supabase
-    .from('appointments')
+  const { data: appointments, error } = await (supabase.from('appointments') as any)
     .select(`
       id,
       start_time,

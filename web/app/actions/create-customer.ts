@@ -12,7 +12,7 @@ export async function createCustomer(formData: FormData) {
   const email = formData.get('email') as string || null
   
   // Dados extras
-  const document = formData.get('document') as string || null // CPF/CNPJ
+  const document = formData.get('document') as string || null 
   const gender = formData.get('gender') as string || null
   const address = formData.get('address') as string || null
   const notes = formData.get('notes') as string || null
@@ -23,7 +23,7 @@ export async function createCustomer(formData: FormData) {
     return { error: "Nome e Telefone são obrigatórios." }
   }
 
-  // Sanitização simples do telefone (remove tudo que não é número)
+  // Sanitização simples
   const phone = phoneRaw.replace(/\D/g, '')
 
   try {
@@ -31,20 +31,21 @@ export async function createCustomer(formData: FormData) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: "Usuário não autenticado." }
 
-    // Busca o ID da organização via Perfil
-    const { data: profile } = await supabase
+    // Busca o ID da organização
+    const { data: rawProfile } = await supabase
       .from('profiles')
       .select('organization_id')
       .eq('id', user.id)
       .single()
 
+    const profile = rawProfile as any
+
     if (!profile?.organization_id) {
       return { error: "Você não pertence a uma organização." }
     }
 
-    // 4. Verificação de Duplicidade (Telefone ou Documento na mesma Org)
-    const query = supabase
-      .from('customers')
+    // 4. Verificação de Duplicidade
+    const query = (supabase.from('customers') as any)
       .select('id')
       .eq('organization_id', profile.organization_id)
       .or(`phone.eq.${phone}${document ? `,document.eq.${document}` : ''}`)
@@ -56,8 +57,7 @@ export async function createCustomer(formData: FormData) {
     }
 
     // 5. Inserção
-    const { error: insertError } = await supabase
-      .from('customers')
+    const { error: insertError } = await (supabase.from('customers') as any)
       .insert({
         organization_id: profile.organization_id,
         name,

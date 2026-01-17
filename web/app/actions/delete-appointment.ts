@@ -9,20 +9,18 @@ export async function cancelAppointment(appointmentId: string) {
   const supabase = await createClient()
 
   // 1. Buscar dados para a mensagem antes de atualizar
-  const { data: appointment } = await supabase
-    .from('appointments')
+  const { data: appointment } = await (supabase.from('appointments') as any)
     .select(`
       *,
       services ( title )
     `)
     .eq('id', appointmentId)
-    .single() as any
+    .single()
 
   if (!appointment) return { error: "Agendamento não encontrado" }
 
   // 2. Atualizar Status para 'canceled'
-  const { error } = await supabase
-    .from('appointments')
+  const { error } = await (supabase.from('appointments') as any)
     .update({ status: 'canceled' })
     .eq('id', appointmentId)
 
@@ -30,8 +28,7 @@ export async function cancelAppointment(appointmentId: string) {
 
   // 3. Enviar WhatsApp de Cancelamento
   if (appointment.customer_id) {
-    const { data: client } = await supabase
-      .from('customers')
+    const { data: client } = await (supabase.from('customers') as any)
       .select('name, phone')
       .eq('id', appointment.customer_id)
       .single()
@@ -47,8 +44,11 @@ export async function cancelAppointment(appointmentId: string) {
 
             const message = `Olá ${client.name}, seu agendamento de *${nomeServico}* para o dia ${dia} às ${hora} foi *cancelado*.`
             
-            await sendWhatsappMessage(client.phone, message)
-            console.log("✅ Aviso de cancelamento enviado!")
+            // Verifica se a função existe antes de chamar
+            if (sendWhatsappMessage) {
+                await sendWhatsappMessage(client.phone, message)
+                console.log("✅ Aviso de cancelamento enviado!")
+            }
         } catch (err) {
             console.error("Erro zap cancel:", err)
         }
@@ -64,19 +64,17 @@ export async function cancelAppointment(appointmentId: string) {
 export async function deleteAppointment(appointmentId: string) {
   const supabase = await createClient()
 
-  // 1. Buscar dados antes de deletar (para conseguir avisar)
-  const { data: appointment } = await supabase
-    .from('appointments')
+  // 1. Buscar dados antes de deletar
+  const { data: appointment } = await (supabase.from('appointments') as any)
     .select(`
       *,
       services ( title )
     `)
     .eq('id', appointmentId)
-    .single() as any
+    .single()
 
   // 2. Deletar o agendamento
-  const { error } = await supabase
-    .from('appointments')
+  const { error } = await (supabase.from('appointments') as any)
     .delete()
     .eq('id', appointmentId)
 
@@ -84,8 +82,7 @@ export async function deleteAppointment(appointmentId: string) {
 
   // 3. Enviar WhatsApp
   if (appointment?.customer_id) {
-    const { data: client } = await supabase
-      .from('customers')
+    const { data: client } = await (supabase.from('customers') as any)
       .select('name, phone')
       .eq('id', appointment.customer_id)
       .single()
@@ -98,7 +95,9 @@ export async function deleteAppointment(appointmentId: string) {
             
             const message = `Olá ${client.name}, informamos que seu agendamento de *${nomeServico}* no dia ${dia} foi removido da nossa agenda.`
             
-            await sendWhatsappMessage(client.phone, message)
+            if (sendWhatsappMessage) {
+                await sendWhatsappMessage(client.phone, message)
+            }
         } catch (err) {
             console.error("Erro zap delete:", err)
         }

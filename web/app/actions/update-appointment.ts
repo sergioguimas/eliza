@@ -31,8 +31,7 @@ export async function updateAppointment(formData: FormData) {
   const newEndTime = new Date(newStartTime.getTime() + duration * 60000)
 
   // Atualiza no Banco
-  const { error } = await supabase
-    .from('appointments')
+  const { error } = await (supabase.from('appointments') as any)
     .update({
       start_time: newStartTime.toISOString(),
       end_time: newEndTime.toISOString()

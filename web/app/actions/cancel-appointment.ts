@@ -4,13 +4,10 @@ import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { sendAppointmentCancellation } from "./whatsapp-messages"
 
-// CORREÇÃO: Agora aceita string direto, não FormData
 export async function cancelAppointment(appointmentId: string) {
   const supabase = await createClient()
 
-  // 1. Tenta atualizar no banco
-  const { error } = await supabase
-    .from('appointments')
+  const { error } = await (supabase.from('appointments') as any)
     .update({ status: 'canceled' })
     .eq('id', appointmentId)
 
@@ -19,13 +16,20 @@ export async function cancelAppointment(appointmentId: string) {
     return { error: error.message }
   }
 
-  // 2. Se deu certo, avisa no WhatsApp
-  sendAppointmentCancellation(appointmentId).catch(err => 
-    console.error("Falha ao enviar aviso de cancelamento:", err)
-  )
+  // Tenta enviar a mensagem (sem travar se falhar)
+  try {
+    if (sendAppointmentCancellation) {
+        sendAppointmentCancellation(appointmentId).catch(err => 
+            console.error("Falha background whatsapp:", err)
+        )
+    }
+  } catch (e) {
+    console.error("Erro ao tentar enviar WPP", e)
+  }
 
   revalidatePath('/agendamentos')
   revalidatePath('/dashboard')
   revalidatePath('/')
+  
   return { success: true }
 }

@@ -20,9 +20,7 @@ export async function updateAppointmentStatus(appointmentId: string, newStatus: 
 
   try {
     // 2. Atualização Segura
-    // O RLS do Supabase já garante que o usuário só altere agendamentos da própria org
-    const { error } = await supabase
-      .from('appointments')
+    const { error } = await (supabase.from('appointments') as any)
       .update({ status: newStatus })
       .eq('id', appointmentId)
 

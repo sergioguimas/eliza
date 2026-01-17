@@ -13,8 +13,7 @@ export async function updateProfile(formData: FormData) {
   const crm = formData.get('crm') as string
   const specialty = formData.get('specialty') as string
 
-  const { error } = await supabase
-    .from('profiles')
+  const { error } = await (supabase.from('profiles') as any)
     .update({
       full_name,
       crm,

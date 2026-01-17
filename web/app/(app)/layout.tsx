@@ -6,6 +6,23 @@ import { KeckleonProvider } from "@/providers/keckleon-provider"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 
+// --- TIPAGEM MANUAL (BLINDAGEM) ---
+type Organization = {
+  id: string
+  name: string
+  slug: string
+  niche: 'clinica' | 'barbearia' | 'salao' | 'advocacia' | 'generico'
+}
+
+type ProfileWithOrg = {
+  id: string
+  full_name: string | null
+  email: string | null
+  role: string
+  organization_id: string | null
+  organizations: Organization | null 
+}
+
 export default async function AppLayout({
   children,
 }: {
@@ -16,55 +33,64 @@ export default async function AppLayout({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return redirect('/login')
 
-  const { data: profile } = await supabase
+  // 1. Busca Perfil com Join na Organização
+  const { data: rawProfile } = await supabase
     .from('profiles')
     .select('*, organizations(*)')
     .eq('id', user.id)
     .single()
 
+  // 2. Casting Manual (Válvula de Escape)
+  const profile = rawProfile as unknown as ProfileWithOrg
+
   const organization = profile?.organizations
   
-  // Se não tiver organização e não for admin do sistema, manda pro setup
-  if (!organization && !user.email?.includes('admin')) {
+  // 3. Lógica de Redirecionamento
+  // Se não tiver organização e não for admin do sistema (God Mode), manda pro setup
+  const isGodMode = user.email === process.env.NEXT_PUBLIC_GOD_EMAIL
+  
+  if (!organization && !isGodMode) {
       redirect('/setup')
   }
   
-  // Keckleon Logic
+  // 4. Lógica Camaleão (Keckleon)
   const niche = organization?.niche || 'generico'
   const dict = getDictionary(niche)
   const themeClass = `theme-${niche}`
 
   return (
-    // 1. Injeta o Tema CSS
-    <div className={`h-full ${themeClass}`}> 
-      {/* 2. Injeta o Dicionário */}
+    // Injeta o Tema CSS no container principal
+    <div className={`h-full ${themeClass} bg-background text-foreground`}> 
+      {/* Injeta o Dicionário e Nicho no Contexto */}
       <KeckleonProvider dictionary={dict} niche={niche}>
-        {/* 3. Injeta a Lógica do Sidebar */}
+        
         <SidebarProvider>
-          {/* AQUI A MUDANÇA: Passamos o 'profile' completo */}
+          {/* Passamos os dados tipados (ou null) para a Sidebar */}
           <AppSidebar 
             user={user} 
-            organization={organization} 
-            profile={profile}
+            // Casting para any aqui garante que o componente aceite, mesmo se a tipagem dele for estrita
+            organization={organization as any} 
+            profile={profile as any}
           />
           
           {/* Conteúdo Principal */}
-          <main className="flex-1 w-full overflow-hidden flex flex-col">
-            {/* Header com botão para abrir/fechar sidebar */}
-            <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
+          <main className="flex-1 w-full overflow-hidden flex flex-col h-screen">
+            {/* Header Mobile/Desktop */}
+            <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur px-4 supports-[backdrop-filter]:bg-background/60">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
-              <h1 className="text-sm font-medium">
+              <h1 className="text-sm font-medium truncate">
                 {organization?.name || "Eliza SaaS"}
               </h1>
             </header>
             
-            {/* Área de scroll do conteúdo */}
-            <div className="flex-1 overflow-auto p-4 md:p-8">
+            {/* Área de Scroll */}
+            <div className="flex-1 overflow-auto p-4 md:p-6 bg-muted/10">
               {children}
             </div>
           </main>
         </SidebarProvider>
+
       </KeckleonProvider>
     </div>
   )

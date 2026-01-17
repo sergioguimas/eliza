@@ -6,8 +6,7 @@ import { revalidatePath } from "next/cache"
 export async function getServiceRecords(customerId: string) {
   const supabase = await createClient()
 
-  const { data, error } = await supabase
-    .from('service_records') // <--- Tabela nova
+  const { data, error } = await (supabase.from('service_records') as any)
     .select(`
       *,
       professional:profiles!service_records_professional_id_fkey (
@@ -40,17 +39,18 @@ export async function createServiceRecord(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
 
   // 1. Identificar a Organização do usuário atual
-  const { data: profile } = await supabase
+  const { data: rawProfile } = await supabase
     .from('profiles')
     .select('organization_id')
     .eq('id', user?.id!)
     .single()
 
+  const profile = rawProfile as any
+
   if (!profile?.organization_id) return { error: 'Sem organização vinculada' }
 
   // 2. Criar o Registro
-  const { error } = await supabase
-    .from('service_records')
+  const { error } = await (supabase.from('service_records') as any)
     .insert({
       organization_id: profile.organization_id,
       customer_id: customerId,

@@ -28,8 +28,7 @@ export function AppointmentCardActions({ appointment }: AppointmentCardActionsPr
   async function updateStatus(status: string, label: string) {
     setLoading(true)
     try {
-      const { error } = await supabase
-        .from('appointments')
+      const { error } = await (supabase.from('appointments') as any)
         .update({ status })
         .eq('id', appointment.id)
 

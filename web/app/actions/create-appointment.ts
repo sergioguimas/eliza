@@ -17,21 +17,22 @@ export async function createAppointment(formData: FormData) {
     return { error: "Dados incompletos" }
   }
 
-  // 1. Calcular horário de fim
-  const { data: service } = await supabase
+  // 1. Buscar dados do Serviço
+  const { data: rawService } = await supabase
     .from('services')
     .select('duration_minutes, price')
     .eq('id', service_id)
     .single()
 
-  if (!service) return { error: "Serviço não encontrado" }
+  if (!rawService) return { error: "Serviço não encontrado" }
+
+  const service = rawService as any
 
   const startTime = new Date(start_time_raw)
   const endTime = new Date(startTime.getTime() + service.duration_minutes * 60000)
 
-  // 2. VERIFICAÇÃO DE CONFLITO (Ignora Cancelados)
-  const query = supabase
-    .from('appointments')
+  // 2. VERIFICAÇÃO DE CONFLITO
+  const query = (supabase.from('appointments') as any)
     .select('id')
     .eq('organization_id', organization_id)
     .neq('status', 'canceled')
@@ -39,7 +40,7 @@ export async function createAppointment(formData: FormData) {
     .gt('end_time', startTime.toISOString())
 
   if (staff_id) {
-    query.eq('profile_id', staff_id)
+    query.eq('professional_id', staff_id)
   }
 
   const { data: conflicts, error: conflictError } = await query
@@ -53,14 +54,13 @@ export async function createAppointment(formData: FormData) {
     return { error: "Já existe um agendamento neste horário (conflito)." }
   }
 
-  // 3. Criar o agendamento E RECUPERAR O DADO (.select().single())
-  const { data: newAppointment, error } = await supabase
-    .from('appointments')
+  // 3. Criar o agendamento
+  const { data: newAppointment, error } = await (supabase.from('appointments') as any)
     .insert({
       organization_id,
       customer_id,
       service_id,
-      profile_id: staff_id || null,
+      professional_id: staff_id || null,
       start_time: startTime.toISOString(),
       end_time: endTime.toISOString(),
       price: service.price,
@@ -70,15 +70,21 @@ export async function createAppointment(formData: FormData) {
     .single()
 
   if (error || !newAppointment) {
-    console.error(error)
+    console.error("Erro insert:", error)
     return { error: "Erro ao criar agendamento" }
   }
 
   // 4. Enviar WhatsApp
   if (newAppointment?.id) {
-    sendAppointmentConfirmation(newAppointment.id).catch(err => 
-      console.error("Falha ao enviar confirmação de agendamento:", err)
-    )
+    try {
+        if (sendAppointmentConfirmation) {
+            sendAppointmentConfirmation(newAppointment.id).catch((err: any) => 
+                console.error("Falha ao enviar confirmação de agendamento:", err)
+            )
+        }
+    } catch (e) {
+        console.error("Erro ao chamar envio de msg", e)
+    }
   }
 
   revalidatePath('/agendamentos')

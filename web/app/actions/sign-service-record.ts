@@ -9,14 +9,14 @@ export async function signServiceRecord(recordId: string, customerId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Não autorizado' }
 
-  const { error } = await supabase
-    .from('service_notes') 
+  const { error } = await (supabase.from('service_records') as any)
     .update({
       status: 'signed',
-      signed_at: new Date().toISOString()
+      signed_at: new Date().toISOString(),
+      signed_by: user.id
     }) 
     .eq('id', recordId)
-    .eq('profile_id', user.id) // Garante que é o autor
+    .eq('professional_id', user.id) // Garante que só o autor pode assinar
 
   if (error) {
     console.error('Erro ao assinar:', error)

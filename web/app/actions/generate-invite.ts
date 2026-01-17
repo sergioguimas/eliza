@@ -1,52 +1,62 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server"
-import { randomBytes } from "crypto"
 import { headers } from "next/headers"
 
-// Agora aceitamos o 'role' como parâmetro
-export async function generateInviteLink(role: 'professional' | 'staff' = 'staff') {
+export async function generateInvite(
+  organizationId: string, 
+  role: 'staff' | 'professional' | 'admin' = 'staff'
+) {
   const supabase = await createClient()
 
-  // 1. Quem está pedindo?
+  // 1. Verifica Usuário Logado
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Não autorizado" }
 
-  const { data: profile } = await supabase
+  // 2. Busca perfil para validar permissões
+  const { data: rawProfile } = await supabase
     .from('profiles')
     .select('organization_id, role')
     .eq('id', user.id)
     .single()
 
-  // Apenas donos ou admins podem convidar (ajuste conforme sua regra de negócio)
-  const isAllowed = profile?.role === 'owner' || profile?.role === 'admin' || profile?.role === 'professional'
+  const profile = rawProfile as any
 
-  if (!profile || !profile.organization_id || !isAllowed) {
-    return { error: "Você não tem permissão para convidar membros." }
+  // SEGURANÇA: Verifica se o usuário realmente pertence à organização
+  if (!profile || profile.organization_id !== organizationId) {
+    return { error: "Você não tem permissão para gerar convites desta organização." }
   }
 
-  // 2. Gerar um código curto (Ex: a4f1b2)
-  const code = randomBytes(4).toString('hex')
+  const isAllowed = ['owner', 'admin'].includes(profile.role)
+  if (!isAllowed) {
+    return { error: "Apenas Donos e Administradores podem convidar membros." }
+  }
 
-  // 3. Salvar no banco (Validade: 48 horas)
+  // 3. Gera código aleatório (8 caracteres)
+  const code = Math.random().toString(36).substring(2, 10).toUpperCase()
+
+  // 4. Define expiração (7 dias)
   const expiresAt = new Date()
-  expiresAt.setHours(expiresAt.getHours() + 48)
+  expiresAt.setDate(expiresAt.getDate() + 7)
 
-  const { error } = await supabase.from('invitations').insert({
-    organization_id: profile.organization_id,
-    code: code,
-    expires_at: expiresAt.toISOString(),
-    role: role // <--- SALVAMOS O CARGO AQUI
-  })
+  // 5. Salva no Banco (Com Blindagem no Insert também)
+  const { error } = await (supabase.from('invitations') as any)
+    .insert({
+      organization_id: organizationId,
+      code,
+      role, 
+      expires_at: expiresAt.toISOString()
+    })
 
   if (error) {
     console.error("Erro ao criar convite:", error)
-    return { error: "Erro ao gerar convite no banco de dados." }
+    return { error: "Erro ao registrar convite no banco de dados." }
   }
 
-  // 4. Montar URL
-  const origin = (await headers()).get('origin')
-  const inviteUrl = `${origin}/convite/${code}`
+  // 6. Monta URL de Retorno
+  const headersList = await headers()
+  const origin = headersList.get('origin') || 'http://localhost:3000'
+  const url = `${origin}/convite/${code}`
 
-  return { code, url: inviteUrl }
+  return { url }
 }

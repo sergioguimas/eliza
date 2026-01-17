@@ -1,232 +1,262 @@
 'use client'
 
-import { useState, useTransition } from "react"
-import { useRouter } from "next/navigation"
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle, 
-  CardFooter 
-} from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
+import { useState } from "react"
+import { createOrganization } from "@/app/actions/organization"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { toast } from "sonner"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { 
   Loader2, 
+  Building2, 
+  Store, 
+  Briefcase, 
+  Scissors, 
+  Sparkles, 
   ArrowRight, 
-  ArrowLeft, 
-  Check 
+  ArrowLeft,
+  CheckCircle2,
+  Globe
 } from "lucide-react"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
-// Importações do nosso sistema
-import { updateSettings } from "@/app/actions/update-settings"
-import { getNicheOptions, nicheConfig } from "@/lib/niche-config"
+// Opções de Nicho com metadados visuais
+const NICHE_OPTIONS = [
+  { id: 'clinica', label: 'Saúde & Clínica', icon: Building2, color: 'text-blue-500', border: 'hover:border-blue-500', bg: 'hover:bg-blue-50' },
+  { id: 'advocacia', label: 'Advocacia', icon: Briefcase, color: 'text-red-800', border: 'hover:border-red-800', bg: 'hover:bg-red-50' },
+  { id: 'barbearia', label: 'Barbearia', icon: Scissors, color: 'text-orange-600', border: 'hover:border-orange-600', bg: 'hover:bg-orange-50' },
+  { id: 'salao', label: 'Salão de Beleza', icon: Sparkles, color: 'text-pink-500', border: 'hover:border-pink-500', bg: 'hover:bg-pink-50' },
+  { id: 'generico', label: 'Outro Negócio', icon: Store, color: 'text-slate-600', border: 'hover:border-slate-600', bg: 'hover:bg-slate-50' },
+]
 
-export function SetupForm({ organization }: { organization: any }) {
-  const [isPending, startTransition] = useTransition()
-  const router = useRouter()
+export function SetupForm() {
+  const [step, setStep] = useState(1)
+  const [isLoading, setIsLoading] = useState(false)
   
-  // Controle de Passos (0 = Nicho, 1 = Dados, 2 = Localização)
-  const [step, setStep] = useState(0)
-
-  // Carrega as opções do arquivo de configuração
-  const nicheOptions = getNicheOptions()
-
-  // Estado dos Dados do Formulário
+  // Estado único para todos os passos
   const [formData, setFormData] = useState({
-    niche: organization?.niche || 'generico',
-    name: organization?.name || '',
-    full_name: '',
-    document: organization?.document || '',
-    phone: organization?.phone || '',
-    email: organization?.email || '',
-    address: organization?.address || ''
+    niche: '',
+    name: '',
+    slug: ''
   })
 
-  // Helper para pegar o label do nicho atual (Ex: "Barbearia") para usar nos textos
-  const currentNicheLabel = nicheConfig[formData.niche]?.label.split('/')[0] || 'Empresa'
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+  // Avança para o próximo passo com validação simples
+  const handleNext = () => {
+    if (step === 1 && !formData.niche) {
+      toast.warning("Por favor, selecione o ramo de atuação.")
+      return
+    }
+    if (step === 2 && (!formData.name || !formData.slug)) {
+      toast.warning("Preencha o nome e a URL do seu sistema.")
+      return
+    }
+    setStep((prev) => prev + 1)
   }
 
-  const handleFinish = async () => {
-    startTransition(async () => {
-      const dataToSend = new FormData()
-      dataToSend.append('org_id', organization.id)
+  // Volta um passo
+  const handleBack = () => setStep((prev) => prev - 1)
+
+  // Envio final
+  async function onSubmit() {
+    setIsLoading(true)
+    
+    // Converte o objeto de estado para FormData (exigido pela Server Action)
+    const data = new FormData()
+    data.append('niche', formData.niche)
+    data.append('name', formData.name)
+    data.append('slug', formData.slug)
+
+    const result = await createOrganization(data)
+    
+    if (result?.error) {
+      toast.error(result.error)
+      setIsLoading(false)
+    }
+    // Sucesso = Redirecionamento automático via Server Action
+  }
+
+  // Helper para atualizar campos
+  const updateField = (key: string, value: string) => {
+    setFormData(prev => ({ ...prev, [key]: value }))
+  }
+
+  // Helper para gerar slug automático baseado no nome (se o slug estiver vazio)
+  const handleNameBlur = () => {
+    if (!formData.slug && formData.name) {
+      const slug = formData.name
+        .toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove acentos
+        .replace(/[^a-z0-9]/g, "-") // Troca espaços/especiais por traço
+        .replace(/-+/g, "-") // Remove traços duplicados
+        .replace(/^-|-$/g, "") // Remove traços do início/fim
       
-      // Adiciona todos os campos no FormData
-      Object.entries(formData).forEach(([key, value]) => {
-        dataToSend.append(key, value)
-      })
-
-      const result = await updateSettings(dataToSend)
-
-      if (result?.error) {
-        toast.error(result.error)
-      } else {
-        toast.success("Setup concluído! Bem-vindo.")
-        router.push('/dashboard') 
-        router.refresh()
-      }
-    })
+      updateField('slug', slug)
+    }
   }
 
   return (
-    <div className="max-w-xl mx-auto">
-      {/* Indicador de Progresso (Bolinhas 1, 2, 3) */}
-      <div className="flex items-center justify-center mb-8 space-x-2 sm:space-x-4">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="flex items-center">
-             <div className={cn(
-               "w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors",
-               step >= i ? "border-primary bg-primary text-primary-foreground" : "border-muted text-muted-foreground"
-             )}>
-               {i + 1}
-             </div>
-             {i < 2 && <div className={cn("w-8 sm:w-16 h-0.5 mx-2", step > i ? "bg-primary" : "bg-muted")} />}
-          </div>
-        ))}
+    <Card className="w-full max-w-xl mx-auto shadow-xl border-0 ring-1 ring-gray-200 dark:ring-gray-800 overflow-hidden flex flex-col min-h-[500px]">
+      
+      {/* HEADER: PROGRESSO */}
+      <div className="w-full h-2 bg-gray-100 dark:bg-gray-800">
+        <div 
+          className="h-full bg-primary transition-all duration-500 ease-in-out" 
+          style={{ width: `${(step / 3) * 100}%` }}
+        />
       </div>
 
-      <Card className="border-border bg-card shadow-lg">
+      <CardHeader className="space-y-1 text-center pb-2 pt-8">
+        <CardTitle className="text-2xl font-bold tracking-tight">
+          {step === 1 && "Qual é o seu Universo?"}
+          {step === 2 && "Batize seu Espaço"}
+          {step === 3 && "Tudo pronto?"}
+        </CardTitle>
+        <CardDescription className="text-base">
+          {step === 1 && "Escolha o nicho que mais se adapta ao seu negócio."}
+          {step === 2 && "Defina como seus clientes vão encontrar você."}
+          {step === 3 && "Confirme os dados para iniciarmos o sistema."}
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent className="flex-1 flex flex-col justify-center py-6">
         
-        {/* === PASSO 1: ESCOLHA DO NICHO === */}
-        {step === 0 && (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-            <CardHeader>
-              <CardTitle>Qual o seu ramo?</CardTitle>
-              <CardDescription>Vamos personalizar o sistema para o seu tipo de negócio.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Gera os botões baseados no arquivo niche-config.ts */}
-              {nicheOptions.map((item) => (
-                <div 
-                  key={item.id}
-                  onClick={() => setFormData(prev => ({ ...prev, niche: item.id }))}
+        {/* PASSO 1: NICHO */}
+        {step === 1 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
+            {NICHE_OPTIONS.map((option) => {
+              const Icon = option.icon
+              const isSelected = formData.niche === option.id
+              return (
+                <button
+                  key={option.id}
+                  onClick={() => updateField('niche', option.id)}
+                  type="button"
                   className={cn(
-                    "cursor-pointer rounded-lg border-2 p-4 flex flex-col items-center text-center gap-3 transition-all hover:bg-muted/50",
-                    formData.niche === item.id ? "border-primary bg-primary/5" : "border-muted"
+                    "relative flex items-center p-4 gap-4 rounded-xl border-2 transition-all duration-200 text-left",
+                    isSelected 
+                      ? `border-primary bg-primary/5 ring-1 ring-primary` 
+                      : `border-transparent bg-gray-50 dark:bg-gray-900 ${option.border} ${option.bg}`
                   )}
                 >
-                  <div className={cn("p-2 rounded-full bg-muted", formData.niche === item.id && "bg-primary text-primary-foreground")}>
-                    <item.icon className="w-6 h-6" />
+                  <div className={cn("p-2 rounded-full bg-white dark:bg-gray-800 shadow-sm", option.color)}>
+                    <Icon className="w-5 h-5" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold">{item.label}</h3>
-                    <p className="text-xs text-muted-foreground">{item.description}</p>
+                  <div className="flex-1">
+                    <span className="font-semibold block text-sm">{option.label}</span>
                   </div>
-                </div>
-              ))}
-            </CardContent>
-            <CardFooter className="flex justify-end border-t pt-6">
-              <Button onClick={() => setStep(1)}>
-                Continuar <ArrowRight className="ml-2 w-4 h-4" />
-              </Button>
-            </CardFooter>
+                  {isSelected && (
+                    <div className="absolute top-2 right-2 text-primary">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                  )}
+                </button>
+              )
+            })}
           </div>
         )}
 
-        {/* === PASSO 2: DADOS BÁSICOS === */}
-        {step === 1 && (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-            <CardHeader>
-              <CardTitle>Dados da Empresa</CardTitle>
-              <CardDescription>Como você gostaria de chamar sua organização?</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="full_name">Seu Nome Completo</Label>
-                <Input 
-                  id="full_name" name="full_name" 
-                  value={formData.full_name} onChange={handleChange} 
-                  placeholder="Como você quer ser chamado?" 
-                  autoFocus
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome da {currentNicheLabel}</Label>
-                <Input 
-                  id="name" name="name" 
-                  value={formData.name} onChange={handleChange} 
-                  placeholder={`Ex: Minha ${currentNicheLabel} Inc.`}
-                  autoFocus
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="document">CPF ou CNPJ</Label>
-                <Input 
-                  id="document" name="document" 
-                  value={formData.document} onChange={handleChange} 
-                  placeholder="00.000.000/0000-00" 
-                />
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between border-t pt-6">
-              <Button variant="outline" onClick={() => setStep(0)}>
-                <ArrowLeft className="mr-2 w-4 h-4" /> Voltar
-              </Button>
-              <Button onClick={() => setStep(2)} disabled={!formData.name || !formData.full_name}>
-                Próximo <ArrowRight className="ml-2 w-4 h-4" />
-              </Button>
-            </CardFooter>
-          </div>
-        )}
-
-        {/* === PASSO 3: ENDEREÇO E CONTATO === */}
+        {/* PASSO 2: DADOS */}
         {step === 2 && (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-            <CardHeader>
-              <CardTitle>Contato & Endereço</CardTitle>
-              <CardDescription>Como seus clientes te encontram?</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone / WhatsApp</Label>
-                  <Input 
-                    id="phone" name="phone" 
-                    value={formData.phone} onChange={handleChange} 
-                    placeholder="(00) 00000-0000" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Público</Label>
-                  <Input 
-                    id="email" name="email" 
-                    value={formData.email} onChange={handleChange} 
-                    placeholder="contato@empresa.com" 
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address">Endereço Completo</Label>
-                <Textarea 
-                  id="address" name="address" 
-                  value={formData.address} onChange={handleChange} 
-                  placeholder="Rua, Número, Bairro, Cidade - UF" 
-                  rows={3}
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 px-4">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-base">Nome do Negócio</Label>
+              <Input 
+                id="name" 
+                value={formData.name}
+                onChange={(e) => updateField('name', e.target.value)}
+                onBlur={handleNameBlur}
+                placeholder="Ex: Dr. House Clínica, Barbearia Viking..." 
+                className="h-12 text-lg"
+                autoFocus
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="slug" className="text-base">Link do Sistema</Label>
+              <div className="flex items-center rounded-lg border bg-gray-50 dark:bg-gray-900 px-3 h-12 focus-within:ring-2 focus-within:ring-primary focus-within:border-primary transition-all">
+                <Globe className="h-4 w-4 text-muted-foreground mr-2" />
+                <span className="text-muted-foreground text-sm font-medium mr-1">eliza.app/</span>
+                <input 
+                  id="slug"
+                  value={formData.slug}
+                  onChange={(e) => updateField('slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                  placeholder="minha-empresa" 
+                  className="flex-1 bg-transparent border-none outline-none text-sm font-medium h-full"
                 />
               </div>
-            </CardContent>
-            <CardFooter className="flex justify-between border-t pt-6">
-              <Button variant="outline" onClick={() => setStep(1)}>
-                <ArrowLeft className="mr-2 w-4 h-4" /> Voltar
-              </Button>
-              <Button onClick={handleFinish} disabled={isPending}>
-                {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-                Finalizar Setup
-              </Button>
-            </CardFooter>
+              <p className="text-xs text-muted-foreground ml-1">
+                Este será o endereço único que você e sua equipe usarão.
+              </p>
+            </div>
           </div>
         )}
-      </Card>
-    </div>
+
+        {/* PASSO 3: REVISÃO */}
+        {step === 3 && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 px-8">
+            <div className="rounded-xl border bg-gray-50 dark:bg-gray-900 p-6 space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                  {NICHE_OPTIONS.find(n => n.id === formData.niche)?.icon({ className: "w-6 h-6" }) || <Store />}
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Nicho Selecionado</p>
+                  <p className="font-semibold text-lg">
+                    {NICHE_OPTIONS.find(n => n.id === formData.niche)?.label}
+                  </p>
+                </div>
+              </div>
+
+              <div className="h-px bg-gray-200 dark:bg-gray-800" />
+
+              <div className="grid gap-1">
+                <p className="text-sm text-muted-foreground">Nome do Negócio</p>
+                <p className="font-medium">{formData.name}</p>
+              </div>
+
+              <div className="grid gap-1">
+                <p className="text-sm text-muted-foreground">URL de Acesso</p>
+                <p className="font-medium text-primary flex items-center gap-1">
+                  eliza.app/<span className="font-bold underline">{formData.slug}</span>
+                </p>
+              </div>
+            </div>
+            
+            <p className="text-center text-sm text-muted-foreground">
+              Ao clicar em finalizar, seu ambiente será configurado instantaneamente.
+            </p>
+          </div>
+        )}
+
+      </CardContent>
+
+      <CardFooter className="flex justify-between pt-2 pb-8 px-8">
+        {step > 1 ? (
+          <Button 
+            variant="ghost" 
+            onClick={handleBack}
+            disabled={isLoading}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar
+          </Button>
+        ) : (
+          <div /> /* Spacer */
+        )}
+
+        {step < 3 ? (
+          <Button onClick={handleNext} className="pl-6 pr-4">
+            Próximo
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        ) : (
+          <Button onClick={onSubmit} disabled={isLoading} className="pl-6 pr-4 min-w-[140px]">
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Finalizar Setup"}
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
   )
 }
