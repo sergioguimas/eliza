@@ -95,6 +95,9 @@ export function SetupForm() {
     }
   }
 
+  const selectedNiche = NICHE_OPTIONS.find(n => n.id === formData.niche)
+  const NicheIcon = selectedNiche?.icon || Store
+
   return (
     <Card className="w-full max-w-xl mx-auto shadow-xl border-0 ring-1 ring-gray-200 dark:ring-gray-800 overflow-hidden flex flex-col min-h-[500px]">
       
@@ -187,6 +190,7 @@ export function SetupForm() {
               </div>
               <p className="text-xs text-muted-foreground ml-1">
                 Este será o endereço único que você e sua equipe usarão.
+                Não use espaços ou caracteres especiais, apenas letras, números e traços.
               </p>
             </div>
           </div>
@@ -198,12 +202,12 @@ export function SetupForm() {
             <div className="rounded-xl border bg-gray-50 dark:bg-gray-900 p-6 space-y-4">
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                  {NICHE_OPTIONS.find(n => n.id === formData.niche)?.icon({ className: "w-6 h-6" }) || <Store />}
+                  <NicheIcon className="w-6 h-6" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Nicho Selecionado</p>
                   <p className="font-semibold text-lg">
-                    {NICHE_OPTIONS.find(n => n.id === formData.niche)?.label}
+                    <NicheIcon className="w-6 h-6" />
                   </p>
                 </div>
               </div>
