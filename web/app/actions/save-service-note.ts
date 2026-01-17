@@ -25,7 +25,7 @@ export async function saveServiceNote(formData: FormData) {
   }
 
   const { error } = await supabase
-    .from('service_notes')
+    .from('service_records')
     .insert({
       customer_id,
       content,

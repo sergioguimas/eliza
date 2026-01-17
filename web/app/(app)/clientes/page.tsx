@@ -172,7 +172,7 @@ export default async function ClientesPage({
           <div className="py-20 text-center border-2 border-dashed border-border rounded-xl">
             {/* ÍCONE DE EMPTY STATE DINÂMICO */}
             <div className="flex justify-center mb-4">
-               <CategoryIcon name="cliente" className="h-12 w-12 text-muted-foreground/50" />
+               <CategoryIcon name="clientes" className="h-12 w-12 text-muted-foreground/50" />
             </div>
             <p className="text-muted-foreground">Nenhum {dict.label_cliente} encontrado.</p>
           </div>

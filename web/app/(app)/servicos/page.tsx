@@ -80,7 +80,7 @@ export default async function ProcedimentosPage() {
             <CardContent className="p-6">
               <div className="flex justify-between items-start mb-4">
                 <div className="p-2 bg-primary/10 rounded-lg">
-                  <CategoryIcon name="servico" className="h-5 w-5 text-primary" />
+                  <CategoryIcon name="servicos" className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex gap-2">
                   <CreateServiceDialog 

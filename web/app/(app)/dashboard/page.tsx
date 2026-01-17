@@ -157,7 +157,7 @@ export default async function DashboardPage() {
                 <h2 className="text-2xl font-bold tracking-tight text-foreground">{totalServices}</h2>
               </div>
               <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
-                <CategoryIcon name='servico' className="h-4 w-4 text-blue-500" />
+                <CategoryIcon name='servicos' className="h-4 w-4 text-blue-500" />
               </div>
             </CardContent>
           </Card>
@@ -171,7 +171,7 @@ export default async function DashboardPage() {
                 <h2 className="text-2xl font-bold tracking-tight text-foreground">{totalCustomers}</h2>
               </div>
               <div className="p-2 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
-                <CategoryIcon name='cliente' className="h-4 w-4 text-green-500" />
+                <CategoryIcon name='clientes' className="h-4 w-4 text-green-500" />
               </div>
             </CardContent>
           </Card>

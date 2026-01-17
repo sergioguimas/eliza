@@ -9,10 +9,10 @@ export async function deleteServiceRecord(recordId: string) {
   if (!user) return { error: 'Não autorizado' }
 
   const { error } = await supabase
-    .from('service_notes')
+    .from('service_records')
     .delete()
     .eq('id', recordId)
-    .eq('profile_id', user.id)
+    .eq('professional_id', user.id)
 
   if (error) {
     console.error('Erro ao excluir:', error)
