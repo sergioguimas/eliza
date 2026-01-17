@@ -189,7 +189,7 @@ export function SetupForm() {
                 />
               </div>
               <p className="text-xs text-muted-foreground ml-1">
-                Este será o endereço único que você e sua equipe usarão.
+                Este será o endereço único que você e sua equipe usarão. <br></br>
                 Não use espaços ou caracteres especiais, apenas letras, números e traços.
               </p>
             </div>
@@ -207,7 +207,7 @@ export function SetupForm() {
                 <div>
                   <p className="text-sm text-muted-foreground">Nicho Selecionado</p>
                   <p className="font-semibold text-lg">
-                    <NicheIcon className="w-6 h-6" />
+                    <NicheIcon className="w-6 h-6" /> {selectedNiche?.label}
                   </p>
                 </div>
               </div>

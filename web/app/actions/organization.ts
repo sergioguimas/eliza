@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server"
+import { createClient as createClientAdmin } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { z } from "zod"
@@ -13,12 +14,32 @@ const createOrgSchema = z.object({
 })
 
 export async function createOrganization(formData: FormData) {
+  // 1. Cliente Normal (para verificar quem é o usuário logado)
   const supabase = await createClient()
 
   const { data: { user }, error: userError } = await supabase.auth.getUser()
   if (userError || !user) {
     return { error: "Usuário não autenticado." }
   }
+
+  // 2. Cliente Admin (Service Role) - Bypass RLS
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  
+  if (!serviceRoleKey) {
+    console.error("ERRO CRÍTICO: SUPABASE_SERVICE_ROLE_KEY não definida.")
+    return { error: "Erro de configuração no servidor." }
+  }
+
+  const supabaseAdmin = createClientAdmin(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    serviceRoleKey,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
 
   const rawData = {
     name: formData.get("name"),
@@ -35,7 +56,6 @@ export async function createOrganization(formData: FormData) {
   const { name, slug, niche } = result.data
 
   try {
-    // 2. Preparar o Payload
     const newOrg = {
       name,
       slug,
@@ -45,7 +65,7 @@ export async function createOrganization(formData: FormData) {
     }
 
     // 3. Inserir Organização
-    const { data: org, error: orgError } = await (supabase.from("organizations") as any)
+    const { data: org, error: orgError } = await (supabaseAdmin.from("organizations") as any)
       .insert(newOrg)
       .select()
       .single()
@@ -58,18 +78,19 @@ export async function createOrganization(formData: FormData) {
       return { error: "Erro ao criar organização." }
     }
 
-    // 4. Atualizar Perfil
+    // 4. Atualizar Perfil (USANDO ADMIN PARA GARANTIR)
     const updateProfile = {
       organization_id: org.id,
       role: 'owner'
     }
 
-    const { error: profileError } = await (supabase.from("profiles") as any)
+    const { error: profileError } = await (supabaseAdmin.from("profiles") as any)
       .update(updateProfile)
       .eq("id", user.id)
 
     if (profileError) {
       console.error("Erro ao vincular perfil:", profileError)
+      return { error: "Organização criada, mas falha ao vincular seu perfil." }
     }
 
   } catch (error) {
