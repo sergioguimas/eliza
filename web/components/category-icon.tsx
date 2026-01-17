@@ -2,45 +2,88 @@
 
 import { useKeckleon } from "@/providers/keckleon-provider"
 import { 
-  Stethoscope, // Estetoscópio
-  Scissors, // Tesoura
-  Briefcase, // Maleta
-  Gavel, // Martelo
-  Scale, // Balança
-  User, // Usuário
-  FileText, // Documento
-  Sparkles // Brilho
+  // Genéricos
+  LayoutGrid, 
+  Users, 
+  Calendar, 
+  Briefcase,
+  
+  // Clínica
+  Stethoscope, 
+  Activity, 
+  HeartPulse,
+
+  // Barbearia/Salão
+  Scissors, 
+  Sparkles, 
+  Brush,
+  
+  // Advocacia
+  Scale, 
+  Gavel, 
+  ScrollText,
+  
+  // Fallback
+  HelpCircle,
+  LucideIcon
 } from "lucide-react"
 
+// Mapeamento dos ícones por Nicho
+const ICON_MAP: Record<string, Record<string, LucideIcon>> = {
+  clinica: {
+    logo: Stethoscope,
+    dashboard: Activity,
+    agendamentos: Calendar,
+    clientes: HeartPulse, // Ou Users
+    servicos: Stethoscope,
+  },
+  barbearia: {
+    logo: Scissors,
+    dashboard: LayoutGrid,
+    agendamentos: Calendar,
+    clientes: Users,
+    servicos: Scissors,
+  },
+  salao: {
+    logo: Sparkles,
+    dashboard: LayoutGrid,
+    agendamentos: Calendar,
+    clientes: Users,
+    servicos: Brush,
+  },
+  advocacia: {
+    logo: Scale, // Balança
+    dashboard: LayoutGrid,
+    agendamentos: Calendar,
+    clientes: Users,
+    servicos: Gavel, // Martelo ou ScrollText
+  },
+  // Default/Genérico
+  generico: {
+    logo: LayoutGrid,
+    dashboard: LayoutGrid,
+    agendamentos: Calendar,
+    clientes: Users,
+    servicos: Briefcase,
+  }
+}
+
 interface CategoryIconProps {
-  // O que você quer representar?
-  name: 'servico' | 'cliente' | 'prontuario' 
+  name: 'logo' | 'dashboard' | 'agendamentos' | 'clientes' | 'servicos'
   className?: string
 }
 
 export function CategoryIcon({ name, className }: CategoryIconProps) {
-  const { dict } = useKeckleon()
-    
-  // 1. Ícones de SERVIÇO (Procedimento, Corte, Atendimento)
-  if (name === 'servico') {
-    switch (dict.icon_set) {
-      case 'health': return <Stethoscope className={className} />
-      case 'grooming': return <Scissors className={className} />
-      case 'beauty': return <Sparkles className={className} />
-      case 'legal': return <Gavel className={className} />
-      default: return <Briefcase className={className} />
-    }
-  }
+  // Busca o nicho do contexto (se falhar, usa generico)
+  const { niche } = useKeckleon()
+  
+  const currentNiche = niche || 'generico'
 
-  // 2. Ícones de PRONTUÁRIO (Ficha, Histórico, Processo)
-  if (name === 'prontuario') {
-    switch (dict.icon_set) {
-      case 'health': return <FileText className={className} />
-      case 'legal': return <Scale className={className} />
-      default: return <FileText className={className} />
-    }
-  }
+  // 1. Tenta pegar o mapa do nicho atual
+  const nicheIcons = ICON_MAP[currentNiche] || ICON_MAP['generico']
 
-  // 3. Ícones de CLIENTE (Paciente, Tutor)
-  return <User className={className} />
+  // 2. Tenta pegar o ícone específico, se não achar, pega do genérico, se não achar, usa HelpCircle
+  const IconComponent = nicheIcons[name] || ICON_MAP['generico'][name] || HelpCircle
+
+  return <IconComponent className={className} />
 }

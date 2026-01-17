@@ -7,7 +7,7 @@ DROP FUNCTION IF EXISTS public.get_user_org_id();
 
 DROP TABLE IF EXISTS invitations CASCADE;
 DROP TABLE IF EXISTS service_records CASCADE;
-DROP TABLE IF EXISTS service_notes CASCADE;
+DROP TABLE IF EXISTS service_notes CASCADE; -- Para garantir que o antigo suma
 DROP TABLE IF EXISTS appointments CASCADE;
 DROP TABLE IF EXISTS services CASCADE;
 DROP TABLE IF EXISTS customers CASCADE;
@@ -22,7 +22,7 @@ DROP TABLE IF EXISTS whatsapp_instances CASCADE;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ==============================================================================
--- 2. TABELAS CORE (CRIAR PRIMEIRO PARA AS FUNÇÕES FUNCIONAREM)
+-- 2. TABELAS CORE
 -- ==============================================================================
 
 CREATE TABLE organizations (
@@ -31,10 +31,10 @@ CREATE TABLE organizations (
     slug TEXT UNIQUE NOT NULL,
     niche TEXT NOT NULL CHECK (niche IN ('clinica', 'barbearia', 'salao', 'advocacia', 'generico')),
     
-    -- CONFIGURAÇÃO WHATSAPP
+    -- CONFIGURAÇÃO EVOLUTION API (WHATSAPP)
+    evolution_api_url TEXT, 
+    evolution_api_key TEXT,
     whatsapp_instance_name TEXT,
-    whatsapp_api_key TEXT,
-    whatsapp_api_url TEXT,
     whatsapp_status TEXT DEFAULT 'disconnected', 
     
     -- PAGAMENTOS
@@ -61,7 +61,7 @@ CREATE TABLE profiles (
 );
 
 -- ==============================================================================
--- 3. FUNÇÕES UTILITÁRIAS (AGORA QUE AS TABELAS EXISTEM)
+-- 3. FUNÇÕES UTILITÁRIAS
 -- ==============================================================================
 
 CREATE OR REPLACE FUNCTION get_user_org_id()
@@ -82,10 +82,15 @@ CREATE TABLE organization_settings (
     open_hours_start TIME DEFAULT '08:00',
     open_hours_end TIME DEFAULT '18:00',
     days_of_week INTEGER[] DEFAULT '{1,2,3,4,5}',
-    appointment_duration INTEGER DEFAULT 30,
+    appointment_duration INTEGER DEFAULT 60, -- Ajustei para 60 (padrão comum), mas pode ser 30
+    
+    -- Mensagens (Renomeado para bater com o código route.ts)
+    whatsapp_message_reminder TEXT, 
+    
+    -- Outros templates (mantidos genéricos ou renomeie conforme uso futuro)
     msg_appointment_created TEXT,
-    msg_appointment_reminder TEXT,
     msg_appointment_canceled TEXT,
+    
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -109,12 +114,12 @@ CREATE TABLE customers (
 CREATE TABLE services (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     organization_id UUID REFERENCES organizations(id) NOT NULL,
-    title TEXT NOT NULL,
+    title TEXT NOT NULL, -- Código usa 'title'
     description TEXT,
     duration_minutes INTEGER NOT NULL DEFAULT 30,
     price DECIMAL(10,2) DEFAULT 0.00,
-    color TEXT DEFAULT '#3b82f6',
-    active BOOLEAN DEFAULT true,
+    color TEXT DEFAULT '#3b82f6', -- Código usa 'color'
+    active BOOLEAN DEFAULT true,  -- Código usa 'active'
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
@@ -123,10 +128,10 @@ CREATE TABLE appointments (
     organization_id UUID REFERENCES organizations(id) NOT NULL,
     customer_id UUID REFERENCES customers(id) NOT NULL,
     service_id UUID REFERENCES services(id),
-    professional_id UUID REFERENCES profiles(id),
+    professional_id UUID REFERENCES profiles(id), -- Código usa 'professional_id'
     start_time TIMESTAMPTZ NOT NULL,
     end_time TIMESTAMPTZ NOT NULL,
-    status TEXT DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'confirmed', 'canceled', 'completed', 'no_show')),
+    status TEXT DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'pending', 'confirmed', 'canceled', 'completed', 'no_show')),
     notes TEXT,
     price DECIMAL(10,2),
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL
@@ -136,7 +141,7 @@ CREATE TABLE service_records (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     organization_id UUID REFERENCES organizations(id) NOT NULL,
     customer_id UUID REFERENCES customers(id) NOT NULL,
-    professional_id UUID REFERENCES profiles(id),
+    professional_id UUID REFERENCES profiles(id), -- Quem criou
     content TEXT NOT NULL, 
     status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'signed', 'final')),
     tags TEXT[],
