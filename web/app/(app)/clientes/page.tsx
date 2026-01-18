@@ -36,10 +36,10 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ClientesPage({
   searchParams,
 }: {
-  searchParams: { q?: string }
+  searchParams: Promise<{ q?: string }>
 }) {
   const supabase = await createClient()
-  const query = searchParams?.q || ""
+  const query = (await searchParams)?.q || ""
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
