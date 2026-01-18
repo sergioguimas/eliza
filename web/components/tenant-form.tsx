@@ -12,7 +12,6 @@ export function TenantForm() {
   const formRef = useRef<HTMLFormElement>(null)
   const { dict } = useKeckleon()
 
-  // Esta função wrapper resolve o erro de tipagem e permite usar o Toast
   async function handleSubmit(formData: FormData) {
     // 1. Chama a Server Action
     const result = await createTenant(formData)
@@ -29,20 +28,17 @@ export function TenantForm() {
   return (
     <form ref={formRef} action={handleSubmit} className="space-y-4">
       <div>
-        <Label htmlFor="orgName">Nome da {dict.label_clinica}</Label>
-        <br></br>
+        <Label htmlFor="orgName" className="mb-2 block">Nome da Empresa</Label>
         <Input id="orgName" name="orgName" placeholder="Ex: Clínica Saúde Vida" required />
       </div>
       
       <div>
-        <Label htmlFor="email">Email de Acesso</Label>
-        <br></br>
+        <Label htmlFor="email" className="mb-2 block">Email de Acesso</Label>
         <Input id="email" name="email" type="email" placeholder="cliente@clinica.com" required />
       </div>
 
       <div>
-        <Label htmlFor="password">Senha Inicial</Label>
-        <br></br>
+        <Label htmlFor="password" className="mb-2 block">Senha Inicial</Label>
         <Input id="password" name="password" type="text" placeholder="Senha forte" required />
       </div>
 

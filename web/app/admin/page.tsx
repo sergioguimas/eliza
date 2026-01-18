@@ -1,5 +1,5 @@
-import { createAdminClient } from "@/utils/supabase/admin"
 import { createClient } from "@/utils/supabase/server"
+import { createClient as createClientAdmin } from "@supabase/supabase-js"
 import { redirect } from "next/navigation"
 import {
   Table,
@@ -11,57 +11,53 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { toggleOrgStatus } from "./actions"
-import { Ban, CheckCircle, ShieldAlert, Plus, AlertTriangle } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ShieldAlert, Plus, LayoutDashboard, CheckCircle2, Ban, Building2 } from "lucide-react"
 import Link from "next/link"
+import { toggleOrgStatus } from "./actions"
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export default async function AdminDashboard() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-
-  // CORREÇÃO 1: Usar a mesma variável de ambiente da Sidebar
   const godEmail = process.env.NEXT_PUBLIC_GOD_EMAIL
 
-  if (!godEmail || !user || user.email !== godEmail) {
+  if (!user || user.email !== godEmail) {
     return redirect('/dashboard')
   }
 
-  // CORREÇÃO 2: Verificar se a chave de serviço existe antes de tentar usar
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return (
-      <div className="p-8 flex flex-col items-center justify-center text-red-500 space-y-4">
-        <AlertTriangle className="h-12 w-12" />
-        <h1 className="text-xl font-bold">Erro de Configuração</h1>
-        <p>A variável <code>SUPABASE_SERVICE_ROLE_KEY</code> não foi encontrada no servidor.</p>
-        <p className="text-sm text-muted-foreground">Adicione ela no seu arquivo .env.local (pegue no painel do Supabase &gt; Settings &gt; API).</p>
-      </div>
-    )
-  }
+  const supabaseAdmin = createClientAdmin(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
 
-  const supabaseAdmin = createAdminClient()
-  
-  // Tratamento de erro na busca
-  const { data: orgs, error } = await supabaseAdmin
+  const { data: organizations, error } = await supabaseAdmin
     .from('organizations')
     .select('*')
     .order('created_at', { ascending: false })
 
   if (error) {
-    return (
-      <div className="p-8 text-red-500">
-        Erro ao carregar organizações: {error.message}
-      </div>
-    )
+    console.error("Erro ao buscar orgs:", error)
   }
 
+  const orgList = organizations || []
+
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-muted/40 p-8 space-y-8">
       
-      {/* CABEÇALHO DO PAINEL */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-primary/10 rounded-full">
-            <ShieldAlert className="h-8 w-8 text-primary" />
+      {/* HEADER */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <ShieldAlert className="h-6 w-6 text-primary" />
           </div>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Super Admin</h1>
@@ -69,84 +65,124 @@ export default async function AdminDashboard() {
           </div>
         </div>
 
-        <div className="flex gap-4 items-center">
-            <div className="bg-card border px-4 py-2 rounded-lg shadow-sm text-right">
-                <span className="text-2xl font-bold block leading-none">{orgs?.length || 0}</span>
-                <span className="text-[10px] text-muted-foreground uppercase font-bold">Total Empresas</span>
+        {/* BOTÕES E MÉTRICA UNIFORMES */}
+        <div className="flex items-center gap-2 h-10">
+            <div className="flex items-center gap-2 px-4 h-full bg-background border rounded-md shadow-sm">
+                <Building2 className="w-4 h-4 text-muted-foreground" />
+                <span className="font-bold text-foreground">{orgList.length}</span>
+                <span className="text-xs uppercase text-muted-foreground font-semibold">Empresas</span>
             </div>
-            <Button asChild>
+            
+            <div className="w-px h-6 bg-border mx-1" /> {/* Separador visual */}
+
+            <Button asChild variant="default" className="h-full shadow-sm">
                 <Link href="/admin/new">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Nova Organização
+                    <Plus className="mr-2 h-4 w-4" /> Nova Organização
                 </Link>
             </Button>
-            <Button asChild>
+
+            <Button asChild variant="outline" className="h-full bg-background">
                 <Link href="/dashboard">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Voltar ao Dashboard
+                    <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
                 </Link>
             </Button>
         </div>
       </div>
 
-      <div className="border rounded-lg bg-card shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Empresa</TableHead>
-              <TableHead>Plano</TableHead>
-              <TableHead>Nicho</TableHead>
-              <TableHead>Criado em</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {orgs?.map((org: any) => (
-              <TableRow key={org.id}>
-                <TableCell className="font-medium">
-                  {org.name}
-                  <div className="text-xs text-muted-foreground font-mono">{org.id.slice(0, 8)}...</div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="uppercase text-[10px]">
-                    {org.plan || 'Free'}
-                  </Badge>
-                </TableCell>
-                <TableCell className="capitalize">{org.niche}</TableCell>
-                <TableCell>{new Date(org.created_at).toLocaleDateString('pt-BR')}</TableCell>
-                <TableCell>
-                  {org.status === 'active' ? (
-                    <Badge className="bg-green-500/15 text-green-700 hover:bg-green-500/25 border-green-500/20">
-                      Ativo
-                    </Badge>
-                  ) : (
-                    <Badge variant="destructive">Suspenso</Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <form action={async () => {
-                    'use server'
-                    await toggleOrgStatus(org.id, org.status)
-                  }}>
-                    {org.status === 'active' ? (
-                      <Button size="sm" variant="destructive" className="h-8">
-                        <Ban className="w-4 h-4 mr-2" />
-                        Bloquear
-                      </Button>
-                    ) : (
-                      <Button size="sm" variant="outline" className="h-8 border-green-600 text-green-600 hover:text-green-700 hover:bg-green-50">
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Ativar
-                      </Button>
-                    )}
-                  </form>
-                </TableCell>
+      {/* TABELA */}
+      <Card className="shadow-sm">
+        <CardHeader className="px-6 py-8 border-b bg-background/50">
+             <div className="flex items-center justify-between">
+                <div>
+                    <CardTitle>Empresas Cadastradas</CardTitle>
+                    <CardDescription>Visão geral de todos os tenants do sistema.</CardDescription>
+                </div>
+             </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="pl-6 h-10 align-middle">Empresa</TableHead>
+                <TableHead className="h-10 align-middle">Plano</TableHead>
+                <TableHead className="h-10 align-middle">Nicho</TableHead>
+                <TableHead className="h-10 align-middle">Criado em</TableHead>
+                <TableHead className="h-10 align-middle">Status</TableHead>
+                <TableHead className="text-right pr-6 h-10 align-middle">Ações</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {orgList.map((org: any) => {
+                const status = org.subscription_status || 'active' 
+                const isActive = status === 'active'
+
+                return (
+                  <TableRow key={org.id} className="group">
+                    <TableCell className="font-medium pl-6 py-3">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold text-foreground">{org.name}</span>
+                        <span className="text-[11px] text-muted-foreground font-mono opacity-70 group-hover:opacity-100 transition-opacity">
+                          {org.slug}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-3">
+                        <Badge variant="secondary" className="uppercase text-[10px] font-bold tracking-wider">
+                            {org.plan || 'free'}
+                        </Badge>
+                    </TableCell>
+                    <TableCell className="capitalize py-3 text-sm">{org.niche}</TableCell>
+                    <TableCell className="py-3 text-sm text-muted-foreground">
+                      {new Date(org.created_at).toLocaleDateString('pt-BR')}
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <Badge 
+                        variant="outline" 
+                        className={isActive 
+                            ? "border-green-200 text-green-700 bg-green-50" 
+                            : "border-red-200 text-red-700 bg-red-50"
+                        }
+                      >
+                        {isActive ? 'Ativo' : 'Suspenso'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right pr-6 py-3">
+                      
+                      <form 
+                        action={async () => {
+                            'use server'
+                            await toggleOrgStatus(org.id, status)
+                        }}
+                        className="flex justify-end"
+                      >
+                        <Button 
+                            variant={isActive ? "ghost" : "outline"} 
+                            size="sm"
+                            className={isActive 
+                                ? "text-red-600 hover:bg-red-600 hover:text-white transition-colors h-8 px-3" 
+                                : "text-green-600 border-green-200 hover:bg-green-600 hover:text-white transition-colors h-8 px-3"
+                            }
+                        >
+                            {isActive ? (
+                                <>
+                                    <Ban className="mr-2 h-3.5 w-3.5" /> Suspender
+                                </>
+                            ) : (
+                                <>
+                                    <CheckCircle2 className="mr-2 h-3.5 w-3.5" /> Ativar
+                                </>
+                            )}
+                        </Button>
+                      </form>
+
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   )
 }

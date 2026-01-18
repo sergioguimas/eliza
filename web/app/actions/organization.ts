@@ -1,10 +1,16 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server"
+// Importamos o cliente direto do JS para poder usar a chave de Admin
 import { createClient as createClientAdmin } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { z } from "zod"
+import type { Database } from "../../utils/database.types"
+
+// Tipagem auxiliar
+type OrganizationInsert = Database['public']['Tables']['organizations']['Insert']
+type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
 
 const createOrgSchema = z.object({
   name: z.string().min(3, "O nome deve ter pelo menos 3 caracteres"),
@@ -14,7 +20,7 @@ const createOrgSchema = z.object({
 })
 
 export async function createOrganization(formData: FormData) {
-  // 1. Cliente Normal (para verificar quem é o usuário logado)
+  // 1. Cliente Normal (apenas para pegar o ID do usuário logado de forma segura)
   const supabase = await createClient()
 
   const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -22,15 +28,15 @@ export async function createOrganization(formData: FormData) {
     return { error: "Usuário não autenticado." }
   }
 
-  // 2. Cliente Admin (Service Role) - Bypass RLS
+  // 2. Configurar Cliente Admin (God Mode)
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   
   if (!serviceRoleKey) {
     console.error("ERRO CRÍTICO: SUPABASE_SERVICE_ROLE_KEY não definida.")
-    return { error: "Erro de configuração no servidor." }
+    return { error: "Erro de configuração no servidor. Avise o suporte." }
   }
 
-  const supabaseAdmin = createClientAdmin(
+  const supabaseAdmin = createClientAdmin<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     serviceRoleKey,
     {
@@ -56,7 +62,7 @@ export async function createOrganization(formData: FormData) {
   const { name, slug, niche } = result.data
 
   try {
-    const newOrg = {
+    const newOrg: OrganizationInsert = {
       name,
       slug,
       niche, 
@@ -64,8 +70,9 @@ export async function createOrganization(formData: FormData) {
       plan: 'free'
     }
 
-    // 3. Inserir Organização
-    const { data: org, error: orgError } = await (supabaseAdmin.from("organizations") as any)
+    // 3. Inserir Organização (USANDO ADMIN)
+    const { data: org, error: orgError } = await supabaseAdmin
+      .from("organizations")
       .insert(newOrg)
       .select()
       .single()
@@ -78,19 +85,21 @@ export async function createOrganization(formData: FormData) {
       return { error: "Erro ao criar organização." }
     }
 
-    // 4. Atualizar Perfil (USANDO ADMIN PARA GARANTIR)
-    const updateProfile = {
+    // 4. Atualizar Perfil do Usuário para vincular à nova Organização
+    const updateProfile: ProfileUpdate = {
       organization_id: org.id,
       role: 'owner'
     }
 
-    const { error: profileError } = await (supabaseAdmin.from("profiles") as any)
+    const { error: profileError } = await supabaseAdmin
+      .from("profiles")
       .update(updateProfile)
       .eq("id", user.id)
 
     if (profileError) {
       console.error("Erro ao vincular perfil:", profileError)
-      return { error: "Organização criada, mas falha ao vincular seu perfil." }
+      // Se falhar aqui, o usuário fica com a org criada mas sem acesso.
+      return { error: "Organização criada, mas falha crítica ao vincular seu perfil." }
     }
 
   } catch (error) {
@@ -98,6 +107,7 @@ export async function createOrganization(formData: FormData) {
     return { error: "Erro interno do servidor." }
   }
 
+  // 5. Sucesso: Limpa o cache e redireciona
   revalidatePath("/", "layout")
   redirect("/dashboard")
 }

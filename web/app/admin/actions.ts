@@ -1,41 +1,58 @@
 'use server'
 
-import { createAdminClient } from "@/utils/supabase/admin"
-import { revalidatePath } from "next/cache"
 import { createClient } from "@/utils/supabase/server"
-import { redirect } from "next/navigation"
+import { createClient as createClientAdmin } from "@supabase/supabase-js"
+import { revalidatePath } from "next/cache"
 
-async function checkGodMode() {
+// Verifica se é o Super Admin
+async function checkSuperAdmin() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-
-  const godEmail = process.env.GOD_EMAIL
-
-  // Fail Safe: Se não configurou a variável, bloqueia tudo por segurança
-  if (!godEmail) {
-    console.error("ERRO CRÍTICO: GOD_EMAIL não configurado no .env")
-    redirect('/dashboard')
+  
+  if (!user || user.email !== process.env.NEXT_PUBLIC_GOD_EMAIL) {
+    throw new Error("Acesso não autorizado")
   }
-
-  if (!user || user.email !== godEmail) {
-    redirect('/dashboard') // Chuta invasores de volta pro dashboard
-  }
+  return user
 }
 
-export async function toggleOrgStatus(orgId: string, currentStatus: 'active' | 'suspended') {
-  await checkGodMode() // Segurança extra
+// Configura o cliente com poder de Deus (Service Role)
+function getAdminClient() {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!serviceRoleKey) {
+    throw new Error("Erro de configuração: Service Role Key não encontrada")
+  }
+  
+  return createClientAdmin(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    serviceRoleKey,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
+}
 
-  const supabaseAdmin = createAdminClient()
+export async function toggleOrgStatus(orgId: string, currentStatus: string) {
+  // 1. Segurança: Garante que é você mesmo
+  await checkSuperAdmin()
+
+  // 2. Lógica de inversão
   const newStatus = currentStatus === 'active' ? 'suspended' : 'active'
 
-  const { error } = await supabaseAdmin
-    .from('organizations')
-    .update({ status: newStatus })
+  // 3. Executa atualização usando o Cliente Admin (ignora RLS)
+  const supabaseAdmin = getAdminClient()
+
+  const { error } = await (supabaseAdmin.from('organizations') as any)
+    .update({ subscription_status: newStatus }) 
     .eq('id', orgId)
 
   if (error) {
-    throw new Error('Erro ao atualizar status')
+    console.error("Erro no toggleOrgStatus:", error)
+    throw new Error(`Erro ao atualizar status: ${error.message}`)
   }
 
   revalidatePath('/admin')
+  return { success: true }
 }

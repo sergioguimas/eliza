@@ -1,5 +1,4 @@
 import { createServerClient } from '@supabase/ssr'
-import error from 'next/error'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export default async function middleware(request: NextRequest) {
@@ -22,10 +21,11 @@ export default async function middleware(request: NextRequest) {
     }
   )
 
+  // Verifica usuário
   const { data: { user } } = await supabase.auth.getUser()
   const pathname = request.nextUrl.pathname
   
-  // Ignora rotas estáticas e API
+  // Ignora rotas estáticas, API e arquivos
   if (pathname.includes('.') || pathname.startsWith('/_next') || pathname.startsWith('/api')) {
     return response
   }
@@ -35,63 +35,64 @@ export default async function middleware(request: NextRequest) {
   const isPublicRoute = pathname === '/'
   const isInviteRoute = pathname.startsWith('/convite') 
 
+  // === CENÁRIO 1: USUÁRIO NÃO LOGADO ===
   if (!user) {
-    // Se não está logado e tenta acessar área privada
-    if (!isAuthPage && !isPublicRoute) {
+    // Se tenta acessar página privada, manda pro login
+    if (!isAuthPage && !isPublicRoute && !isInviteRoute) {
       const loginUrl = new URL('/login', request.url)
-      // Avisa para onde voltar depois do login
       loginUrl.searchParams.set('next', pathname)
       return NextResponse.redirect(loginUrl)
     }
-  } else {
-    // === LÓGICA DE ONBOARDING ===
-    let isOnboardingCompleted = false
-    let hasOrganization = false
-    let isSuspended = false
+    // Se está na auth page ou pública, deixa passar
+    return response
+  }
+
+  // === CENÁRIO 2: USUÁRIO LOGADO ===
+  
+  // Busca dados vitais do perfil
+  let hasOrganization = false
+  let isSuspended = false
     
-    try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select(`
-          organization_id, 
-          organizations (
-            onboarding_completed,
-            status 
-          )
-        `)
-        .eq('id', user.id)
-        .single()
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select(`
+        organization_id, 
+        organizations (
+          subscription_status 
+        )
+      `)
+      .eq('id', user.id)
+      .single()
+    
+    // Verificações de segurança
+    if (profile?.organization_id) {
+      hasOrganization = true
       
-      const orgRaw = profile?.organizations as any
+      // Checa status da assinatura (mapeando array ou objeto único)
+      const orgRaw = profile.organizations as any
       const orgData = Array.isArray(orgRaw) ? orgRaw[0] : orgRaw
-      
-      if (profile?.organization_id) {
-        hasOrganization = true
-        isOnboardingCompleted = !!orgData?.onboarding_completed
-        isSuspended = orgData?.status === 'suspended'
-      }
-
-    } catch (error) {
-      console.error("Middleware Error:", error)
+      isSuspended = orgData?.subscription_status === 'suspended'
     }
 
-    // === KILL SWITCH ===
-    // Se a empresa está suspensa, manda para a página de bloqueio imediatamente
-    if (isSuspended && !pathname.startsWith('/suspended')) {
-      return NextResponse.redirect(new URL('/suspended', request.url))
-    }
-    // Se for primeiro acesso, manda pra setup
-    if (!hasOrganization && !isSetupPage && !isPublicRoute && !isInviteRoute && !isSuspended) {
-       return NextResponse.redirect(new URL('/setup', request.url))
-    }
-    // Se não completou o onboarding, manda pra setup
-    if (hasOrganization && !isOnboardingCompleted && !isSetupPage && !isSuspended) {
-       return NextResponse.redirect(new URL('/setup', request.url))
-    }
-    // Se já completou o onboarding, não deixa voltar para login ou setup
-    if (isOnboardingCompleted && (isAuthPage || isSetupPage)) {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
+  } catch (error) {
+    console.error("Middleware Error:", error)
+  }
+
+  // 1. Bloqueio por Pagamento (Kill Switch)
+  if (isSuspended && !pathname.startsWith('/suspended')) {
+    return NextResponse.redirect(new URL('/suspended', request.url))
+  }
+
+  // 2. Redirecionamento de Setup
+  // Se NÃO tem organização e tenta acessar o painel -> Vai pro Setup
+  if (!hasOrganization && !isSetupPage && !isPublicRoute && !isInviteRoute && !isSuspended) {
+     return NextResponse.redirect(new URL('/setup', request.url))
+  }
+
+  // Se JÁ TEM organização e tenta acessar o Setup ou Login -> Vai pro Dashboard
+  if (hasOrganization && (isSetupPage || isAuthPage)) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
   return response

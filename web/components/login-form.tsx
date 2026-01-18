@@ -42,7 +42,6 @@ export function LoginForm() {
       }
     } catch (e) {
       console.error(e)
-      toast.error("Ocorreu um erro inesperado")
     } finally {
       setLoading(false)
     }
@@ -84,7 +83,7 @@ export function LoginForm() {
           )}
           
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="mb-2 block">Email</Label>
             <Input 
               id="email" 
               name="email" 
@@ -96,7 +95,7 @@ export function LoginForm() {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
+            <Label htmlFor="password" className="mb-2 block">Senha</Label>
             <Input 
               id="password" 
               name="password" 
@@ -108,6 +107,7 @@ export function LoginForm() {
         </CardContent>
         
         <CardFooter className="flex flex-col gap-4">
+          <br></br>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isLogin ? 'Entrar' : 'Cadastrar')}
           </Button>
