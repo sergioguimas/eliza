@@ -10,56 +10,21 @@ import { UpdateCustomerDialog } from "@/components/update-customer-dialog"
 import { CustomerRowActions } from "@/components/customer-row-actions"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { getServiceRecords } from "@/app/actions/service-records"
+import { ServiceRecordList } from "@/components/service-record-list"
+import { ServiceRecordForm } from "@/components/service-record-form"
+import { Printer } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
+import { unstable_noStore as noStore } from "next/cache"
 
-// --- Componente Interno para Lista de Histórico ---
-// AQUI: Usamos 'any' nos props para aceitar qualquer coisa que venha do banco
-function ServiceRecordList({ records }: { records: any[] }) {
-  if (!records?.length) {
-    return (
-      <div className="flex flex-col items-center justify-center py-10 text-center border-2 border-dashed rounded-xl bg-gray-50/50">
-        <FileText className="h-10 w-10 text-muted-foreground mb-3" />
-        <p className="text-muted-foreground font-medium">Nenhum registro encontrado.</p>
-        <p className="text-xs text-muted-foreground mt-1">Crie um novo atendimento para começar.</p>
-      </div>
-    )
-  }
-  return (
-    <div className="space-y-4">
-      {records.map((rec) => (
-        <Card key={rec.id} className="overflow-hidden border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2 bg-gray-50/50">
-            <div className="flex justify-between items-start">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-white">
-                  {rec.status === 'draft' ? 'Rascunho' : 'Finalizado'}
-                </Badge>
-                <span className="text-sm text-muted-foreground font-medium">
-                  {format(new Date(rec.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
-                </span>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <div className="text-sm whitespace-pre-wrap leading-relaxed text-gray-700 dark:text-gray-300">
-              {rec.content}
-            </div>
-            {rec.profiles && (
-              <div className="mt-4 pt-3 border-t flex items-center gap-2 text-xs text-muted-foreground">
-                <User className="h-3 w-3" />
-                <span>Registrado por: <span className="font-medium text-foreground">{rec.profiles.full_name}</span></span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  )
-}
+export const dynamic = 'force-dynamic'
 
 export default async function CustomerPage({ params }: { params: Promise<{ id: string }> }) {
+  noStore()
   const { id } = await params
-  
   const supabase = await createClient()
+
+  console.log(`[SERVER] Renderizando página do cliente ${id} em:`, new Date().toISOString())
 
   // 1. BUSCAR CLIENTE
   const { data: rawCustomer, error: customerError } = await supabase
@@ -88,8 +53,9 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
     .order('start_time', { ascending: false })
     .limit(20)
 
+  const history = await getServiceRecords(id)
+
   // VÁLVULA DE ESCAPE 2: Garante que é um array, mesmo que venha null
-  // O 'as any[]' garante que o .map funcione sem erro
   const appointments = (rawAppointments || []) as any[]
 
   // 3. BUSCAR HISTÓRICO
@@ -105,7 +71,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
   // VÁLVULA DE ESCAPE 3
   const records = (rawRecords || []) as any[]
 
-  // Helpers (agora funcionam porque 'customer' é any)
+  // Helpers
   const isActive = customer.active !== false
   const getInitials = (name: string) => name ? name.split(' ').slice(0, 2).map((n: string) => n[0]).join('').toUpperCase() : 'CL'
 
@@ -213,13 +179,31 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
 
         {/* ABA 2: HISTÓRICO */}
         <TabsContent value="history" className="focus-visible:outline-none animate-in fade-in slide-in-from-bottom-2 duration-300">
-           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <FileText className="w-5 h-5 text-primary" />
-              Prontuário e Evolução
-            </h2>
-          </div>
-           <ServiceRecordList records={records} />
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
+                <div>
+                    <h2 className="text-lg font-semibold flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-primary" />
+                        Histórico e Evolução
+                    </h2>
+                    <p className="text-sm text-muted-foreground">Registros técnicos e observações.</p>
+                </div>
+                
+                {/* Botão para Gerar Histórico Completo */}
+                <Button variant="outline" size="sm" asChild>
+                    <a href={`/print/history/${customer.id}`} target="_blank" rel="noopener noreferrer">
+                        <Printer className="w-4 h-4 mr-2" />
+                        Imprimir Histórico Completo
+                    </a>
+                </Button>
+            </div>
+
+            {/* Formulário de Novo Registro */}
+            <div className="mb-8">
+                <ServiceRecordForm customerId={customer.id} />
+            </div>
+
+            {/* Lista de Registros */}
+            <ServiceRecordList records={history} customerId={customer.id} />
         </TabsContent>
 
         {/* ABA 3: DADOS CADASTRAIS */}

@@ -20,39 +20,40 @@ export function ServiceRecordForm({ customerId }: ServiceRecordFormProps) {
 
   async function handleSubmit(status: 'draft' | 'signed') {
     if (!content.trim()) {
-      toast.warning("O conteúdo do registro não pode estar vazio.")
+      toast.warning("O conteúdo não pode estar vazio.")
       return
     }
 
     setIsSubmitting(true)
+    
     const formData = new FormData()
     formData.append('customer_id', customerId)
     formData.append('content', content)
-    formData.append('status', status)
 
     const result = await createServiceRecord(formData)
 
     if (result?.error) {
       toast.error(result.error)
     } else {
-      toast.success(status === 'signed' ? "Registro assinado com sucesso!" : "Rascunho salvo.")
+      toast.success("Registro salvo com sucesso!")
       setContent("") // Limpa o campo
-      router.refresh() // Atualiza a lista abaixo
+      router.refresh()
     }
+    
     setIsSubmitting(false)
   }
 
   return (
-    <Card className="border-l-4 border-l-blue-500">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold text-gray-700 dark:text-gray-200">
+    <Card className="border-l-6 border-l-blue-500 mb-8">
+      <CardHeader className="pb-1 bg-gray-50/50">
+        <CardTitle className="text-base font-semibold text-gray-700">
           Novo Registro de Atendimento
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-2">
         <Textarea
-          placeholder="Descreva os detalhes do atendimento, observações técnicas ou notas internas..."
-          className="min-h-[120px] mb-4 resize-none focus-visible:ring-blue-500"
+          placeholder="Descreva os detalhes da evolução, atendimento ou observações..."
+          className="min-h-[120px] mb-4 resize-none bg-white"
           value={content}
           onChange={(e) => setContent(e.target.value)}
           disabled={isSubmitting}
@@ -60,22 +61,12 @@ export function ServiceRecordForm({ customerId }: ServiceRecordFormProps) {
         
         <div className="flex items-center justify-end gap-3">
           <Button 
-            variant="outline" 
             onClick={() => handleSubmit('draft')}
-            disabled={isSubmitting}
-            className="text-gray-600"
-          >
-            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Salvar Rascunho
-          </Button>
-          
-          <Button 
-            onClick={() => handleSubmit('signed')}
             disabled={isSubmitting}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
-            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lock className="mr-2 h-4 w-4" />}
-            Assinar e Finalizar
+            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Salvar Registro
           </Button>
         </div>
       </CardContent>
