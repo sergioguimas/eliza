@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,9 +29,11 @@ export function CreateAppointmentDialog({
   professionals = [],
   staff = [], // Fallback
   currentUser,
-  preselectedDate
+  preselectedDate,
+  organization_id
 }: CreateAppointmentDialogProps) {
   
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   
@@ -82,22 +85,29 @@ export function CreateAppointmentDialog({
     setIsLoading(true)
 
     const formData = new FormData()
-    // Se for cliente existente, mandamos o ID. Se for novo, mandamos os dados.
-    if (customerId !== 'new') {
-        formData.append('customer_id', customerId)
-    } else {
+    // 1. INJEÇÃO DO ID DA ORGANIZAÇÃO
+    formData.append('organization_id', organization_id) 
+
+    // 2. UNIFICAÇÃO DE DATA E HORA
+    const combinedDateTime = `${date}T${time}:00`
+    formData.append('start_time', combinedDateTime)
+
+    // 3. LÓGICA DE CLIENTE
+    if (customerId === 'new') {
         formData.append('customer_name', customerName)
         formData.append('customer_phone', customerPhone)
+    } else {
+        formData.append('customer_id', customerId)
     }
-
-    formData.append('date', date)
-    formData.append('time', time)
-    formData.append('notes', notes)
-    formData.append('professional_id', selectedProfessionalId)
     
+    // 4. SERVIÇO
     if (serviceId) {
         formData.append('service_id', serviceId)
     }
+    
+    // 5. OBSERVAÇÕES E PROFISSIONAL
+    formData.append('notes', notes)
+    formData.append('professional_id', selectedProfessionalId)
 
     const result = await createAppointment(formData)
 
@@ -110,9 +120,11 @@ export function CreateAppointmentDialog({
       setCustomerName("")
       setCustomerPhone("")
       setNotes("")
+
+      // Recarrega a página para atualizar o calendário
+      router.refresh()
     }
     
-    setIsLoading(false)
   }
 
   return (

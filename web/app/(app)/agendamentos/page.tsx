@@ -21,7 +21,7 @@ export default async function AgendamentosPage() {
     .from('profiles')
     .select('organization_id, role, organizations(niche)')
     .eq('id', user.id)
-    .single() as any
+    .single()
 
   if (!profile?.organization_id) {
     redirect('/configuracoes') 
@@ -46,7 +46,7 @@ export default async function AgendamentosPage() {
       .from('services')
       .select('id, title, color') 
       .eq('organization_id', orgId)
-      .eq('is_active', true),
+      .eq('active', true),
       
     // Staff (Médicos/Profissionais)
     // Trazemos apenas quem pode atender (Role owner ou professional)
@@ -88,10 +88,10 @@ export default async function AgendamentosPage() {
       </div>
 
       <CalendarView 
-        appointments={appointments as any} 
-        customers={customers as any} 
-        services={services as any}
-        staff={staff as any}
+        appointments={appointments as any}
+        customers={customers} 
+        services={services}
+        staff={staff}
         organization_id={orgId}
         currentUser={profile} // Passamos o usuário atual para saber se ele é médico ou secretária
       />
