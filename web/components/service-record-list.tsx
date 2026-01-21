@@ -63,9 +63,12 @@ export function ServiceRecordList({ records, customerId }: { records: ServiceRec
     window.open(`https://wa.me/?text=${text}`, '_blank')
   }
 
-  const handlePrint = (id: string) => {
-    window.open(`/print/history/${id}`, '_blank') // Imprime o histórico todo ou individual (ajuste conforme sua rota)
-    // Se quiser imprimir SÓ O REGISTRO, use a rota /print/record/[id] se ela existir
+  const handlePrintHistory = (id: string) => {
+    window.open(`/print/history/${id}`, '_blank')
+  }
+
+  const handlePrintCard = (id: string) => {
+    window.open(`/print/record/${id}`, '_blank')
   }
 
   // --- Render ---
@@ -111,7 +114,7 @@ export function ServiceRecordList({ records, customerId }: { records: ServiceRec
                 {/* DIREITA: Botões de Ação */}
                 <div className="flex items-center gap-1">
                    {/* 1. Botões Públicos (Sempre visíveis) */}
-                   <Button variant="default" size="icon" onClick={() => handlePrint(record.id)} title="Imprimir Histórico">
+                   <Button variant="default" size="icon" onClick={() => handlePrintCard(record.id)} title="Imprimir Histórico">
                      <Printer className="h-4 w-4" />
                    </Button>
                    <Button variant="default" size="icon" onClick={() => shareWhatsapp(record.content)} title="Enviar no Zap">
