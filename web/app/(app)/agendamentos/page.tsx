@@ -61,6 +61,7 @@ export default async function AgendamentosPage() {
       .from('appointments')
       .select(`
         id, 
+        customer_id,
         start_time, 
         end_time, 
         status, 

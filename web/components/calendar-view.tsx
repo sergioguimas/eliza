@@ -154,7 +154,7 @@ export function CalendarView({
     }
 
     return (
-      <AppointmentContextMenu appointmentId={appointment.id}>
+      <AppointmentContextMenu appointment={appointment}>
         <div 
           onClick={(e) => handleEventClick(e, appointment)}
           className={cn(

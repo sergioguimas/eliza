@@ -19,9 +19,10 @@ import { unstable_noStore as noStore } from "next/cache"
 
 export const dynamic = 'force-dynamic'
 
-export default async function CustomerPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CustomerPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
   noStore()
   const { id } = await params
+  const { tab } = await searchParams
   const supabase = await createClient()
 
   console.log(`[SERVER] Renderizando página do cliente ${id} em:`, new Date().toISOString())
@@ -38,7 +39,6 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
   }
 
   // VÁLVULA DE ESCAPE 1: Transforma o dado do banco em 'any'
-  // Isso desliga a verificação de tipo estrita para este objeto
   const customer = rawCustomer as any
 
   // 2. BUSCAR AGENDAMENTOS
@@ -102,13 +102,12 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
         </div>
         
         <div className="flex gap-3">
-           <UpdateCustomerDialog customer={customer} />
            <CustomerRowActions customer={customer} />
         </div>
       </div>
 
       {/* ÁREA PRINCIPAL COM 3 ABAS */}
-      <Tabs defaultValue="appointments" className="w-full">
+      <Tabs defaultValue={tab || "details"} className="w-full">
         <TabsList className="grid w-full grid-cols-3 h-12 p-1 bg-gray-100/80 dark:bg-gray-800/80 rounded-xl mb-6">
           <TabsTrigger value="appointments" className="rounded-lg text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
             Agendamentos

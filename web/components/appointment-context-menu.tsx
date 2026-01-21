@@ -11,17 +11,46 @@ import {
   ContextMenuSubContent
 } from "@/components/ui/context-menu"
 import { updateAppointmentStatus } from "@/app/actions/update-appointment-status"
-import { cancelAppointment } from "@/app/actions/cancel-appointment" // Importe a nova action
+import { cancelAppointment } from "@/app/actions/cancel-appointment"
 import { STATUS_CONFIG } from "@/lib/appointment-config"
 import { toast } from "sonner"
 import { Trash2 } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 export function AppointmentContextMenu({ children, appointment, className }: any) {
-  
+  const router = useRouter() // <--- 2. Inicializa o router
+
   async function handleStatusChange(newStatus: string) {
+    if (!appointment?.id) return
+
     const result = await updateAppointmentStatus(appointment.id, newStatus)
+    
     if (result.success) {
-      toast.success(`Status atualizado!`)
+      // Lógica especial para quando conclui o agendamento
+      if (newStatus === 'completed') {
+        // Tenta pegar o ID do cliente de onde estiver disponível (objeto customers ou customer_id direto)
+        const customerId = appointment.customers?.id || appointment.customer_id
+
+        if (customerId) {
+          toast.success("Agendamento concluído!", {
+            description: "Deseja adicionar o registro clínico agora?",
+            action: {
+              label: "Criar Registro",
+              onClick: () => {
+                // <--- 3. Redirecionamento seguro com o ID verificado
+                router.push(`/clientes/${customerId}?tab=history`)
+              }
+            },
+            duration: 8000,
+          })
+        } else {
+          // Se não tiver ID do cliente, mostra apenas o sucesso simples
+          toast.success("Status atualizado para Concluído!")
+        }
+      } else {
+        // Outros status
+        toast.success(`Status atualizado!`)
+      }
     } else {
       toast.error("Erro ao atualizar status")
     }
@@ -62,7 +91,6 @@ export function AppointmentContextMenu({ children, appointment, className }: any
         
         <ContextMenuSeparator className="bg-zinc-800" />
         
-        {/* BOTÃO DE CANCELAR AGORA FUNCIONAL */}
         <ContextMenuItem 
           onClick={handleCancel}
           className="text-red-400 focus:text-red-400 gap-2"
