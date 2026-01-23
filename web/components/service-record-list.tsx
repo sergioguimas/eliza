@@ -88,8 +88,8 @@ export function ServiceRecordList({ records, customerId }: { records: ServiceRec
         const isEditing = editingId === record.id
 
         return (
-          <Card key={record.id} className={`overflow-hidden border-l-4 transition-all ${
-            isSigned ? 'border-l-green-500 bg-white' : 'border-l-amber-400 bg-amber-50/30'
+          <Card key={record.id} className={`overflow-hidden border-l-16 transition-all ${
+            isSigned ? 'border-l-green-500 bg-green-50' : 'border-l-amber-400 bg-amber-50'
           }`}>
             <CardHeader className="pb-2">
               <div className="flex justify-between items-start">

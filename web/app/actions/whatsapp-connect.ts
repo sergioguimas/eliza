@@ -43,8 +43,8 @@ export async function createWhatsappInstance(): Promise<WhatsappResponse> {
 
   const instanceName = profile.organizations.slug
   // Prioridade: Banco de dados > Variável de Ambiente
-  const EVOLUTION_URL = profile.organizations.evolution_api_url || DEFAULT_EVOLUTION_URL
-  const API_KEY = profile.organizations.evolution_api_key || GLOBAL_API_KEY
+  const EVOLUTION_URL = profile.organizations.evolution_api_url || process.env.NEXT_PUBLIC_EVOLUTION_URL
+  const API_KEY = profile.organizations.evolution_api_key || process.env.EVOLUTION_API_KEY
 
   console.log(`[DEBUG STEP 2] Configuração definida:`)
   console.log(`- Instance Name: ${instanceName}`)

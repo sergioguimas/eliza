@@ -126,7 +126,7 @@ export function SettingsForm({ profile, organization }: any) {
 
       {/* SUB-ABA 3: WHATSAPP */}
       <TabsContent value="whatsapp">
-         <WhatsappSettings />
+         <WhatsappSettings organizationId={organization.id} />
       </TabsContent>
 
     </Tabs>

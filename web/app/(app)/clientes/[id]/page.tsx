@@ -164,7 +164,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
                       </div>
                       
                       {appt.profiles && (
-                        <div className="flex items-center gap-2 text-sm bg-gray-50 px-3 py-1.5 rounded-full self-start md:self-center">
+                        <div className="flex items-center gap-2 text-sm bg-black-50 px-3 py-1.5 rounded-full self-start md:self-center">
                           <User className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium">{appt.profiles.full_name}</span>
                         </div>
