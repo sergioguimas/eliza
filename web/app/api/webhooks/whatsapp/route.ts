@@ -1,201 +1,107 @@
-import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/utils/supabase/admin'
-import { addDays, format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { createClient } from "@/utils/supabase/server"
+import { headers } from "next/headers"
+import { NextResponse } from "next/server"
 
-// Variáveis de ambiente como Fallback (caso o cliente não tenha configurado)
-const DEFAULT_EVOLUTION_URL = process.env.NEXT_PUBLIC_EVOLUTION_API_URL
-const GLOBAL_API_KEY = process.env.EVOLUTION_API_KEY
+// Palavras-chave aceitas (pode adicionar mais)
+const CONFIRMATION_KEYWORDS = ['sim', 'confirmar', 'confirmo', 'ok', 'pode ser', 'confirmado']
+const CANCELLATION_KEYWORDS = ['cancelar', 'não', 'nao', 'desmarcar']
 
-// Adicionei '1' e '2' para bater com a mensagem do Cron Job
-const CONFIRMATION_KEYWORDS = ['1', 'sim', 'confirmar', 'confirmo', 'vou', 'comparecer', 'ok', '👍']
-const CANCELLATION_KEYWORDS = ['2', 'não', 'nao', 'cancelar', 'cancela', 'não vou', 'nao vou', 'remarcar']
-
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const payload = await request.json()
-    const { event, data, instance } = payload
+    const body = await req.json()
     
-    // 1. Ignora eventos irrelevantes
-    if (event !== 'messages.upsert') {
-      return NextResponse.json({ message: 'Ignored event' }, { status: 200 })
+    // 1. Verifica se é um evento de MENSAGEM
+    const eventType = body.event || body.type
+    if (eventType !== 'messages.upsert') {
+        return NextResponse.json({ status: 'ignored' })
     }
 
-    const messageData = data.message || data
-    const key = data.key || messageData.key || {}
+    const messageData = body.data
+    const key = messageData.key
+    const messageContent = messageData.message
 
-    // --- IDENTIFICAÇÃO DO NÚMERO ---
-    let targetJid = key.remoteJid || data.remoteJid || ''
-
-    if (targetJid.includes('@lid') && key.remoteJidAlt) targetJid = key.remoteJidAlt
-    if (!targetJid || targetJid.includes('@lid')) return NextResponse.json({ message: 'Invalid JID' }, { status: 200 })
-    if (key.fromMe || targetJid.includes('@g.us')) return NextResponse.json({ message: 'Ignored group/self' }, { status: 200 })
-
-    const phoneDigits = targetJid.replace(/\D/g, '')
-    const searchPhone = phoneDigits.slice(-8) // Pega os últimos 8 dígitos para busca flexível
-
-    // 2. Extrai o Conteúdo
-    let content = ''
-    if (messageData.conversation) content = messageData.conversation
-    else if (messageData.extendedTextMessage?.text) content = messageData.extendedTextMessage.text
-
-    if (!content) return NextResponse.json({ message: 'No content' }, { status: 200 })
-    
-    const lowerContent = content.toLowerCase().trim()
-    
-    // Verifica intenção (Se não for 1/Sim ou 2/Não, ignora)
-    const isConfirmation = CONFIRMATION_KEYWORDS.some(w => lowerContent === w || lowerContent.startsWith(w + ' '))
-    const isCancellation = CANCELLATION_KEYWORDS.some(w => lowerContent === w || lowerContent.startsWith(w + ' '))
-
-    if (!isConfirmation && !isCancellation) {
-        return NextResponse.json({ message: 'Not a command' }, { status: 200 })
+    // 2. Ignora mensagens enviadas por NÓS (do sistema) ou de Grupos
+    if (key.fromMe || key.remoteJid.includes('@g.us')) {
+        return NextResponse.json({ status: 'ignored_self_or_group' })
     }
 
-    // 3. Busca no Banco
-    const supabase = createAdminClient()
+    // 3. Extrai o texto da mensagem (Baileys tem várias formas de mandar texto)
+    let text = ''
+    if (messageContent.conversation) {
+        text = messageContent.conversation
+    } else if (messageContent.extendedTextMessage?.text) {
+        text = messageContent.extendedTextMessage.text
+    } else {
+        return NextResponse.json({ status: 'no_text' }) // É áudio, foto, etc.
+    }
 
-    // A. Busca Cliente
-    const { data: customer } = await supabase
+    text = text.trim().toLowerCase()
+    
+    // 4. Lógica de Confirmação
+    if (CONFIRMATION_KEYWORDS.some(k => text.includes(k))) {
+        await handleConfirmation(key.remoteJid)
+        return NextResponse.json({ status: 'processed_confirmation' })
+    }
+
+    return NextResponse.json({ status: 'received' })
+
+  } catch (error) {
+    console.error("Erro no Webhook:", error)
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+  }
+}
+
+// --- FUNÇÃO AUXILIAR QUE ATUALIZA O BANCO ---
+async function handleConfirmation(remoteJid: string) {
+    const supabase = await createClient()
+
+    // Limpa o número para buscar no banco (Remove @s.whatsapp.net e o 55 se necessário)
+    // O banco geralmente salva como (11) 99999-9999 ou 5511999999999. Vamos tentar buscar pelos últimos 8 dígitos para garantir.
+    const rawNumber = remoteJid.replace('@s.whatsapp.net', '').replace(/\D/g, '')
+    const searchNumber = rawNumber.slice(-8) // Pega os últimos 8 dígitos para ser flexível
+
+    console.log(`🔍 [Webhook] Buscando agendamento para confirmar. Tel: ${rawNumber}`)
+
+    // 1. Busca o cliente pelo telefone
+    // Usamos .ilike com % para achar qualquer cliente que tenha esse final de número
+    const { data: customers } = await supabase
         .from('customers')
-        .select('id, name')
-        .ilike('phone', `%${searchPhone}%`)
+        .select('id')
+        .ilike('phone', `%${searchNumber}%`)
+        
+    if (!customers || customers.length === 0) {
+        console.log("❌ [Webhook] Cliente não encontrado.")
+        return
+    }
+
+    const customerIds = customers.map(c => c.id)
+
+    // 2. Busca o PRÓXIMO agendamento PENDENTE (status 'pending') desse cliente
+    // Ignoramos os passados e pegamos o primeiro do futuro
+    const now = new Date().toISOString()
+    
+    const { data: appointment, error } = await supabase
+        .from('appointments')
+        .select('id, status, start_time')
+        .in('customer_id', customerIds)
+        .eq('status', 'pending') // Só confirma se estiver pendente (não mexe nos cancelados/já confirmados)
+        .gt('start_time', now)   // Só agendamentos futuros
+        .order('start_time', { ascending: true }) // O mais próximo
         .limit(1)
         .single()
 
-    if (!customer) return NextResponse.json({ message: 'Customer not found' }, { status: 200 })
+    if (error || !appointment) {
+        console.log("⚠️ [Webhook] Nenhum agendamento pendente futuro encontrado.")
+        return
+    }
 
-    // B. Busca Agendamento Recente + Configurações da Org
-    // Aqui está o segredo: Já trazemos as configurações junto!
-    const yesterday = new Date()
-    yesterday.setHours(yesterday.getHours() - 24)
-
-    const { data: appointment } = await supabase
+    // 3. ATUALIZA PARA CONFIRMADO
+    const { error: updateError } = await supabase
         .from('appointments')
-        .select(`
-            id, 
-            start_time, 
-            status,
-            organization_id,
-            organizations (
-                slug,
-                evolution_api_url,
-                evolution_api_key,
-                organization_settings ( 
-                    msg_appointment_canceled,
-                    open_hours_start,
-                    open_hours_end
-                )
-            )
-        `)
-        .eq('customer_id', customer.id)
-        .in('status', ['scheduled', 'confirmed']) // Só mexe se estiver agendado ou confirmado
-        .gte('start_time', yesterday.toISOString())
-        .order('start_time', { ascending: true })
-        .limit(1)
-        .single() as any
+        .update({ status: 'confirmed' })
+        .eq('id', appointment.id)
 
-    if (!appointment) return NextResponse.json({ message: 'No active appointment' }, { status: 200 })
-
-    const org = appointment.organizations
-    const settings = org.organization_settings?.[0] || org.organization_settings // Trata array ou objeto
-
-    // Configurações de Envio da Org
-    const EVOLUTION_URL = org.evolution_api_url || DEFAULT_EVOLUTION_URL
-    const API_KEY = org.evolution_api_key || GLOBAL_API_KEY
-    const instanceName = org.slug
-
-    // --- AÇÃO: CONFIRMAR ---
-    if (isConfirmation) {
-        if (appointment.status === 'confirmed') return NextResponse.json({ message: 'Already confirmed' }, { status: 200 })
-        
-        await supabase.from('appointments').update({ status: 'confirmed' }).eq('id', appointment.id)
-        
-        // Opcional: Enviar mensagem de agradecimento ("Obrigado, confirmado!")
-        // Mas por enquanto só confirma silenciosamente no sistema.
-        console.log(`✅ Agendamento confirmado via Zap: ${customer.name}`)
-        return NextResponse.json({ success: true, action: 'confirmed' }, { status: 200 })
+    if (!updateError) {
+        console.log(`✅ [Webhook] Agendamento ${appointment.id} confirmado via WhatsApp!`)
     }
-
-    // --- AÇÃO: CANCELAR ---
-    if (isCancellation) {
-        // 1. Atualiza Status
-        await supabase.from('appointments').update({ status: 'canceled' }).eq('id', appointment.id)
-        console.log(`🚫 Agendamento cancelado via Zap: ${customer.name}`)
-
-        // 2. Calcula Horários Livres para sugerir (Básico)
-        // Usa o horário configurado na org ou padrão 08-18
-        const startHour = parseInt(settings?.open_hours_start?.split(':')[0] || "8")
-        const endHour = parseInt(settings?.open_hours_end?.split(':')[0] || "18")
-        
-        // Cria array de horários possíveis (Ex: [8, 9, 10...])
-        const possibleHours = Array.from({ length: endHour - startHour }, (_, i) => i + startHour)
-
-        // Busca ocupados de amanhã
-        const tomorrow = addDays(new Date(), 1)
-        const startDay = new Date(tomorrow.setHours(0,0,0,0)).toISOString()
-        const endDay = new Date(tomorrow.setHours(23,59,59,999)).toISOString()
-
-        const { data: busySlots } = await supabase
-            .from('appointments')
-            .select('start_time')
-            .eq('organization_id', appointment.organization_id)
-            .neq('status', 'canceled')
-            .gte('start_time', startDay)
-            .lte('start_time', endDay)
-
-        const busyTimes = new Set(busySlots?.map(a => new Date(a.start_time).getHours()))
-
-        // Filtra livres e pega 3
-        const freeSlots = possibleHours
-            .filter(h => !busyTimes.has(h))
-            .slice(0, 3)
-            .map(h => `${h}:00`)
-
-        // 3. Pega Mensagem Personalizada
-        let messageText = settings?.msg_appointment_canceled || "Agendamento cancelado."
-        
-        const firstName = customer.name.split(' ')[0]
-        const dateObj = new Date(appointment.start_time)
-        // Precisamos importar 'format' e 'ptBR' lá em cima se não tiver
-        const dateStr = format(dateObj, "dd/MM", { locale: ptBR }) 
-        const timeStr = format(dateObj, "HH:mm", { locale: ptBR })
-
-        messageText = messageText
-            .replace(/{name}/g, firstName)
-            .replace(/{date}/g, dateStr)
-            .replace(/{time}/g, timeStr)
-        // -------------------------------------------------------
-        // Se não tiver, adicionamos no final se houver horários
-        const slotsString = freeSlots.length > 0 
-            ? `\n\nHorários livres amanhã:\n` + freeSlots.map(h => `▪️ ${h}`).join('\n')
-            : ""
-
-        // Se o usuário configurou a tag no texto:
-        if (messageText.includes('{{horarios_livres}}')) {
-             // Se tiver horários, substitui. Se não tiver, limpa a tag.
-             messageText = messageText.replace('{{horarios_livres}}', slotsString.replace('\n\n', '')) 
-        } else {
-             // Se não configurou tag, anexa no final
-             messageText += slotsString
-        }
-
-        // 4. Envia Resposta
-        await fetch(`${EVOLUTION_URL}/message/sendText/${instanceName}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'apikey': API_KEY },
-            body: JSON.stringify({
-                number: targetJid.replace('@s.whatsapp.net', '').replace(/@lid/g, ''),
-                text: messageText
-            })
-        })
-
-        return NextResponse.json({ success: true, action: 'canceled' }, { status: 200 })
-    }
-
-    return NextResponse.json({ message: 'No action taken' }, { status: 200 })
-
-  } catch (error) {
-    console.error("❌ Erro no Webhook:", error)
-    return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
-  }
 }

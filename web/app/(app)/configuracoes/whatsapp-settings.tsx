@@ -80,7 +80,6 @@ export function WhatsappSettings() {
       </CardHeader>
       <CardContent>
         
-        {/* CONTAINER PRINCIPAL: Agora usa cores do tema (bg-muted/20) em vez de branco fixo */}
         <div className="bg-muted/20 border border-border rounded-xl p-8 flex flex-col items-center justify-center min-h-[350px] gap-6 relative overflow-hidden">
             
             {/* CASO 1: LOADING GERAL */}

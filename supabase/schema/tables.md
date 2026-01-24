@@ -47,9 +47,9 @@
 | organization_settings | open_hours_end            | time without time zone   | YES         |
 | organization_settings | appointment_duration      | integer                  | YES         |
 | organization_settings | days_of_week              | ARRAY                    | YES         |
-| organization_settings | whatsapp_message_created  | text                     | YES         |
-| organization_settings | whatsapp_message_reminder | text                     | YES         |
-| organization_settings | whatsapp_message_canceled | text                     | YES         |
+| organization_settings | msg_appointment_created  | text                     | YES         |
+| organization_settings | msg_appointment_reminder | text                     | YES         |
+| organization_settings | msg_appointment_canceled | text                     | YES         |
 | organization_settings | created_at                | timestamp with time zone | YES         |
 | organization_settings | updated_at                | timestamp with time zone | YES         |
 | organizations         | id                        | uuid                     | NO          |

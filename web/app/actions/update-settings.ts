@@ -11,44 +11,37 @@ export async function updateSettings(formData: FormData) {
     return { error: 'Usuário não autenticado' }
   }
 
-  const org_id = formData.get('org_id') as string
-  
-  const hasOrgData = formData.has('name') 
-  const hasProfileData = formData.has('full_name')
+  // Identifica EXPLICITAMENTE qual formulário está enviando
+  const form_type = formData.get('form_type') as string
 
   try {
-    // 1. ATUALIZAÇÃO DO PERFIL
-    if (hasProfileData) {
+    // --- CASO 1: ATUALIZAR PERFIL ---
+    if (form_type === 'profile') {
       const full_name = formData.get('full_name') as string
       const professional_license = formData.get('crm') as string 
 
       const { error: profileError } = await (supabase.from('profiles') as any)
         .update({ 
           full_name, 
-          professional_license
+          professional_license 
         })
         .eq('id', user.id)
 
       if (profileError) throw profileError
     }
 
-    // 2. ATUALIZAÇÃO DA CLÍNICA
-    if (hasOrgData && org_id) {
+    // --- CASO 2: ATUALIZAR CLÍNICA ---
+    else if (form_type === 'organization') {
+      const org_id = formData.get('org_id') as string
       const name = formData.get('name') as string
       
-      if (!name || name.trim() === '') {
-        return { error: "O nome da clínica é obrigatório." }
-      }
+      if (!org_id) return { error: "ID da organização não encontrado" }
+      if (!name || name.trim() === '') return { error: "O nome da clínica é obrigatório." }
 
+      // Se tiver nicho no form, adiciona (mantendo compatibilidade)
       const niche = formData.get('niche') as string
-
-      const orgUpdateData: any = {
-        name
-      }
-
-      if (niche) {
-        orgUpdateData.niche = niche
-      }
+      const orgUpdateData: any = { name }
+      if (niche) orgUpdateData.niche = niche
       
       const { error: orgError } = await (supabase.from('organizations') as any)
         .update(orgUpdateData)

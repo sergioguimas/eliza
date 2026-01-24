@@ -50,8 +50,8 @@ export async function sendAppointmentConfirmation(appointmentId: string) {
 
   // 3. Configuração
   const instanceName = appointment.organizations.slug
-  const EVOLUTION_URL = appointment.organizations.evolution_api_url || DEFAULT_EVOLUTION_URL
-  const API_KEY = appointment.organizations.evolution_api_key || GLOBAL_API_KEY
+  const EVOLUTION_URL = appointment.organizations.evolution_api_url || process.env.NEXT_PUBLIC_EVOLUTION_API_URL
+  const API_KEY = appointment.organizations.evolution_api_key || process.env.EVOLUTION_API_KEY
   
   // 4. Formata Telefone e Dados
   const rawPhone = appointment.customers.phone.replace(/\D/g, "")
@@ -116,8 +116,8 @@ export async function sendAppointmentCancellation(appointmentId: string) {
 
   // 2. Configura API
   const instanceName = appointment.organizations.slug
-  const EVOLUTION_URL = appointment.organizations.evolution_api_url || DEFAULT_EVOLUTION_URL
-  const API_KEY = appointment.organizations.evolution_api_key || GLOBAL_API_KEY
+  const EVOLUTION_URL = appointment.organizations.evolution_api_url || process.env.NEXT_PUBLIC_EVOLUTION_API_URL
+  const API_KEY = appointment.organizations.evolution_api_key || process.env.EVOLUTION_API_KEY
   
   const rawPhone = appointment.customers.phone.replace(/\D/g, "")
   const phone = rawPhone.startsWith("55") ? rawPhone : `55${rawPhone}`

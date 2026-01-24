@@ -85,7 +85,7 @@ CREATE TABLE organization_settings (
     appointment_duration INTEGER DEFAULT 60, -- Ajustei para 60 (padrão comum), mas pode ser 30
     
     -- Mensagens (Renomeado para bater com o código route.ts)
-    whatsapp_message_reminder TEXT, 
+    msg_appointment_reminder TEXT, 
     
     -- Outros templates (mantidos genéricos ou renomeie conforme uso futuro)
     msg_appointment_created TEXT,

@@ -202,7 +202,7 @@ export async function deleteWhatsappInstance() {
     if (!org) return { error: "Org não encontrada" }
 
     const instanceName = org.slug
-    const EVOLUTION_URL = org.evolution_api_url || DEFAULT_EVOLUTION_URL
+    const EVOLUTION_URL = org.evolution_api_url || process.env.NEXT_PUBLIC_EVOLUTION_URL
     const API_KEY = org.evolution_api_key || GLOBAL_API_KEY
 
     try {
@@ -233,8 +233,8 @@ export async function getWhatsappStatus(): Promise<WhatsappResponse> {
     if (!org) return { status: 'unknown' }
 
     const instanceName = org.slug
-    const EVOLUTION_URL = org.evolution_api_url || DEFAULT_EVOLUTION_URL
-    const API_KEY = org.evolution_api_key || GLOBAL_API_KEY
+    const EVOLUTION_URL = org.evolution_api_url || process.env.NEXT_PUBLIC_EVOLUTION_URL
+    const API_KEY = org.evolution_api_key || process.env.EVOLUTION_API_KEY
 
     // console.log("[DEBUG STATUS] Verificando status...") 
 
