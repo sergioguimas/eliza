@@ -81,7 +81,7 @@ export async function POST(request: Request) {
                 evolution_api_url,
                 evolution_api_key,
                 organization_settings ( 
-                    whatsapp_message_canceled,
+                    msg_appointment_canceled,
                     open_hours_start,
                     open_hours_end
                 )
@@ -152,7 +152,7 @@ export async function POST(request: Request) {
             .map(h => `${h}:00`)
 
         // 3. Pega Mensagem Personalizada
-        let messageText = settings?.whatsapp_message_canceled || "Agendamento cancelado."
+        let messageText = settings?.msg_appointment_canceled || "Agendamento cancelado."
         
         const firstName = customer.name.split(' ')[0]
         const dateObj = new Date(appointment.start_time)

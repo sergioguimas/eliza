@@ -33,7 +33,7 @@ export async function sendAppointmentConfirmation(appointmentId: string) {
         slug, 
         evolution_api_url, 
         evolution_api_key,
-        organization_settings ( whatsapp_message_created ) 
+        organization_settings ( msg_appointment_created ) 
       )
     `)
     .eq('id', appointmentId)
@@ -62,7 +62,7 @@ export async function sendAppointmentConfirmation(appointmentId: string) {
   
   // 5. Pega o template do banco (ou usa um padrão se falhar)
   const settings = appointment.organizations.organization_settings?.[0] || appointment.organizations.organization_settings
-  const template = settings?.whatsapp_message_created || "Olá {name}, seu agendamento para {service} em {date} às {time} foi confirmado."
+  const template = settings?.msg_appointment_created || "Olá {name}, seu agendamento para {service} em {date} às {time} foi confirmado."
 
   // 6. Monta a mensagem final substituindo as variáveis
   const messageText = replaceVariables(template, {
@@ -106,7 +106,7 @@ export async function sendAppointmentCancellation(appointmentId: string) {
         slug, 
         evolution_api_url, 
         evolution_api_key,
-        organization_settings ( whatsapp_message_canceled )
+        organization_settings ( msg_appointment_canceled )
       )
     `)
     .eq('id', appointmentId)
@@ -129,7 +129,7 @@ export async function sendAppointmentCancellation(appointmentId: string) {
 
   // 4. Pega Template e Substitui
   const settings = appointment.organizations.organization_settings?.[0] || appointment.organizations.organization_settings
-  const template = settings?.whatsapp_message_canceled || "Olá {name}, seu agendamento em {date} foi cancelado."
+  const template = settings?.msg_appointment_canceled || "Olá {name}, seu agendamento em {date} foi cancelado."
 
   const message = replaceVariables(template, {
     name: appointment.customers.name.split(' ')[0],

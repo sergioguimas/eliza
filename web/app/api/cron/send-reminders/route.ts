@@ -47,7 +47,7 @@ export async function GET(request: Request) {
         slug, 
         evolution_api_url, 
         evolution_api_key,
-        organization_settings ( whatsapp_message_reminder )
+        organization_settings ( msg_appointment_reminder )
       )
     `)
     .eq('status', 'scheduled')
@@ -91,7 +91,7 @@ export async function GET(request: Request) {
     const rawSettings = org.organization_settings as any
     const settings = Array.isArray(rawSettings) ? rawSettings[0] : rawSettings
     
-    let template = settings?.whatsapp_message_reminder || "Olá {name}, lembrete do seu agendamento amanhã às {time}. Confirma?"
+    let template = settings?.msg_appointment_reminder || "Olá {name}, lembrete do seu agendamento amanhã às {time}. Confirma?"
     
     const dateObjUtc = new Date(app.start_time)
     const dateBrazil = subHours(dateObjUtc, 3) 
