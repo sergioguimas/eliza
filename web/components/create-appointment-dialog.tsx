@@ -8,26 +8,25 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createAppointment } from "@/app/actions/create-appointment"
 import { toast } from "sonner"
-import { Loader2, CalendarIcon, Clock, User, Plus, Search } from "lucide-react"
+import { Loader2, CalendarIcon, Clock, User, Plus } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 
-// Interface completa para alinhar com o CalendarView
 interface CreateAppointmentDialogProps {
-  customers?: any[] // Lista de clientes para o select
-  services?: any[]  // Lista de serviços para o select
-  professionals?: any[] // Lista de médicos
-  staff?: any[] // Caso venha com nome de staff (alias para professionals)
+  customers?: any[] 
+  services?: any[]  
+  professionals?: any[] 
+  staff?: any[] 
   organization_id: string
   currentUser: any
-  preselectedDate?: Date | null // Data clicada no calendário
+  preselectedDate?: Date | null
 }
 
 export function CreateAppointmentDialog({ 
   customers = [], 
   services = [], 
   professionals = [],
-  staff = [], // Fallback
+  staff = [],
   currentUser,
   preselectedDate,
   organization_id
@@ -37,12 +36,11 @@ export function CreateAppointmentDialog({
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   
-  // Unifica a lista de profissionais
   const team = professionals.length > 0 ? professionals : staff
 
   // States do formulário
-  const [customerId, setCustomerId] = useState("new") // 'new' ou ID do cliente
-  const [customerName, setCustomerName] = useState("") // Usado se for cliente novo
+  const [customerId, setCustomerId] = useState("new")
+  const [customerName, setCustomerName] = useState("")
   const [customerPhone, setCustomerPhone] = useState("")
   
   const [serviceId, setServiceId] = useState("")
@@ -51,18 +49,25 @@ export function CreateAppointmentDialog({
   const [notes, setNotes] = useState("")
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<string>("")
 
-  // Quando o modal abre, reseta ou configura defaults
+  // Reseta o formulário toda vez que o modal abre
   useEffect(() => {
     if (open) {
-      // 1. Data e Hora
+      // 1. Reseta campos para evitar "lixo" do agendamento anterior
+      setCustomerId("new")
+      setCustomerName("")
+      setCustomerPhone("")
+      setServiceId("")
+      setNotes("")
+      setIsLoading(false) // 👈 GARANTIA DE DESTRAVAMENTO
+
+      // 2. Data e Hora
       if (preselectedDate) {
         setDate(preselectedDate.toISOString().split('T')[0])
-        // Se quiser setar a hora atual arredondada, pode fazer aqui
       } else {
         setDate(new Date().toISOString().split('T')[0])
       }
       
-      // 2. Profissional Padrão
+      // 3. Profissional Padrão
       if (currentUser?.role === 'professional' || currentUser?.role === 'owner') {
         setSelectedProfessionalId(currentUser.id)
       } else if (team.length > 0 && !selectedProfessionalId) {
@@ -74,7 +79,6 @@ export function CreateAppointmentDialog({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     
-    // Validação básica
     const finalCustomerName = customerId === 'new' ? customerName : customers.find(c => c.id === customerId)?.name
     
     if (!date || !time || !finalCustomerName || !selectedProfessionalId) {
@@ -82,17 +86,13 @@ export function CreateAppointmentDialog({
       return
     }
 
-    setIsLoading(true)
+    setIsLoading(true) // Trava o botão
 
     const formData = new FormData()
-    // 1. INJEÇÃO DO ID DA ORGANIZAÇÃO
     formData.append('organization_id', organization_id) 
-
-    // 2. UNIFICAÇÃO DE DATA E HORA
     const combinedDateTime = `${date}T${time}:00`
     formData.append('start_time', combinedDateTime)
 
-    // 3. LÓGICA DE CLIENTE
     if (customerId === 'new') {
         formData.append('customer_name', customerName)
         formData.append('customer_phone', customerPhone)
@@ -100,31 +100,25 @@ export function CreateAppointmentDialog({
         formData.append('customer_id', customerId)
     }
     
-    // 4. SERVIÇO
-    if (serviceId) {
-        formData.append('service_id', serviceId)
-    }
-    
-    // 5. OBSERVAÇÕES E PROFISSIONAL
+    if (serviceId) formData.append('service_id', serviceId)
     formData.append('notes', notes)
     formData.append('professional_id', selectedProfessionalId)
 
-    const result = await createAppointment(formData)
+    try {
+        const result = await createAppointment(formData)
 
-    if (result?.error) {
-      toast.error(result.error)
-    } else {
-      toast.success("Agendamento criado com sucesso!")
-      setOpen(false)
-      // Limpa campos críticos
-      setCustomerName("")
-      setCustomerPhone("")
-      setNotes("")
-
-      // Recarrega a página para atualizar o calendário
-      router.refresh()
+        if (result?.error) {
+          toast.error(result.error)
+        } else {
+          toast.success("Agendamento criado com sucesso!")
+          setOpen(false) // Fecha o modal
+          router.refresh() // Atualiza a tela
+        }
+    } catch (error) {
+        toast.error("Erro inesperado ao criar agendamento.")
+    } finally {
+        setIsLoading(false) // 👈 A CORREÇÃO MÁGICA: Destrava o botão aconteça o que acontecer
     }
-    
   }
 
   return (
@@ -143,7 +137,7 @@ export function CreateAppointmentDialog({
         
         <form onSubmit={handleSubmit} className="space-y-4 py-2">
           
-          {/* 1. SELEÇÃO DE PROFISSIONAL (Obrigatório no Multi-Profissional) */}
+          {/* Profissional */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-xs font-bold uppercase text-muted-foreground">
                 <User className="w-3 h-3" />
@@ -169,7 +163,7 @@ export function CreateAppointmentDialog({
 
           <div className="border-t my-2" />
 
-          {/* 2. CLIENTE (Existente ou Novo) */}
+          {/* Paciente */}
           <div className="space-y-2">
             <Label>Paciente</Label>
             <Select value={customerId} onValueChange={setCustomerId}>
@@ -205,7 +199,7 @@ export function CreateAppointmentDialog({
             )}
           </div>
 
-          {/* 3. SERVIÇO */}
+          {/* Serviço */}
           <div className="space-y-2">
             <Label>Procedimento / Serviço</Label>
             <Select value={serviceId} onValueChange={setServiceId}>
@@ -227,7 +221,7 @@ export function CreateAppointmentDialog({
             </Select>
           </div>
 
-          {/* 4. DATA E HORA */}
+          {/* Data e Hora */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="flex items-center gap-2">

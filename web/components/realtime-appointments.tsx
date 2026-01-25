@@ -3,42 +3,38 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
-import { toast } from 'sonner'
 
 export function RealtimeAppointments() {
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
-    // Inscreve no canal de mudanças da tabela 'appointments'
+    console.log("🔌 [Realtime] Iniciando conexão...")
+
     const channel = supabase
-      .channel('realtime-appointments')
+      .channel('global-appointments-listener')
       .on(
         'postgres_changes',
         {
-          event: '*', // Escuta tudo: UPDATE, INSERT, DELETE
+          event: '*',
           schema: 'public',
           table: 'appointments',
         },
         (payload) => {
-          console.log('⚡ Mudança detectada no banco:', payload)
-          
-          // O comando mágico: Recarrega os dados da página sem piscar a tela inteira
+          console.log('🔄 [Realtime] O Banco mudou! Atualizando tela...', payload.eventType)
           router.refresh()
-
-          // Feedback visual (opcional)
-          if (payload.eventType === 'UPDATE' && payload.new.status === 'confirmed') {
-             toast.success("Agendamento confirmado via WhatsApp!")
-          }
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ [Realtime] Conectado e escutando!')
+        }
+      })
 
-    // Limpeza quando sair da página
     return () => {
       supabase.removeChannel(channel)
     }
   }, [router, supabase])
 
-  return null // Este componente é invisível
+  return null
 }

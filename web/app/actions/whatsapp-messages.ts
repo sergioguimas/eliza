@@ -4,9 +4,6 @@ import { createClient } from "@/utils/supabase/server"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 
-const DEFAULT_EVOLUTION_URL = process.env.NEXT_PUBLIC_EVOLUTION_API_URL
-const GLOBAL_API_KEY = process.env.EVOLUTION_API_KEY
-
 // Função auxiliar para trocar as variáveis {name}, {date}, etc.
 function replaceVariables(template: string, data: any) {
   if (!template) return ""
@@ -147,6 +144,7 @@ export async function sendAppointmentCancellation(appointmentId: string) {
       body: JSON.stringify({ number: phone, text: message })
     })
   } catch (err) {
+    console.log("EVOLUTION_URL:", EVOLUTION_URL)
     console.error("Erro ao enviar cancelamento:", err)
   }
 }

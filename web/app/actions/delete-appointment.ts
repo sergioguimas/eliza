@@ -2,7 +2,9 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { sendWhatsappMessage } from './send-whatsapp'
+import { sendWhatsAppMessage } from './send-whatsapp'
+
+
 
 // === OPÇÃO A: CANCELAR (Mantém registro, avisa cliente) ===
 export async function cancelAppointment(appointmentId: string) {
@@ -45,8 +47,12 @@ export async function cancelAppointment(appointmentId: string) {
             const message = `Olá ${client.name}, seu agendamento de *${nomeServico}* para o dia ${dia} às ${hora} foi *cancelado*.`
             
             // Verifica se a função existe antes de chamar
-            if (sendWhatsappMessage) {
-                await sendWhatsappMessage(client.phone, message)
+            if (sendWhatsAppMessage) {
+                await sendWhatsAppMessage({
+                phone: client.phone,
+                message: message,
+                organizationId: appointment.organization_id
+            })
                 console.log("✅ Aviso de cancelamento enviado!")
             }
         } catch (err) {
@@ -95,8 +101,12 @@ export async function deleteAppointment(appointmentId: string) {
             
             const message = `Olá ${client.name}, informamos que seu agendamento de *${nomeServico}* no dia ${dia} foi removido da nossa agenda.`
             
-            if (sendWhatsappMessage) {
-                await sendWhatsappMessage(client.phone, message)
+            if (sendWhatsAppMessage) {
+                await sendWhatsAppMessage({
+                phone: client.phone,
+                message: message,
+                organizationId: appointment.organization_id
+            })
             }
         } catch (err) {
             console.error("Erro zap delete:", err)

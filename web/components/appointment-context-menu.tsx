@@ -37,7 +37,6 @@ export function AppointmentContextMenu({ children, appointment, className }: any
             action: {
               label: "Criar Registro",
               onClick: () => {
-                // <--- 3. Redirecionamento seguro com o ID verificado
                 router.push(`/clientes/${customerId}?tab=history`)
               }
             },

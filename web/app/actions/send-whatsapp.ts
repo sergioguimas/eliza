@@ -1,55 +1,89 @@
 'use server'
 
-import { createClient } from "@/utils/supabase/server"
+import { createClient } from "@supabase/supabase-js" // 👈 Usamos a lib direta para ter modo Admin
 
-const DEFAULT_EVOLUTION_URL = process.env.NEXT_PUBLIC_EVOLUTION_API_URL
-const GLOBAL_API_KEY = process.env.EVOLUTION_API_KEY
+// 🛡️ CONFIGURAÇÃO DE SEGURANÇA (FALLBACK)
+const DEFAULT_URL = "http://localhost:8082" 
+const DEFAULT_KEY = "medagenda123"
+const DEFAULT_INSTANCE = "admin-painel-1768703535"
 
-export async function sendWhatsappMessage(phone: string, message: string) {
-  const supabase = await createClient()
+interface SendMessageProps {
+  phone: string
+  message: string
+  organizationId: string
+}
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: "Usuário não autenticado" }
+export async function sendWhatsAppMessage({ phone, message, organizationId }: SendMessageProps) {
+  // 👇 MUDANÇA: Criamos um cliente ADMIN para ignorar as travas de segurança (RLS)
+  // Isso permite que o Webhook (que não tem login) consiga ler as configs da API
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('organization_id, organizations:organization_id(slug, evolution_api_url, evolution_api_key)')
-    .eq('id', user.id)
-    .single() as any
+  console.log(`📤 [SendWhatsApp] Iniciando envio para Org ID: ${organizationId}`)
 
-  if (!profile?.organizations?.slug) return { error: "Organização sem instância." }
+  // 1. Busca Configurações no Banco (Agora com permissão total)
+  const { data: org, error } = await supabase
+    .from('organizations')
+    .select('slug, evolution_api_url, evolution_api_key')
+    .eq('id', organizationId)
+    .single()
+
+  if (error) {
+    // Agora esse erro só vai aparecer se o ID realmente não existir
+    console.error("❌ [SendWhatsApp] Erro real ao buscar organização:", error.message)
+  }
+
+  // 2. Lógica Blindada de Variáveis
+  let evolutionUrl = org?.evolution_api_url
   
-  const instanceName = profile.organizations.slug
-  const EVOLUTION_URL = profile.organizations.evolution_api_url || process.env.NEXT_PUBLIC_EVOLUTION_API_URL
-  const API_KEY = profile.organizations.evolution_api_key || process.env.EVOLUTION_API_KEY
+  if (!evolutionUrl || evolutionUrl.trim() === "") {
+      // console.warn(`⚠️ [SendWhatsApp] URL não configurada. Usando Fallback.`)
+      evolutionUrl = DEFAULT_URL
+  }
+  evolutionUrl = evolutionUrl.replace(/\/$/, "")
 
-  const cleanPhone = phone.replace(/\D/g, "")
-  const formattedPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`
+  const apiKey = (org?.evolution_api_key || DEFAULT_KEY) as string
+  const instanceName = org?.slug || DEFAULT_INSTANCE
 
+  // 3. Tratamento do Telefone
+  let cleanPhone = phone.replace(/\D/g, '')
+  if (cleanPhone.length >= 10 && cleanPhone.length <= 11) {
+    cleanPhone = '55' + cleanPhone
+  }
+
+  // 4. Montagem da URL Final
+  const finalEndpoint = `${evolutionUrl}/message/sendText/${instanceName}`
+
+  // 5. Disparo
   try {
-    const response = await fetch(`${EVOLUTION_URL}/message/sendText/${instanceName}`, {
+    const response = await fetch(finalEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': API_KEY
+        'apikey': apiKey
       },
       body: JSON.stringify({
-        number: formattedPhone,
-        text: message
+        number: cleanPhone,
+        text: message,
+        linkPreview: false,
+        delay: 1200
       })
     })
 
     const data = await response.json()
 
     if (!response.ok) {
-      console.error("Erro Evolution:", data)
-      return { error: "Falha ao enviar mensagem." }
+      console.error("❌ [SendWhatsApp] API recusou:", data)
+      return { success: false, error: data }
     }
 
+    console.log("✅ [SendWhatsApp] Enviado com sucesso!")
     return { success: true, data }
 
-  } catch (error) {
-    console.error("Erro de envio:", error)
-    return { error: "Erro de conexão com API WhatsApp." }
+  } catch (err: any) {
+    console.error("🔥 [SendWhatsApp] Falha de Conexão:", err.message)
+    return { success: false, error: "Erro de conexão com API" }
   }
 }

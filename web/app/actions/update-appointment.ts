@@ -2,7 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { sendWhatsappMessage } from './send-whatsapp'
+import { sendWhatsAppMessage } from './send-whatsapp'
 
 // Ajuste os tipos conforme necessário
 export async function updateAppointment(formData: FormData) {

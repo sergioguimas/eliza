@@ -245,8 +245,7 @@ export default async function DashboardPage() {
                           <span className="text-primary font-medium">
                             {new Date(app.start_time).toLocaleTimeString('pt-BR', { 
                               hour: '2-digit', 
-                              minute: '2-digit', 
-                              timeZone: 'UTC' 
+                              minute: '2-digit'
                             })}
                           </span>
                         </div>

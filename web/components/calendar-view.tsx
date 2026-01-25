@@ -7,7 +7,7 @@ import {
   isToday, parseISO, addWeeks, subWeeks
 } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2, Filter, User } from "lucide-react"
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2, Filter, User, CheckCircle2, Clock, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { CreateAppointmentDialog } from "@/components/create-appointment-dialog"
@@ -17,13 +17,13 @@ import { AppointmentContextMenu } from "./appointment-context-menu"
 import { STATUS_CONFIG } from "@/lib/appointment-config"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-// Paleta de cores suaves para os médicos
+// Paleta de cores (Modo Agendado/Neutro)
 const PROFESSIONAL_COLORS = [
-  { bg: '#dbeafe', border: '#3b82f6', text: '#1e3a8a' }, // Azul
-  { bg: '#dcfce7', border: '#22c55e', text: '#14532d' }, // Verde
-  { bg: '#fce7f3', border: '#ec4899', text: '#831843' }, // Rosa
-  { bg: '#f3e8ff', border: '#a855f7', text: '#581c87' }, // Roxo
-  { bg: '#ffedd5', border: '#f97316', text: '#7c2d12' }, // Laranja
+  { bg: '#e0f2fe', border: '#0ea5e9', text: '#0369a1' }, // Sky Blue
+  { bg: '#f1f5f9', border: '#64748b', text: '#334155' }, // Slate
+  { bg: '#fae8ff', border: '#d946ef', text: '#86198f' }, // Fuchsia
+  { bg: '#ede9fe', border: '#8b5cf6', text: '#5b21b6' }, // Violet
+  { bg: '#ffedd5', border: '#f97316', text: '#9a3412' }, // Orange
   { bg: '#ccfbf1', border: '#14b8a6', text: '#0f766e' }, // Teal
 ]
 
@@ -51,7 +51,7 @@ type Props = {
 
 const getRawHour = (dateString: string) => {
   if (!dateString) return 0;
-  return new Date(dateString).getUTCHours();
+  return new Date(dateString).getHours();
 };
 
 export function CalendarView({ 
@@ -115,42 +115,52 @@ export function CalendarView({
     setDate(new Date())
   }
   
-  // === FUNÇÃO PARA ABRIR O UPDATE ===
   function handleEventClick(e: React.MouseEvent, appointment: Appointment) {
-    e.stopPropagation() // Evita bugs de clique
+    e.stopPropagation() 
     setSelectedAppointment(appointment)
     setIsUpdateOpen(true)
   }
 
+  // --- COMPONENTE DO CARD ---
   function AppointmentCard({ appointment }: { appointment: Appointment }) {
     const status = appointment.status || 'scheduled'
-    const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG['scheduled']
-    const isScheduled = status === 'scheduled'
     const isPanorama = filterId === 'all'
     
-    let cardStyle = {}
-    let profColors = null
+    // Configuração Padrão (Agendado/Scheduled)
+    let styles = {
+        bg: '#e0f2fe',      // Azul claro
+        border: '#0ea5e9',  // Azul forte
+        text: '#0369a1',    // Azul escuro
+        icon: CalendarIcon
+    }
 
-    if (isScheduled) {
-        if (isPanorama && appointment.professional_id) {
-            profColors = getProfessionalColor(appointment.professional_id)
-            cardStyle = {
-                backgroundColor: profColors.bg,
-                borderLeft: `3px solid ${profColors.border}`,
-                color: profColors.text
-            }
-        } else {
-            const serviceColor = appointment.services?.color || '#3b82f6'
-            cardStyle = {
-                backgroundColor: `${serviceColor}15`,
-                borderLeft: `3px solid ${serviceColor}`,
-                color: '#e4e4e7'
-            }
+    // Cores por Status
+    if (status === 'confirmed') {
+        styles = {
+            bg: '#dcfce7',      // Verde claro
+            border: '#16a34a',  // Verde forte
+            text: '#14532d',    // Verde escuro
+            icon: CheckCircle2
+        }
+    } else if (status === 'pending') {
+        styles = {
+            bg: '#fef9c3',      // Amarelo claro
+            border: '#ca8a04',  // Ouro
+            text: '#713f12',    // Marrom
+            icon: Clock
+        }
+    } else if (status === 'canceled') {
+        styles = {
+            bg: '#fee2e2',      // Vermelho claro
+            border: '#ef4444',  // Vermelho
+            text: '#7f1d1d',    // Vinho
+            icon: XCircle
         }
     } else {
-       cardStyle = {
-         color: config.color ? config.color.replace('text-', '') : undefined 
-       }
+        // Se for apenas "Agendado" e estivermos vendo todos
+        if (isPanorama && appointment.professional_id) {
+            styles = { ...styles, ...getProfessionalColor(appointment.professional_id), icon: User }
+        }
     }
 
     return (
@@ -158,36 +168,39 @@ export function CalendarView({
         <div 
           onClick={(e) => handleEventClick(e, appointment)}
           className={cn(
-            "px-2 py-1 rounded border text-[10px] md:text-xs font-medium h-full flex flex-col justify-center gap-0.5 transition-all hover:brightness-95 shadow-sm overflow-hidden cursor-pointer",
-            !isScheduled && "bg-zinc-800 border-zinc-700"
+            "px-2 py-1 rounded border text-[10px] md:text-xs font-medium h-full flex flex-col justify-center gap-0.5 transition-all hover:brightness-95 shadow-sm overflow-hidden cursor-pointer relative",
+            status === 'canceled' && "opacity-70 grayscale"
           )}
-          style={cardStyle}
+          style={{
+            backgroundColor: styles.bg,
+            borderLeft: `3px solid ${styles.border}`,
+            color: styles.text
+          }}
         >
-          <div className="flex justify-between items-center w-full">
-            <span className="truncate font-bold max-w-[90%] leading-tight">
+          <div className="flex justify-between items-start w-full gap-1">
+            <span className={cn(
+                "truncate font-bold leading-tight",
+                status === 'canceled' && "line-through"
+            )}>
               {appointment.customers?.name || 'Sem nome'}
             </span>
-            {!isScheduled && (
-              <config.icon className="h-3 w-3 shrink-0 opacity-80" />
-            )}
+            <styles.icon className="h-3 w-3 shrink-0 opacity-70 mt-0.5" />
           </div>
           
-          <div className="flex justify-between items-center opacity-80 text-[10px] gap-2">
+          <div className="flex justify-between items-center opacity-85 text-[10px] gap-2">
             <div className="truncate flex items-center gap-1">
-                {isPanorama && appointment.profiles?.full_name ? (
-                     <span className="uppercase font-bold tracking-tighter opacity-75">
-                        {appointment.profiles.full_name.split(' ')[0]}
-                     </span>
-                ) : (
-                    <span>{appointment.services?.title || "Serviço"}</span>
-                )}
+                <span className="font-semibold tracking-tight truncate">
+                   {isPanorama && appointment.profiles?.full_name 
+                      ? appointment.profiles.full_name.split(' ')[0] 
+                      : appointment.services?.title || "Consulta"
+                   }
+                </span>
             </div>
             
-            <span className="whitespace-nowrap font-mono text-[9px]">
+            <span className="whitespace-nowrap font-mono text-[9px] opacity-100 font-bold">
               {new Date(appointment.start_time).toLocaleTimeString('pt-BR', { 
                 hour: '2-digit', 
-                minute: '2-digit',
-                timeZone: 'UTC' 
+                minute: '2-digit'
               })}
             </span>
           </div>
@@ -269,7 +282,7 @@ export function CalendarView({
   }
 
   function renderDayView() {
-    const hours = Array.from({ length: 14 }, (_, i) => i + 7);
+    const hours = Array.from({ length: 17 }, (_, i) => i + 6);
 
     return (
       <div className="rounded-md border border-zinc-800 bg-zinc-900 overflow-hidden flex flex-col h-[700px]">
@@ -306,6 +319,7 @@ export function CalendarView({
 
   return (
     <div className="space-y-4">
+      {/* --- CABEÇALHO DO CALENDÁRIO --- */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         
         <div className="flex items-center gap-4 flex-wrap">
@@ -379,6 +393,31 @@ export function CalendarView({
 
       {view === 'month' && renderMonthView()}
       {view === 'day' && renderDayView()}
+
+      {/* --- LEGENDA DO RODAPÉ (ESTUPIDAMENTE ÓBVIO) --- */}
+      <div className="flex flex-wrap items-center gap-6 p-4 rounded-md border border-zinc-800 bg-zinc-900/50 text-xs">
+          <span className="font-semibold text-zinc-400 uppercase tracking-wider text-[10px]">Legenda:</span>
+          
+          <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-[#fef9c3] border border-[#ca8a04]"></div>
+              <span className="text-zinc-300">Pendente (Aguardando resposta)</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-[#dcfce7] border border-[#16a34a]"></div>
+              <span className="text-zinc-300">Confirmado (Cliente respondeu SIM)</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-[#e0f2fe] border border-[#0ea5e9]"></div>
+              <span className="text-zinc-300">Agendado (Padrão)</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-[#fee2e2] border border-[#ef4444]"></div>
+              <span className="text-zinc-300">Cancelado</span>
+          </div>
+      </div>
 
       <UpdateAppointmentDialog
         appointment={selectedAppointment}

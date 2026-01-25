@@ -1,105 +1,65 @@
-import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
+import { type NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
-export default async function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
-    request: { headers: request.headers },
-  })
+    request: {
+      headers: request.headers,
+    },
+  });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set({ name, value, ...options }))
-          response = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set({ name, value, ...options }))
-        },
-      },
-    }
-  )
-
-  // Verifica usuário
-  const { data: { user } } = await supabase.auth.getUser()
-  const pathname = request.nextUrl.pathname
-  
-  // Ignora rotas estáticas, API e arquivos
-  if (pathname.includes('.') || pathname.startsWith('/_next') || pathname.startsWith('/api')) {
-    return response
-  }
-
-  const isAuthPage = pathname === '/login'
-  const isSetupPage = pathname === '/setup'
-  const isPublicRoute = pathname === '/'
-  const isInviteRoute = pathname.startsWith('/convite') 
-
-  // === CENÁRIO 1: USUÁRIO NÃO LOGADO ===
-  if (!user) {
-    // Se tenta acessar página privada, manda pro login
-    if (!isAuthPage && !isPublicRoute && !isInviteRoute) {
-      const loginUrl = new URL('/login', request.url)
-      loginUrl.searchParams.set('next', pathname)
-      return NextResponse.redirect(loginUrl)
-    }
-    // Se está na auth page ou pública, deixa passar
-    return response
-  }
-
-  // === CENÁRIO 2: USUÁRIO LOGADO ===
-  
-  // Busca dados vitais do perfil
-  let hasOrganization = false
-  let isSuspended = false
-    
   try {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select(`
-        organization_id, 
-        organizations (
-          subscription_status 
-        )
-      `)
-      .eq('id', user.id)
-      .single()
-    
-    // Verificações de segurança
-    if (profile?.organization_id) {
-      hasOrganization = true
-      
-      // Checa status da assinatura (mapeando array ou objeto único)
-      const orgRaw = profile.organizations as any
-      const orgData = Array.isArray(orgRaw) ? orgRaw[0] : orgRaw
-      isSuspended = orgData?.subscription_status === 'suspended'
+    // Verifica se as variáveis existem antes de tentar conectar
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+       console.warn("⚠️ Middleware: Variáveis de ambiente do Supabase não encontradas. Pulando Auth.");
+       return response;
     }
 
-  } catch (error) {
-    console.error("Middleware Error:", error)
-  }
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              request.cookies.set(name, value)
+            );
+            response = NextResponse.next({
+              request,
+            });
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options)
+            );
+          },
+        },
+      }
+    );
 
-  // 1. Bloqueio por Pagamento (Kill Switch)
-  if (isSuspended && !pathname.startsWith('/suspended')) {
-    return NextResponse.redirect(new URL('/suspended', request.url))
-  }
+    // Tenta pegar o usuário. Se falhar por rede, cai no catch abaixo.
+    await supabase.auth.getUser();
 
-  // 2. Redirecionamento de Setup
-  // Se NÃO tem organização e tenta acessar o painel -> Vai pro Setup
-  if (!hasOrganization && !isSetupPage && !isPublicRoute && !isInviteRoute && !isSuspended) {
-     return NextResponse.redirect(new URL('/setup', request.url))
-  }
+    return response;
 
-  // Se JÁ TEM organização e tenta acessar o Setup ou Login -> Vai pro Dashboard
-  if (hasOrganization && (isSetupPage || isAuthPage)) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+  } catch (e) {
+    // Se der erro (ex: fetch failed), o site NÃO CAI. Apenas loga o erro e segue.
+    console.error("⚠️ Erro no Middleware (Supabase ignorado):", e);
+    return response;
   }
-
-  return response
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - images - .svg, .png, .jpg, .jpeg, .gif, .webp
+     * Feel free to modify this pattern to include more paths.
+     */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
-}
+};
