@@ -20,6 +20,10 @@ interface CreateAppointmentDialogProps {
   organization_id: string
   currentUser: any
   preselectedDate?: Date | null
+  preselectedProfessionalId?: string | null
+  
+  open?: boolean 
+  onOpenChange?: (open: boolean) => void
 }
 
 export function CreateAppointmentDialog({ 
@@ -29,52 +33,76 @@ export function CreateAppointmentDialog({
   staff = [],
   currentUser,
   preselectedDate,
-  organization_id
+  preselectedProfessionalId,
+  organization_id,
+  open: controlledOpen,
+  onOpenChange: setControlledOpen
 }: CreateAppointmentDialogProps) {
   
   const router = useRouter()
-  const [open, setOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
   
+  // Lógica híbrida: Pode ser controlado por fora (Calendário) ou por dentro (Botão Novo)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = isControlled ? setControlledOpen : setInternalOpen
+
+  const [isLoading, setIsLoading] = useState(false)
   const team = professionals.length > 0 ? professionals : staff
 
   // States do formulário
   const [customerId, setCustomerId] = useState("new")
   const [customerName, setCustomerName] = useState("")
   const [customerPhone, setCustomerPhone] = useState("")
-  
   const [serviceId, setServiceId] = useState("")
   const [date, setDate] = useState("")
   const [time, setTime] = useState("")
   const [notes, setNotes] = useState("")
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<string>("")
 
-  // Reseta o formulário toda vez que o modal abre
   useEffect(() => {
     if (open) {
-      // 1. Reseta campos para evitar "lixo" do agendamento anterior
+      // 1. Reseta campos
       setCustomerId("new")
       setCustomerName("")
       setCustomerPhone("")
       setServiceId("")
       setNotes("")
-      setIsLoading(false) // 👈 GARANTIA DE DESTRAVAMENTO
+      setIsLoading(false)
 
       // 2. Data e Hora
       if (preselectedDate) {
-        setDate(preselectedDate.toISOString().split('T')[0])
+        // Ajusta para fuso local para preencher o input corretamente
+        // O input type="date" espera YYYY-MM-DD local
+        const year = preselectedDate.getFullYear()
+        const month = String(preselectedDate.getMonth() + 1).padStart(2, '0')
+        const day = String(preselectedDate.getDate()).padStart(2, '0')
+        setDate(`${year}-${month}-${day}`)
+
+        // Se a data vier com hora (ex: clique na visão de dia), preenche a hora
+        const hours = preselectedDate.getHours()
+        const minutes = preselectedDate.getMinutes()
+        // Se não for 00:00 (meia noite cravada costuma ser só dia), preenche
+        if (hours !== 0 || minutes !== 0) {
+             setTime(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`)
+        } else {
+             setTime("")
+        }
       } else {
         setDate(new Date().toISOString().split('T')[0])
+        setTime("")
       }
       
       // 3. Profissional Padrão
-      if (currentUser?.role === 'professional' || currentUser?.role === 'owner') {
+      if (preselectedProfessionalId && preselectedProfessionalId !== 'all') {
+         setSelectedProfessionalId(preselectedProfessionalId)
+      } else if (currentUser?.role === 'professional' || currentUser?.role === 'owner') {
         setSelectedProfessionalId(currentUser.id)
-      } else if (team.length > 0 && !selectedProfessionalId) {
+      } else if (team.length > 0) {
         setSelectedProfessionalId(team[0].id)
       }
     }
-  }, [open, preselectedDate, currentUser, team])
+  }, [open, preselectedDate, preselectedProfessionalId, currentUser, team])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -86,7 +114,7 @@ export function CreateAppointmentDialog({
       return
     }
 
-    setIsLoading(true) // Trava o botão
+    setIsLoading(true)
 
     const formData = new FormData()
     formData.append('organization_id', organization_id) 
@@ -111,24 +139,27 @@ export function CreateAppointmentDialog({
           toast.error(result.error)
         } else {
           toast.success("Agendamento criado com sucesso!")
-          setOpen(false) // Fecha o modal
-          router.refresh() // Atualiza a tela
+          if (setOpen) setOpen(false)
+          router.refresh()
         }
     } catch (error) {
         toast.error("Erro inesperado ao criar agendamento.")
     } finally {
-        setIsLoading(false) // 👈 A CORREÇÃO MÁGICA: Destrava o botão aconteça o que acontecer
+        setIsLoading(false)
     }
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm">
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Agendamento
-        </Button>
-      </DialogTrigger>
+      {/* Só mostra o gatilho se NÃO estiver sendo controlado externamente */}
+      {!isControlled && (
+          <DialogTrigger asChild>
+            <Button size="sm">
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Agendamento
+            </Button>
+          </DialogTrigger>
+      )}
       
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>

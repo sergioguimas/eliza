@@ -1,8 +1,5 @@
 'use client'
 
-import { useState } from "react"
-import { MoreHorizontal, Check, UserCheck, CheckCircle, Ban } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,109 +7,70 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent
 } from "@/components/ui/dropdown-menu"
-import { createClient } from "@/utils/supabase/client"
+import { Button } from "@/components/ui/button"
+import { MoreHorizontal, Check, UserCheck, CheckCircle2, Ban, Trash2 } from "lucide-react"
 import { toast } from "sonner"
-import { useRouter } from "next/navigation"
-import { cancelAppointment } from "@/app/actions/cancel-appointment"
+import { updateAppointmentStatus } from "@/app/actions/update-appointment-status"
+import { cancelAppointment, deleteAppointment } from "@/app/actions/delete-appointment"
 
-interface AppointmentCardActionsProps {
-  appointment: any
-}
+export function AppointmentCardActions({ appointment }: { appointment: any }) {
 
-export function AppointmentCardActions({ appointment }: AppointmentCardActionsProps) {
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
-  const supabase = createClient()
-
-  async function updateStatus(status: string, label: string) {
-    setLoading(true)
-    try {
-      const { error } = await (supabase.from('appointments') as any)
-        .update({ status })
-        .eq('id', appointment.id)
-
-      if (error) throw error
-      
-      toast.success(`Status atualizado: ${label}`)
-      router.refresh()
-    } catch (error) {
+  async function handleStatusChange(status: string) {
+    const result = await updateAppointmentStatus(appointment.id, status)
+    if (result.success) {
+      toast.success(`Status alterado para: ${status}`)
+    } else {
       toast.error("Erro ao atualizar status")
-      console.error(error)
-    } finally {
-      setLoading(false)
     }
   }
 
   async function handleCancel() {
-    setLoading(true)
-    const result = await cancelAppointment(appointment.id)
-    if (result?.error) {
-        toast.error(result.error)
-    } else {
-        toast.success("Agendamento cancelado")
-    }
-    setLoading(false)
+    toast.promise(cancelAppointment(appointment.id), {
+      loading: 'Cancelando...',
+      success: 'Agendamento cancelado!',
+      error: 'Erro ao cancelar'
+    })
   }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground data-[state=open]:bg-accent"
-            onClick={(e) => {
-                e.preventDefault() // Evita que o Link pai navegue
-                e.stopPropagation() // Evita que o Link pai perceba o clique
-            }}
-        >
-          <MoreHorizontal className="h-4 w-4" />
+        <Button variant="ghost" size="icon" className="h-6 w-6 p-0 hover:bg-slate-200/50 rounded-full">
+          <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
           <span className="sr-only">Abrir menu</span>
         </Button>
       </DropdownMenuTrigger>
       
-      <DropdownMenuContent align="end" className="w-48 bg-background border-border text-zinc-200">
+      <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>Ações Rápidas</DropdownMenuLabel>
-        <DropdownMenuSeparator className="bg-zinc-800" />
-        
-        <DropdownMenuItem 
-            onClick={(e) => { e.stopPropagation(); updateStatus('confirmed', 'Confirmado') }}
-            disabled={loading}
-            className="cursor-pointer focus:bg-zinc-800 focus:text-foreground"
-        >
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem onClick={() => handleStatusChange('confirmed')}>
           <Check className="mr-2 h-4 w-4 text-blue-500" />
           <span>Confirmar</span>
         </DropdownMenuItem>
 
-        <DropdownMenuItem 
-            onClick={(e) => { e.stopPropagation(); updateStatus('arrived', 'Na Recepção') }}
-            disabled={loading}
-            className="cursor-pointer focus:bg-zinc-800 focus:text-foreground"
-        >
+        <DropdownMenuItem onClick={() => handleStatusChange('arrived')}>
           <UserCheck className="mr-2 h-4 w-4 text-amber-500" />
-          <span>Chegou</span>
+          <span>Chegou (Recepção)</span>
         </DropdownMenuItem>
 
-        <DropdownMenuItem 
-            onClick={(e) => { e.stopPropagation(); updateStatus('completed', 'Finalizado') }}
-            disabled={loading}
-            className="cursor-pointer focus:bg-zinc-800 focus:text-foreground"
-        >
-          <CheckCircle className="mr-2 h-4 w-4 text-emerald-500" />
+        <DropdownMenuItem onClick={() => handleStatusChange('completed')}>
+          <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
           <span>Finalizar</span>
         </DropdownMenuItem>
 
-        <DropdownMenuSeparator className="bg-zinc-800" />
-        
-        <DropdownMenuItem 
-            onClick={(e) => { e.stopPropagation(); handleCancel() }}
-            disabled={loading}
-            className="text-red-500 focus:text-red-400 focus:bg-red-950/20 cursor-pointer"
-        >
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem onClick={handleCancel} className="text-red-600 focus:text-red-600 focus:bg-red-50">
           <Ban className="mr-2 h-4 w-4" />
           <span>Cancelar</span>
         </DropdownMenuItem>
+
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -7,24 +7,32 @@ import {
   isToday, parseISO, addWeeks, subWeeks
 } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2, Filter, User, CheckCircle2, Clock, XCircle } from "lucide-react"
+import { 
+    ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2, Filter, 
+    CheckCircle2, Clock, XCircle, User, Plus 
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { CreateAppointmentDialog } from "@/components/create-appointment-dialog"
 import { UpdateAppointmentDialog } from "@/components/update-appointment-dialog"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AppointmentContextMenu } from "./appointment-context-menu"
-import { STATUS_CONFIG } from "@/lib/appointment-config"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
 
-// Paleta de cores (Modo Agendado/Neutro)
+// Paleta de cores
 const PROFESSIONAL_COLORS = [
-  { bg: '#e0f2fe', border: '#0ea5e9', text: '#0369a1' }, // Sky Blue
-  { bg: '#f1f5f9', border: '#64748b', text: '#334155' }, // Slate
-  { bg: '#fae8ff', border: '#d946ef', text: '#86198f' }, // Fuchsia
-  { bg: '#ede9fe', border: '#8b5cf6', text: '#5b21b6' }, // Violet
-  { bg: '#ffedd5', border: '#f97316', text: '#9a3412' }, // Orange
-  { bg: '#ccfbf1', border: '#14b8a6', text: '#0f766e' }, // Teal
+  { bg: '#e0f2fe', border: '#0ea5e9', text: '#0369a1' },
+  { bg: '#f1f5f9', border: '#64748b', text: '#334155' },
+  { bg: '#fae8ff', border: '#d946ef', text: '#86198f' },
+  { bg: '#ede9fe', border: '#8b5cf6', text: '#5b21b6' },
+  { bg: '#ffedd5', border: '#f97316', text: '#9a3412' },
+  { bg: '#ccfbf1', border: '#14b8a6', text: '#0f766e' },
 ]
 
 type Appointment = {
@@ -38,6 +46,7 @@ type Appointment = {
   customers: { id: string; name: string } | null
   services: { id: string; title: string; color?: string } | null
   profiles?: { id: string; full_name: string } | null
+  organization_id?: string
 }
 
 type Props = {
@@ -71,6 +80,10 @@ export function CalendarView({
   
   // Estado do Filtro
   const [filterId, setFilterId] = useState<string>('all')
+
+  // Estado para abrir modal de criação pelo clique direito
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [createDate, setCreateDate] = useState<Date | null>(null)
 
   const [isMounted, setIsMounted] = useState(false)
   useEffect(() => {
@@ -121,43 +134,31 @@ export function CalendarView({
     setIsUpdateOpen(true)
   }
 
+  // --- FUNÇÃO PARA ABRIR O MODAL DE CRIAÇÃO VIA CLIQUE DIREITO ---
+  function openCreateModal(targetDate: Date) {
+      setCreateDate(targetDate)
+      setIsCreateOpen(true)
+  }
+
   // --- COMPONENTE DO CARD ---
   function AppointmentCard({ appointment }: { appointment: Appointment }) {
     const status = appointment.status || 'scheduled'
     const isPanorama = filterId === 'all'
     
-    // Configuração Padrão (Agendado/Scheduled)
     let styles = {
-        bg: '#e0f2fe',      // Azul claro
-        border: '#0ea5e9',  // Azul forte
-        text: '#0369a1',    // Azul escuro
+        bg: '#e0f2fe',
+        border: '#0ea5e9',
+        text: '#0369a1',
         icon: CalendarIcon
     }
 
-    // Cores por Status
     if (status === 'confirmed') {
-        styles = {
-            bg: '#dcfce7',      // Verde claro
-            border: '#16a34a',  // Verde forte
-            text: '#14532d',    // Verde escuro
-            icon: CheckCircle2
-        }
+        styles = { bg: '#dcfce7', border: '#16a34a', text: '#14532d', icon: CheckCircle2 }
     } else if (status === 'pending') {
-        styles = {
-            bg: '#fef9c3',      // Amarelo claro
-            border: '#ca8a04',  // Ouro
-            text: '#713f12',    // Marrom
-            icon: Clock
-        }
+        styles = { bg: '#fef9c3', border: '#ca8a04', text: '#713f12', icon: Clock }
     } else if (status === 'canceled') {
-        styles = {
-            bg: '#fee2e2',      // Vermelho claro
-            border: '#ef4444',  // Vermelho
-            text: '#7f1d1d',    // Vinho
-            icon: XCircle
-        }
+        styles = { bg: '#fee2e2', border: '#ef4444', text: '#7f1d1d', icon: XCircle }
     } else {
-        // Se for apenas "Agendado" e estivermos vendo todos
         if (isPanorama && appointment.professional_id) {
             styles = { ...styles, ...getProfessionalColor(appointment.professional_id), icon: User }
         }
@@ -178,10 +179,7 @@ export function CalendarView({
           }}
         >
           <div className="flex justify-between items-start w-full gap-1">
-            <span className={cn(
-                "truncate font-bold leading-tight",
-                status === 'canceled' && "line-through"
-            )}>
+            <span className={cn("truncate font-bold leading-tight", status === 'canceled' && "line-through")}>
               {appointment.customers?.name || 'Sem nome'}
             </span>
             <styles.icon className="h-3 w-3 shrink-0 opacity-70 mt-0.5" />
@@ -196,7 +194,6 @@ export function CalendarView({
                    }
                 </span>
             </div>
-            
             <span className="whitespace-nowrap font-mono text-[9px] opacity-100 font-bold">
               {new Date(appointment.start_time).toLocaleTimeString('pt-BR', { 
                 hour: '2-digit', 
@@ -249,29 +246,39 @@ export function CalendarView({
                 ).sort((a, b) => a.start_time.localeCompare(b.start_time))
 
                 return (
-                  <div 
-                    key={j} 
-                    className={cn(
-                      "border-r border-b border-zinc-800/50 p-1 md:p-2 min-h-[80px] relative hover:bg-zinc-800/30 transition-colors group flex flex-col gap-1",
-                      !isSameMonth(day, monthStart) && "bg-zinc-950/30 opacity-40",
-                      isToday(day) && "bg-zinc-900"
-                    )}
-                  >
-                    <span className={cn(
-                      "text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full mb-1",
-                      isToday(day) ? "bg-primary text-primary-foreground" : "text-zinc-400 group-hover:text-zinc-200"
-                    )}>
-                      {format(day, 'd')}
-                    </span>
-                    
-                    <div className="flex flex-col gap-1 overflow-y-auto max-h-[100px] no-scrollbar">
-                      {dayAppointments.map(apt => (
-                        <div key={apt.id} className="h-auto">
-                           <AppointmentCard appointment={apt} />
+                  <ContextMenu key={j}>
+                    <ContextMenuTrigger className="h-full w-full">
+                        <div 
+                            className={cn(
+                            "h-full w-full border-r border-b border-zinc-800/50 p-1 md:p-2 min-h-[80px] relative hover:bg-zinc-800/30 transition-colors group flex flex-col gap-1",
+                            !isSameMonth(day, monthStart) && "bg-zinc-950/30 opacity-40",
+                            isToday(day) && "bg-zinc-900"
+                            )}
+                        >
+                            <span className={cn(
+                            "text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full mb-1",
+                            isToday(day) ? "bg-primary text-primary-foreground" : "text-zinc-400 group-hover:text-zinc-200"
+                            )}>
+                            {format(day, 'd')}
+                            </span>
+                            
+                            <div className="flex flex-col gap-1 overflow-y-auto max-h-[100px] no-scrollbar">
+                            {dayAppointments.map(apt => (
+                                <div key={apt.id} className="h-auto">
+                                <AppointmentCard appointment={apt} />
+                                </div>
+                            ))}
+                            </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
+                    </ContextMenuTrigger>
+                    
+                    <ContextMenuContent className="w-48">
+                         <ContextMenuItem onClick={() => openCreateModal(day)}>
+                             <Plus className="mr-2 h-4 w-4" />
+                             Agendar neste dia
+                         </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
                 )
               })}
             </div>
@@ -282,7 +289,7 @@ export function CalendarView({
   }
 
   function renderDayView() {
-    const hours = Array.from({ length: 17 }, (_, i) => i + 6);
+    const hours = Array.from({ length: 17 }, (_, i) => i + 6); // 06:00 as 22:00
 
     return (
       <div className="rounded-md border border-zinc-800 bg-zinc-900 overflow-hidden flex flex-col h-[700px]">
@@ -294,22 +301,36 @@ export function CalendarView({
               return isSameDay(aptDate, date) && getRawHour(apt.start_time) === hour && apt.status !== 'canceled';
             });
 
+            const slotDate = new Date(date)
+            slotDate.setHours(hour, 0, 0, 0)
+
             return (
-              <div key={hour} className="grid grid-cols-[60px_1fr] min-h-[100px] border-b border-zinc-800/50 group hover:bg-zinc-800/20">
-                <div className="border-r border-zinc-800/50 p-2 text-right">
-                  <span className="text-xs text-zinc-500 font-medium">
-                    {hour.toString().padStart(2, '0')}:00
-                  </span>
-                </div>
-                
-                <div className="p-1 md:p-2 relative flex gap-2 overflow-x-auto">
-                  {hourAppointments.map(apt => (
-                    <div key={apt.id} className="flex-1 min-w-[150px] max-w-[250px]">
-                      <AppointmentCard appointment={apt} />
+              <ContextMenu key={hour}>
+                <ContextMenuTrigger>
+                    <div className="grid grid-cols-[60px_1fr] min-h-[100px] border-b border-zinc-800/50 group hover:bg-zinc-800/20 cursor-context-menu">
+                        <div className="border-r border-zinc-800/50 p-2 text-right">
+                        <span className="text-xs text-zinc-500 font-medium">
+                            {hour.toString().padStart(2, '0')}:00
+                        </span>
+                        </div>
+                        
+                        <div className="p-1 md:p-2 relative flex gap-2 overflow-x-auto">
+                        {hourAppointments.map(apt => (
+                            <div key={apt.id} className="flex-1 min-w-[150px] max-w-[250px]">
+                            <AppointmentCard appointment={apt} />
+                            </div>
+                        ))}
+                        </div>
                     </div>
-                  ))}
-                </div>
-              </div>
+                </ContextMenuTrigger>
+                
+                <ContextMenuContent className="w-52">
+                    <ContextMenuItem onClick={() => openCreateModal(slotDate)}>
+                        <Clock className="mr-2 h-4 w-4" />
+                        Agendar às {hour}:00
+                    </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
             );
           })}
         </div>
@@ -319,7 +340,7 @@ export function CalendarView({
 
   return (
     <div className="space-y-4">
-      {/* --- CABEÇALHO DO CALENDÁRIO --- */}
+      {/* CABEÇALHO */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         
         <div className="flex items-center gap-4 flex-wrap">
@@ -387,6 +408,7 @@ export function CalendarView({
             organization_id={organization_id} 
             preselectedDate={date}
             currentUser={currentUser}
+            preselectedProfessionalId={filterId} 
           />
         </div>
       </div>
@@ -394,25 +416,22 @@ export function CalendarView({
       {view === 'month' && renderMonthView()}
       {view === 'day' && renderDayView()}
 
-      {/* --- LEGENDA DO RODAPÉ (ESTUPIDAMENTE ÓBVIO) --- */}
+      {/* LEGENDA */}
       <div className="flex flex-wrap items-center gap-6 p-4 rounded-md border border-zinc-800 bg-zinc-900/50 text-xs">
           <span className="font-semibold text-zinc-400 uppercase tracking-wider text-[10px]">Legenda:</span>
           
           <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded bg-[#fef9c3] border border-[#ca8a04]"></div>
-              <span className="text-zinc-300">Pendente (Aguardando resposta)</span>
+              <span className="text-zinc-300">Pendente</span>
           </div>
-
           <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded bg-[#dcfce7] border border-[#16a34a]"></div>
-              <span className="text-zinc-300">Confirmado (Cliente respondeu SIM)</span>
+              <span className="text-zinc-300">Confirmado</span>
           </div>
-
           <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded bg-[#e0f2fe] border border-[#0ea5e9]"></div>
-              <span className="text-zinc-300">Agendado (Padrão)</span>
+              <span className="text-zinc-300">Agendado</span>
           </div>
-
           <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded bg-[#fee2e2] border border-[#ef4444]"></div>
               <span className="text-zinc-300">Cancelado</span>
@@ -427,6 +446,20 @@ export function CalendarView({
         services={services}
         currentUser={currentUser}
       />
+
+      <CreateAppointmentDialog 
+        customers={customers} 
+        services={services} 
+        professionals={staff}
+        organization_id={organization_id} 
+        currentUser={currentUser}
+        
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        preselectedDate={createDate}
+        preselectedProfessionalId={filterId}
+      />
+
     </div>
   )
 }

@@ -1,102 +1,96 @@
 'use client'
 
-import { 
-  ContextMenu, 
-  ContextMenuContent, 
-  ContextMenuItem, 
-  ContextMenuTrigger, 
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
   ContextMenuSeparator,
+  ContextMenuLabel,
   ContextMenuSub,
   ContextMenuSubTrigger,
   ContextMenuSubContent
 } from "@/components/ui/context-menu"
-import { updateAppointmentStatus } from "@/app/actions/update-appointment-status"
-import { cancelAppointment } from "@/app/actions/cancel-appointment"
-import { STATUS_CONFIG } from "@/lib/appointment-config"
+import { 
+  Check, 
+  UserCheck, 
+  CheckCircle2, 
+  Ban, 
+  Trash2,
+  CalendarClock
+} from "lucide-react"
 import { toast } from "sonner"
-import { Trash2 } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { updateAppointmentStatus } from "@/app/actions/update-appointment-status"
+import { cancelAppointment, deleteAppointment } from "@/app/actions/delete-appointment"
 
-export function AppointmentContextMenu({ children, appointment, className }: any) {
-  const router = useRouter() // <--- 2. Inicializa o router
+interface AppointmentContextMenuProps {
+  children: React.ReactNode
+  appointment: any
+  customers?: any[] // Mantido para compatibilidade, caso precise no futuro
+  services?: any[]
+}
 
-  async function handleStatusChange(newStatus: string) {
-    if (!appointment?.id) return
+export function AppointmentContextMenu({ 
+  children, 
+  appointment 
+}: AppointmentContextMenuProps) {
 
-    const result = await updateAppointmentStatus(appointment.id, newStatus)
-    
+  async function handleStatusChange(status: string) {
+    const result = await updateAppointmentStatus(appointment.id, status)
     if (result.success) {
-      // Lógica especial para quando conclui o agendamento
-      if (newStatus === 'completed') {
-        // Tenta pegar o ID do cliente de onde estiver disponível (objeto customers ou customer_id direto)
-        const customerId = appointment.customers?.id || appointment.customer_id
-
-        if (customerId) {
-          toast.success("Agendamento concluído!", {
-            description: "Deseja adicionar o registro clínico agora?",
-            action: {
-              label: "Criar Registro",
-              onClick: () => {
-                router.push(`/clientes/${customerId}?tab=history`)
-              }
-            },
-            duration: 8000,
-          })
-        } else {
-          // Se não tiver ID do cliente, mostra apenas o sucesso simples
-          toast.success("Status atualizado para Concluído!")
-        }
-      } else {
-        // Outros status
-        toast.success(`Status atualizado!`)
-      }
+      toast.success(`Status alterado para: ${status}`)
     } else {
       toast.error("Erro ao atualizar status")
     }
   }
 
   async function handleCancel() {
-    if (confirm("Tem certeza que deseja cancelar este agendamento?")) {
-      const result = await cancelAppointment(appointment.id)
-      if (result.success) {
-        toast.success("Agendamento cancelado com sucesso")
-      } else {
-        toast.error("Erro ao cancelar")
-      }
-    }
+    toast.promise(cancelAppointment(appointment.id), {
+      loading: 'Cancelando e avisando cliente...',
+      success: 'Agendamento cancelado com sucesso!',
+      error: 'Erro ao cancelar'
+    })
   }
 
   return (
     <ContextMenu>
-      <ContextMenuTrigger className={className}>
+      <ContextMenuTrigger asChild>
         {children}
       </ContextMenuTrigger>
-      <ContextMenuContent className="w-56 bg-background border-border text-zinc-200">
-        <ContextMenuSub>
-          <ContextMenuSubTrigger>Alterar Status</ContextMenuSubTrigger>
-          <ContextMenuSubContent className="bg-background border-border text-zinc-200">
-            {Object.entries(STATUS_CONFIG).map(([key, value]) => (
-              <ContextMenuItem 
-                key={key} 
-                onClick={() => handleStatusChange(key)}
-                className="gap-2"
-              >
-                <value.icon className="h-4 w-4" />
-                {value.label}
-              </ContextMenuItem>
-            ))}
-          </ContextMenuSubContent>
-        </ContextMenuSub>
-        
-        <ContextMenuSeparator className="bg-zinc-800" />
-        
-        <ContextMenuItem 
-          onClick={handleCancel}
-          className="text-red-400 focus:text-red-400 gap-2"
-        >
-          <Trash2 className="h-4 w-4" />
-          Cancelar Agendamento
+      
+      <ContextMenuContent className="w-56">
+        <ContextMenuLabel>Ações Rápidas</ContextMenuLabel>
+        <ContextMenuSeparator />
+
+        {/* --- CONFIRMAR --- */}
+        <ContextMenuItem onClick={() => handleStatusChange('confirmed')}>
+          <Check className="mr-2 h-4 w-4 text-blue-500" />
+          <span>Confirmar</span>
         </ContextMenuItem>
+
+        {/* --- CHEGOU --- */}
+        <ContextMenuItem onClick={() => handleStatusChange('arrived')}>
+          <UserCheck className="mr-2 h-4 w-4 text-amber-500" />
+          <span>Chegou (Recepção)</span>
+        </ContextMenuItem>
+
+        {/* --- FINALIZAR --- */}
+        <ContextMenuItem onClick={() => handleStatusChange('completed')}>
+          <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
+          <span>Finalizar</span>
+        </ContextMenuItem>
+        
+        {/* --- REAGENDAR (Abre modal de edição) --- */}
+        {/* Nota: A ação de clique no card já abre a edição, então aqui é opcional */}
+        
+        <ContextMenuSeparator />
+
+        {/* --- CANCELAR --- */}
+        <ContextMenuItem onClick={handleCancel} className="text-red-600 focus:text-red-600 focus:bg-red-50">
+           <Ban className="mr-2 h-4 w-4" />
+           <span>Cancelar</span>
+        </ContextMenuItem>
+
       </ContextMenuContent>
     </ContextMenu>
   )
