@@ -23,9 +23,12 @@ import {
   Gavel, 
   ScrollText,
   
+  // Certificado
+  FileBadge,
+
   // Fallback
   HelpCircle,
-  LucideIcon
+  LucideIcon,
 } from "lucide-react"
 
 // Mapeamento dos ícones por Nicho
@@ -52,11 +55,18 @@ const ICON_MAP: Record<string, Record<string, LucideIcon>> = {
     servicos: Brush,
   },
   advocacia: {
-    logo: Scale, // Balança
+    logo: Scale,
     dashboard: LayoutGrid,
     agendamentos: Calendar,
     clientes: Users,
-    servicos: Gavel, // Martelo ou ScrollText
+    servicos: Gavel,
+  },
+  certificado: {
+    logo: FileBadge,
+    dashboard: LayoutGrid,
+    agendamentos: Calendar,
+    clientes: Users,
+    servicos: FileBadge,
   },
   // Default/Genérico
   generico: {

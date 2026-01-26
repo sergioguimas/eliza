@@ -32,6 +32,14 @@ export const dictionaries = {
     msg_boas_vindas: "Bem-vindo ao escritório de advocacia",
     icon_set: "legal"
   },
+  certificado: {
+    label_cliente: "Cliente",
+    label_profissional: "Agente de Registro",
+    label_prontuario: "Certificado",
+    label_servico: "Serviços",
+    msg_boas_vindas: "Bem-vindo ao sistema de certificados",
+    icon_set: "certification"
+  },
   generico: {
     label_cliente: "Cliente",
     label_profissional: "Profissional",

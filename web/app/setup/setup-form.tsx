@@ -16,7 +16,8 @@ import {
   ArrowRight, 
   ArrowLeft,
   CheckCircle2,
-  Globe
+  Globe,
+  FileBadge,
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -27,6 +28,7 @@ const NICHE_OPTIONS = [
   { id: 'advocacia', label: 'Advocacia', icon: Briefcase, color: 'text-red-800', border: 'hover:border-red-800', bg: 'hover:bg-red-50' },
   { id: 'barbearia', label: 'Barbearia', icon: Scissors, color: 'text-orange-600', border: 'hover:border-orange-600', bg: 'hover:bg-orange-50' },
   { id: 'salao', label: 'Salão de Beleza', icon: Sparkles, color: 'text-pink-500', border: 'hover:border-pink-500', bg: 'hover:bg-pink-50' },
+  { id: 'certificado', label: 'Certificados Digitais', icon: FileBadge, color: 'text-green-600', border: 'hover:border-green-600', bg: 'hover:bg-green-50' },
   { id: 'generico', label: 'Outro Negócio', icon: Store, color: 'text-slate-600', border: 'hover:border-slate-600', bg: 'hover:bg-slate-50' },
 ]
 
@@ -207,7 +209,7 @@ export function SetupForm() {
                 <div>
                   <p className="text-sm text-muted-foreground">Nicho Selecionado</p>
                   <p className="font-semibold text-lg">
-                    <NicheIcon className="w-6 h-6" /> {selectedNiche?.label}
+                    {selectedNiche?.label}
                   </p>
                 </div>
               </div>

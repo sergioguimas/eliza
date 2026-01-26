@@ -26,7 +26,7 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar"
 import { useKeckleon } from "@/providers/keckleon-provider"
-import { CategoryIcon } from "@/components/category-icon" // <--- RESTAURADO
+import { CategoryIcon } from "@/components/category-icon"
 import { createClient } from "@/utils/supabase/client"
 import { useRouter } from "next/navigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"

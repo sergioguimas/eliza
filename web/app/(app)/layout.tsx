@@ -11,7 +11,7 @@ type Organization = {
   id: string
   name: string
   slug: string
-  niche: 'clinica' | 'barbearia' | 'salao' | 'advocacia' | 'generico'
+  niche: 'clinica' | 'barbearia' | 'salao' | 'advocacia' | 'generico' | 'certificado'
 }
 
 type ProfileWithOrg = {

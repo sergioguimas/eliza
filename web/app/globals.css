@@ -135,6 +135,11 @@
   --radius: 8px;
 }
 
+.theme-certificado {
+  --primary: 120 40% 35%; /* Verde Sério */
+  --radius: 6px;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

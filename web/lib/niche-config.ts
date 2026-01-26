@@ -5,8 +5,11 @@ import {
   Briefcase, // Genérico
   Dog, // Petshop
   Dumbbell, // Academia
-  Scale  // Advocacia
+  Scale,  // Advocacia
+  ShieldCheck,  // Segurança
+  FileBadge  // Certificados Digitais  
 } from "lucide-react"
+
 
 // Definimos o tipo para garantir que todo nicho tenha tudo que precisa
 export type NicheMetadata = {
@@ -48,6 +51,12 @@ export const nicheConfig: Record<string, NicheMetadata> = {
     label: 'Outro Negócio',
     description: 'Para consultoria e serviços gerais.',
     icon: Briefcase
+  },
+  certificado: {
+    id: 'certificado',
+    label: 'Certificados Digitais',
+    description: 'Para empresas de certificação digital.',
+    icon: FileBadge
   }
 }
 
