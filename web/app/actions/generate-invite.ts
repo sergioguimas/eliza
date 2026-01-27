@@ -39,7 +39,7 @@ export async function generateInvite(
   const expiresAt = new Date()
   expiresAt.setDate(expiresAt.getDate() + 7)
 
-  // 5. Salva no Banco (Com Blindagem no Insert também)
+  // 5. Salva no Banco
   const { error } = await (supabase.from('invitations') as any)
     .insert({
       organization_id: organizationId,

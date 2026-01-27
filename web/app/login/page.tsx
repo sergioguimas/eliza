@@ -25,7 +25,6 @@ export default async function LoginPage() {
         Eliza
       </div>
 
-      {/* ENVOLVA O FORMULÁRIO COM SUSPENSE */}
       <Suspense fallback={<div>Carregando...</div>}>
         <LoginForm />
       </Suspense>

@@ -86,16 +86,28 @@ export default async function PrintHistoryPage({ params }: { params: Promise<{ i
              </div>
 
              {rec.status === 'signed' && (
-                <div className="mt-2 text-[10px] text-gray-400 italic text-right px-2">
-                   Assinado digitalmente por {rec.professional?.full_name} (Hash: {rec.signature_hash?.slice(0,8)}...)
+                <div className="text-center">
+                <p className="font-bold text-sm uppercase">{rec.professional?.full_name}</p>
+                <p className="text-xs text-gray-600 mb-2">{rec.professional?.role === 'owner' ? 'Responsável Técnico' : 'Profissional'}</p>
+                
+                <div className="bg-gray-100 p-2 inline-block rounded border border-gray-200 mt-2">
+                    <p className="text-[10px] text-gray-500 font-mono">
+                        Assinado digitalmente em {format(new Date(rec.signed_at), "dd/MM/yyyy 'às' HH:mm:ss")}
+                    </p>
+                    <p className="text-[10px] text-gray-400 font-mono tracking-tighter">
+                        HASH: {rec.signature_hash}
+                    </p>
                 </div>
+             </div>
              )}
           </div>
         ))}
       </main>
 
       <footer className="mt-12 pt-4 border-t border-gray-300 text-center text-xs text-gray-500">
-         <p>Documento gerado eletronicamente pelo sistema Eliza.</p>
+         <p className="text-[10px] text-gray-400 text-center mt-8">
+            Documento gerado pelo sistema Eliza em {format(new Date(), "dd/MM/yyyy HH:mm")}
+         </p>
       </footer>
     </div>
   )

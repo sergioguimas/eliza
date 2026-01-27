@@ -4,7 +4,6 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { sendWhatsAppMessage } from './send-whatsapp'
 
-// Ajuste os tipos conforme necessário
 export async function updateAppointment(formData: FormData) {
   const supabase = await createClient()
 
@@ -23,8 +22,7 @@ export async function updateAppointment(formData: FormData) {
     .single()
 
   if (!currentAppointment) return { error: "Agendamento não encontrado" }
-
-  // Monta a nova data
+  // Calcula novos horários
   const newStartTime = new Date(`${dateRaw}T${timeRaw}:00`)
   // @ts-ignore
   const duration = currentAppointment.services.duration || 30

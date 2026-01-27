@@ -1,6 +1,6 @@
 'use server'
 
-const BASE_URL = process.env.NEXT_PUBLIC_EVOLUTION_URL
+const BASE_URL = process.env.NEXT_PUBLIC_EVOLUTION_API_URL
 const API_KEY = process.env.EVOLUTION_API_KEY
 
 if (!BASE_URL || !API_KEY) {

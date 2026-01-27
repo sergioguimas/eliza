@@ -20,8 +20,6 @@ type OrganizationRow = {
   slug: string
   niche: string
   whatsapp_instance_name: string | null
-  whatsapp_api_key: string | null
-  whatsapp_api_url: string | null
   whatsapp_status: string | null
 }
 
@@ -34,6 +32,8 @@ type SettingsRow = {
   msg_appointment_created: string | null
   msg_appointment_reminder: string | null
   msg_appointment_canceled: string | null
+  lunch_start?: string | null 
+  lunch_end?: string | null
 }
 
 export default async function ConfiguracoesPage() {
@@ -104,7 +104,6 @@ export default async function ConfiguracoesPage() {
         {/* ABA 1: DADOS GERAIS */}
         <TabsContent value="geral" className="mt-0">
           <SettingsForm 
-             // Usamos 'as any' nos props para evitar conflito se o componente filho tiver tipagem diferente
              profile={profile as any} 
              organization={organization as any} 
           />
@@ -115,6 +114,7 @@ export default async function ConfiguracoesPage() {
            <PreferencesForm 
              settings={settings as any} 
              organizationId={profile?.organization_id || ""}
+             organizationData={organization as any}
            />
         </TabsContent>
 

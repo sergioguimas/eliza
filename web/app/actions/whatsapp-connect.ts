@@ -43,7 +43,7 @@ export async function createWhatsappInstance(): Promise<WhatsappResponse> {
 
   const instanceName = profile.organizations.slug
   // Prioridade: Banco de dados > Variável de Ambiente
-  const EVOLUTION_URL = profile.organizations.evolution_api_url || process.env.NEXT_PUBLIC_EVOLUTION_URL
+  const EVOLUTION_URL = profile.organizations.evolution_api_url || process.env.NEXT_PUBLIC_EVOLUTION_API_URL
   const API_KEY = profile.organizations.evolution_api_key || process.env.EVOLUTION_API_KEY
 
   console.log(`[DEBUG STEP 2] Configuração definida:`)
@@ -76,7 +76,6 @@ export async function createWhatsappInstance(): Promise<WhatsappResponse> {
   try {
     console.log("[DEBUG STEP 4] Enviando comando /instance/create...")
     
-    // Aumentamos o tempo limite para 50 segundos
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 50000)
 
@@ -119,19 +118,16 @@ export async function createWhatsappInstance(): Promise<WhatsappResponse> {
             status: 'qrcode'
         }
     }
-
-    // Sucesso mas sem QR Code no corpo (vamos buscar manualmente)
+    // Sucesso, mas sem QR Code no corpo
     console.log("[DEBUG STEP 6] Instância criada, mas sem QR no corpo. Buscando separadamente...")
     return connectWhatsappInstance(instanceName, EVOLUTION_URL, API_KEY!)
 
   } catch (error: any) {
     console.error("[DEBUG ERROR] Erro fatal no fetch de criação:", error)
     
-    // FALLBACK OTIMISTA: Se deu Timeout, pode ser que a AWS criou mas demorou pra responder.
-    // Vamos tentar buscar o QR Code mesmo assim.
     if (error.name === 'AbortError' || error.cause?.code === 'ECONNRESET') {
         console.log("[DEBUG STEP 7] Timeout detectado! Tentando recuperar QR Code caso tenha criado no background...")
-        await delay(2000) // Espera 2s para a API respirar
+        await delay(2000)
         return connectWhatsappInstance(instanceName, EVOLUTION_URL, API_KEY!)
     }
 
@@ -144,7 +140,7 @@ async function connectWhatsappInstance(instanceName: string, url: string, key: s
      console.log(`[DEBUG CONNECT] Iniciando busca persistente de QR Code...`)
      
      let attempts = 0
-     const maxAttempts = 10 // Tenta por 20 segundos (10 x 2s)
+     const maxAttempts = 10
 
      while (attempts < maxAttempts) {
         attempts++
@@ -164,7 +160,7 @@ async function connectWhatsappInstance(instanceName: string, url: string, key: s
                 return { success: true, qrcode: data.base64, status: 'qrcode' }
             }
             
-            // 2. SUCESSO: Já conectou (Você leu o QR rápido)
+            // 2. SUCESSO: Já conectou
             if (data.instance && data.instance.state === 'open') {
                  console.log("[DEBUG SUCCESS] Instância já conectada!")
                  return { success: true, status: 'connected' }
@@ -176,7 +172,7 @@ async function connectWhatsappInstance(instanceName: string, url: string, key: s
 
         } catch (e) {
              console.error("[DEBUG CONNECT ERROR]", e)
-             await delay(2000) // Se der erro de rede, espera também
+             await delay(2000)
         }
      }
 
@@ -202,7 +198,7 @@ export async function deleteWhatsappInstance() {
     if (!org) return { error: "Org não encontrada" }
 
     const instanceName = org.slug
-    const EVOLUTION_URL = org.evolution_api_url || process.env.NEXT_PUBLIC_EVOLUTION_URL
+    const EVOLUTION_URL = org.evolution_api_url || process.env.NEXT_PUBLIC_EVOLUTION_API_URL
     const API_KEY = org.evolution_api_key || GLOBAL_API_KEY
 
     try {
@@ -233,10 +229,8 @@ export async function getWhatsappStatus(): Promise<WhatsappResponse> {
     if (!org) return { status: 'unknown' }
 
     const instanceName = org.slug
-    const EVOLUTION_URL = org.evolution_api_url || process.env.NEXT_PUBLIC_EVOLUTION_URL
+    const EVOLUTION_URL = org.evolution_api_url || process.env.NEXT_PUBLIC_EVOLUTION_API_URL
     const API_KEY = org.evolution_api_key || process.env.EVOLUTION_API_KEY
-
-    // console.log("[DEBUG STATUS] Verificando status...") 
 
     try {
         const response = await fetch(`${EVOLUTION_URL}/instance/connectionState/${instanceName}`, {
@@ -254,7 +248,7 @@ export async function getWhatsappStatus(): Promise<WhatsappResponse> {
         }
         
         if (data.instance && data.instance.state === 'connecting') {
-             return { status: 'disconnected' } // Ainda precisa ler QR
+             return { status: 'disconnected' }
         }
 
         return { status: 'disconnected' }

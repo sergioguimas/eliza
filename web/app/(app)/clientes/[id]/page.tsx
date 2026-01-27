@@ -202,7 +202,12 @@ export default async function CustomerPage({ params, searchParams }: { params: P
             </div>
 
             {/* Lista de Registros */}
-            <ServiceRecordList records={history} customerId={customer.id} />
+            <ServiceRecordList 
+                records={history} 
+                customerId={customer.id} 
+                customerPhone={customer.phone}
+                organizationId={customer.organization_id}
+            />
         </TabsContent>
 
         {/* ABA 3: DADOS CADASTRAIS */}

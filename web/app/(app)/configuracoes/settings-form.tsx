@@ -48,7 +48,6 @@ export function SettingsForm({ profile, organization }: any) {
         {/* --- ABA 1: ORGANIZAÇÃO --- */}
         <TabsContent value="organization">
           <form action={handleSubmit}>
-            {/* 👇 IDENTIFICADOR DO FORMULÁRIO */}
             <input type="hidden" name="form_type" value="organization" />
             
             <Card className="border-zinc-200 dark:border-zinc-800">
@@ -80,7 +79,6 @@ export function SettingsForm({ profile, organization }: any) {
         {/* --- ABA 2: PERFIL --- */}
         <TabsContent value="profile">
           <form action={handleSubmit}>
-            {/* 👇 IDENTIFICADOR DO FORMULÁRIO */}
             <input type="hidden" name="form_type" value="profile" />
 
             <Card className="border-zinc-200 dark:border-zinc-800">
@@ -94,7 +92,7 @@ export function SettingsForm({ profile, organization }: any) {
                   <Input name="full_name" defaultValue={profile?.full_name || ''} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Registro (CRM/CRP/OAB)</Label>
+                  <Label>Registro do Conselho</Label>
                   <Input name="crm" defaultValue={profile?.crm || ''} placeholder="Ex: 12345-SP" />
                 </div>
               </CardContent>
@@ -108,7 +106,7 @@ export function SettingsForm({ profile, organization }: any) {
           </form>
         </TabsContent>
 
-        {/* --- ABA 3: WHATSAPP (Componente Isolado) --- */}
+        {/* --- ABA 3: WHATSAPP --- */}
         <TabsContent value="whatsapp">
           <WhatsappSettings />
         </TabsContent>

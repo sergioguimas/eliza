@@ -10,8 +10,6 @@ export async function createCustomer(formData: FormData) {
   const name = formData.get('name') as string
   const phoneRaw = formData.get('phone') as string
   const email = formData.get('email') as string || null
-  
-  // Dados extras
   const document = formData.get('document') as string || null 
   const gender = formData.get('gender') as string || null
   const address = formData.get('address') as string || null

@@ -83,7 +83,7 @@ export async function createCompany(formData: FormData) {
     .insert({
       name: companyName,
       slug: slug,
-      niche: 'generico', // Padrão seguro
+      niche: 'generico', // Padrão
       plan: 'free',
       subscription_status: 'active'
     })

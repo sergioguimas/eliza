@@ -34,13 +34,13 @@ export default function SuspendedPage() {
         </CardHeader>
         <CardContent className="space-y-4 text-center">
           <p className="text-sm text-muted-foreground">
-            Para regularizar o acesso imediato e evitar perda de dados, entre em contato com nosso suporte financeiro.
+            Para regularizar o acesso imediato e evitar perda de dados, entre em contato com nosso suporte.
           </p>
           
           <div className="flex flex-col gap-2">
             <Button asChild className="w-full font-semibold" variant="default">
               <Link href="https://wa.me/5533999791305" target="_blank">
-                Falar com Financeiro
+                Falar com Suporte
               </Link>
             </Button>
             

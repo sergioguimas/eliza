@@ -1,7 +1,6 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server"
-// Importamos o cliente direto do JS para poder usar a chave de Admin
 import { createClient as createClientAdmin } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
@@ -98,7 +97,6 @@ export async function createOrganization(formData: FormData) {
 
     if (profileError) {
       console.error("Erro ao vincular perfil:", profileError)
-      // Se falhar aqui, o usuário fica com a org criada mas sem acesso.
       return { error: "Organização criada, mas falha crítica ao vincular seu perfil." }
     }
 

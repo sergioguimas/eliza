@@ -21,7 +21,7 @@ export default async function InvitePage({ params }: { params: { code: string } 
     .eq('code', params.code)
     .single()
 
-  // === CENÁRIO 1: CONVITE INVÁLIDO OU EXPIRADO ===
+  //CONVITE INVÁLIDO OU EXPIRADO
   if (!invite || new Date(invite.expires_at) < new Date()) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/20 p-4">
@@ -43,7 +43,7 @@ export default async function InvitePage({ params }: { params: { code: string } 
 
   const orgName = invite.organizations?.name || "Empresa"
 
-  // === CENÁRIO 2: CONVITE VÁLIDO -> MOSTRAR FORMULÁRIO ===
+  //CONVITE VÁLIDO -> MOSTRAR FORMULÁRIO
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/20 p-4">
       <Card className="w-full max-w-md shadow-xl bg-card">
@@ -64,7 +64,6 @@ export default async function InvitePage({ params }: { params: { code: string } 
             Crie sua conta abaixo para aceitar o convite e acessar o painel imediatamente.
           </div>
 
-          {/* Aqui entra o formulário que cria o usuário */}
           <RegisterForm inviteCode={params.code} assignedEmail={invite.email} />
           
         </CardContent>

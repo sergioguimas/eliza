@@ -6,7 +6,7 @@ import { sendWhatsAppMessage } from './send-whatsapp'
 
 
 
-// === OPÇÃO A: CANCELAR (Mantém registro, avisa cliente) ===
+//CANCELAR (Mantém registro, avisa cliente)
 export async function cancelAppointment(appointmentId: string) {
   const supabase = await createClient()
 
@@ -66,7 +66,7 @@ export async function cancelAppointment(appointmentId: string) {
   return { success: true }
 }
 
-// === OPÇÃO B: EXCLUIR (Apaga do banco, avisa cliente) ===
+//EXCLUIR (Apaga do banco, avisa cliente)
 export async function deleteAppointment(appointmentId: string) {
   const supabase = await createClient()
 

@@ -10,8 +10,6 @@ export async function updateCustomer(formData: FormData) {
   const name = formData.get('name') as string
   const phone = formData.get('phone') as string
   const document = formData.get('document') as string
-  
-  // Novos Campos
   const email = formData.get('email') as string
   const address = formData.get('address') as string
   const notes = formData.get('notes') as string

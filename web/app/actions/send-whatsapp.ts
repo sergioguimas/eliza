@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from "@supabase/supabase-js" // 👈 Usamos a lib direta para ter modo Admin
+import { createClient } from "@supabase/supabase-js"
 
 // 🛡️ CONFIGURAÇÃO DE SEGURANÇA (FALLBACK)
 const DEFAULT_URL = "http://localhost:8082" 
@@ -13,9 +13,15 @@ interface SendMessageProps {
   organizationId: string
 }
 
+interface SendMediaProps {
+  phone: string
+  caption: string
+  media: string
+  fileName: string
+  organizationId: string
+}
+
 export async function sendWhatsAppMessage({ phone, message, organizationId }: SendMessageProps) {
-  // 👇 MUDANÇA: Criamos um cliente ADMIN para ignorar as travas de segurança (RLS)
-  // Isso permite que o Webhook (que não tem login) consiga ler as configs da API
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -39,7 +45,6 @@ export async function sendWhatsAppMessage({ phone, message, organizationId }: Se
   let evolutionUrl = org?.evolution_api_url
   
   if (!evolutionUrl || evolutionUrl.trim() === "") {
-      // console.warn(`⚠️ [SendWhatsApp] URL não configurada. Usando Fallback.`)
       evolutionUrl = DEFAULT_URL
   }
   evolutionUrl = evolutionUrl.replace(/\/$/, "")
@@ -84,6 +89,69 @@ export async function sendWhatsAppMessage({ phone, message, organizationId }: Se
 
   } catch (err: any) {
     console.error("🔥 [SendWhatsApp] Falha de Conexão:", err.message)
+    return { success: false, error: "Erro de conexão com API" }
+  }
+}
+
+export async function sendWhatsAppMedia({ phone, caption, media, fileName, organizationId }: SendMediaProps) {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  console.log(`📤 [SendMedia] Preparando envio de arquivo para Org: ${organizationId}`)
+
+  // 1. Busca Configurações
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('slug, evolution_api_url, evolution_api_key')
+    .eq('id', organizationId)
+    .single()
+
+  let evolutionUrl = org?.evolution_api_url || DEFAULT_URL
+  evolutionUrl = evolutionUrl.replace(/\/$/, "")
+  const apiKey = (org?.evolution_api_key || DEFAULT_KEY) as string
+  const instanceName = org?.slug || DEFAULT_INSTANCE
+
+  // 2. Tratamento do Telefone
+  let cleanPhone = phone.replace(/\D/g, '')
+  if (cleanPhone.length >= 10 && cleanPhone.length <= 11) {
+    cleanPhone = '55' + cleanPhone
+  }
+
+  // 3. Endpoint de Mídia da Evolution API
+  const finalEndpoint = `${evolutionUrl}/message/sendMedia/${instanceName}`
+
+  try {
+    const response = await fetch(finalEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': apiKey
+      },
+      body: JSON.stringify({
+        number: cleanPhone,
+        media: media,
+        mediatype: "document",
+        mimetype: "application/pdf",
+        fileName: fileName,
+        caption: caption,
+        delay: 1200
+      })
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      console.error("❌ [SendMedia] API recusou:", data)
+      return { success: false, error: data }
+    }
+
+    console.log("✅ [SendMedia] Arquivo enviado com sucesso!")
+    return { success: true, data }
+
+  } catch (err: any) {
+    console.error("🔥 [SendMedia] Falha de Conexão:", err.message)
     return { success: false, error: "Erro de conexão com API" }
   }
 }

@@ -65,22 +65,17 @@ export async function createAppointment(formData: FormData) {
     }
   }
 
-  // 👇 CORREÇÃO DE DATA "BLINDADA"
-  // Objetivo: Transformar o input em uma data válida no fuso -03:00 (Brasil)
   let timeString = start_time_raw.trim()
 
   // Verifica se a string JÁ TEM informação de fuso (Z, +00:00, -03:00)
   // Regex: Procura por Z ou +XX:XX ou -XX:XX no final da string
   const hasOffset = /Z|[+-]\d{2}:?\d{2}$/.test(timeString)
 
-  if (!hasOffset) {
-      // Se não tem fuso, vamos tratar para adicionar o do Brasil (-03:00)
-      
+  if (!hasOffset) {      
       // Verifica se TEM SEGUNDOS (formato HH:mm:ss) ou só HH:mm
-      // O input type="datetime-local" padrão envia "YYYY-MM-DDTHH:mm" (16 chars)
       const parts = timeString.split('T')
       if (parts[1] && parts[1].length === 5) { 
-          // Se for só HH:mm, adicionamos :00 para ficar padrão ISO
+          // Se for só HH:mm, adiciona :00 para ficar padrão ISO
           timeString += ':00'
       }
       
@@ -90,7 +85,7 @@ export async function createAppointment(formData: FormData) {
 
   const startTime = new Date(timeString)
 
-  // 🚨 VERIFICAÇÃO DE SEGURANÇA (Evita o erro "Invalid time value")
+  // VERIFICAÇÃO DE SEGURANÇA
   if (isNaN(startTime.getTime())) {
       console.error("Data inválida recebida:", start_time_raw, "Tentativa de correção:", timeString)
       return { error: "Data inválida. Por favor verifique o formato." }
@@ -105,7 +100,7 @@ export async function createAppointment(formData: FormData) {
     .eq('organization_id', organization_id)
     .eq('professional_id', professional_id)
     .neq('status', 'canceled')
-    .lt('start_time', endTime.toISOString()) // Aqui não vai mais quebrar
+    .lt('start_time', endTime.toISOString())
     .gt('end_time', startTime.toISOString())
 
   if (conflicts && conflicts.length > 0) {

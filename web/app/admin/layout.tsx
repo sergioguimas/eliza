@@ -9,8 +9,6 @@ export default function AdminLayout({
   // Define o nicho padrão para o admin
   const niche = 'generico'
   const dict = getDictionary(niche)
-  
-  // A classe mágica que carrega as variáveis de cor (roxo, cinza, etc)
   const themeClass = `theme-${niche}`
 
   return (
