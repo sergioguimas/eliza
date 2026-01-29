@@ -9,8 +9,14 @@ export const metadata: Metadata = {
   title: "Agenda | Eliza",
 }
 
-export default async function AgendamentosPage() {
+export default async function AgendamentosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
   const supabase = await createClient()
+  
+  const params = await searchParams
 
   // 1. Verifica autenticação
   const { data: { user } } = await supabase.auth.getUser()

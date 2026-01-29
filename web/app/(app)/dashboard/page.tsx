@@ -62,15 +62,17 @@ export default async function DashboardPage() {
     supabase
       .from('appointments')
       .select(`
-        id, start_time, status, 
+        id, start_time, status,
+        customer_id,
+        service_id,
+        professional_id,
         customers(name), 
         services(title, color)
       `)
       .eq('organization_id', orgId)
-      .gte('start_time', todayStart) // Começo do dia BR
-      .lte('start_time', todayEnd)   // Fim do dia BR
-      .neq('status', 'canceled')     // Tchau cancelados (1 L)
-      .neq('status', 'cancelled')    // Tchau cancelados (2 L)
+      .gte('start_time', todayStart)
+      .lte('start_time', todayEnd)
+      .neq('status', 'canceled')
       .order('start_time', { ascending: true }),
       
     // --- QUERY DE TODOS OS AGENDAMENTOS (Para estatística) ---
