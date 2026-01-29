@@ -16,13 +16,16 @@ export function RealtimeAppointments() {
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'UPDATE', 
           schema: 'public',
           table: 'appointments',
         },
         (payload) => {
-          console.log('🔄 [Realtime] O Banco mudou! Atualizando tela...', payload.eventType)
-          router.refresh()
+          // Só atualiza a tela se o status realmente mudou de valor
+          if (payload.new.status !== payload.old.status) {
+            console.log('🔄 [Realtime] Status sincronizado. Atualizando visual...')
+            router.refresh()
+          }
         }
       )
       .subscribe((status) => {
