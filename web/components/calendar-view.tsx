@@ -56,6 +56,7 @@ type Props = {
   staff?: any[]
   organization_id: string
   currentUser?: any
+  settings?: any
 }
 
 const getRawHour = (dateString: string) => {
@@ -69,7 +70,8 @@ export function CalendarView({
   services = [], 
   staff = [], 
   organization_id,
-  currentUser
+  currentUser,
+  settings
 }: Props) {
   const [date, setDate] = useState(new Date())
   const [view, setView] = useState<'month' | 'week' | 'day'>('month')
@@ -409,6 +411,7 @@ export function CalendarView({
             preselectedDate={date}
             currentUser={currentUser}
             preselectedProfessionalId={filterId} 
+            settings={settings}
           />
         </div>
       </div>
@@ -445,6 +448,7 @@ export function CalendarView({
         professionals={staff}
         services={services}
         currentUser={currentUser}
+        settings={settings}
       />
 
       <CreateAppointmentDialog 
@@ -458,6 +462,7 @@ export function CalendarView({
         onOpenChange={setIsCreateOpen}
         preselectedDate={createDate}
         preselectedProfessionalId={filterId}
+        settings={settings}
       />
 
     </div>

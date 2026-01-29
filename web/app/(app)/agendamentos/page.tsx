@@ -32,7 +32,7 @@ export default async function AgendamentosPage() {
   const dict = getDictionary(niche)
 
   // 3. Busca em paralelo
-  const [customersRes, servicesRes, staffRes, appointmentsRes] = await Promise.all([
+  const [customersRes, servicesRes, staffRes, appointmentsRes, settingsRes] = await Promise.all([
     // Clientes
     supabase
       .from('customers')
@@ -48,8 +48,7 @@ export default async function AgendamentosPage() {
       .eq('organization_id', orgId)
       .eq('active', true),
       
-    // Staff (Médicos/Profissionais)
-    // Trazemos apenas quem pode atender (Role owner ou professional)
+    // Staff (Profissionais)
     supabase
       .from('profiles')
       .select('id, full_name, role')
@@ -71,7 +70,14 @@ export default async function AgendamentosPage() {
         profiles ( full_name )
       `)
       .eq('organization_id', orgId)
-      .neq('status', 'canceled') // Esconde cancelados
+      .neq('status', 'canceled'), // Esconde cancelados
+
+      // Configurações (Horários)
+    supabase
+      .from('organization_settings')
+      .select('*')
+      .eq('organization_id', orgId)
+      .single()
   ])
 
   // Tratamento de arrays vazios
@@ -79,6 +85,7 @@ export default async function AgendamentosPage() {
   const services = servicesRes.data || []
   const staff = staffRes.data || []
   const appointments = appointmentsRes.data || []
+  const settings = settingsRes.data || {}
 
   return (
     <div className="space-y-8">
@@ -94,7 +101,8 @@ export default async function AgendamentosPage() {
         services={services}
         staff={staff}
         organization_id={orgId}
-        currentUser={profile} // Passamos o usuário atual para saber se ele é médico ou secretária
+        currentUser={profile}
+        settings={settings}
       />
     </div>
   )

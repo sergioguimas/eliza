@@ -8,17 +8,19 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { updateAppointment } from "@/app/actions/update-appointment" // Verifique se esse caminho está certo
 import { toast } from "sonner"
-import { Loader2, CalendarIcon, Clock, User, Trash2 } from "lucide-react"
+import { Loader2, CalendarIcon, Clock, User, Trash2, AlertTriangle } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CancelAppointmentDialog } from "./cancel-appointment-dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog"
 
 interface UpdateAppointmentDialogProps {
   appointment: any | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  professionals?: any[] // Lista de médicos (nova prop)
-  services?: any[]      // Lista de serviços (para poder trocar também)
-  currentUser?: any     // Para saber permissões
+  professionals?: any[]
+  services?: any[]
+  currentUser?: any
+  settings?: any
 }
 
 export function UpdateAppointmentDialog({ 
@@ -27,11 +29,13 @@ export function UpdateAppointmentDialog({
   onOpenChange,
   professionals = [],
   services = [],
-  currentUser
+  currentUser,
+  settings
 }: UpdateAppointmentDialogProps) {
   
   const [isLoading, setIsLoading] = useState(false)
   const [isCancelOpen, setIsCancelOpen] = useState(false)
+  const [showOutsideHoursAlert, setShowOutsideHoursAlert] = useState(false)
 
   // States do formulário
   const [date, setDate] = useState("")
@@ -56,10 +60,52 @@ export function UpdateAppointmentDialog({
     }
   }, [appointment, open])
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!appointment) return
+  // Lógica de verificação
+  const isWithinBusinessHours = (dateStr: string, timeStr: string) => {
+    if (!settings) return true;
 
+    const selectedDate = new Date(`${dateStr}T${timeStr}`);
+    const dayOfWeek = selectedDate.getDay(); 
+
+    if (settings.days_of_week && !settings.days_of_week.includes(dayOfWeek)) {
+        return false;
+    }
+
+    const start = settings.open_hours_start || "08:00";
+    const end = settings.open_hours_end || "18:00";
+    
+    if (timeStr < start || timeStr > end) {
+        return false;
+    }
+
+    if (settings.lunch_start && settings.lunch_end) {
+        if (timeStr >= settings.lunch_start && timeStr < settings.lunch_end) {
+            return false;
+        }
+    }
+
+    return true;
+  };
+
+  // Intercepta o envio
+  const handlePreSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!date || !time) {
+        toast.error("Preencha data e hora.");
+        return;
+    }
+
+    if (!isWithinBusinessHours(date, time)) {
+        setShowOutsideHoursAlert(true);
+    } else {
+        performSubmit();
+    }
+  }
+
+  async function performSubmit() {
+    if (!appointment) return
+    setShowOutsideHoursAlert(false)
     setIsLoading(true)
 
     const formData = new FormData()
@@ -68,7 +114,6 @@ export function UpdateAppointmentDialog({
     formData.append('time', time)
     formData.append('notes', notes)
     
-    // Campos opcionais/alteráveis
     if (serviceId) formData.append('service_id', serviceId)
     if (professionalId) formData.append('professional_id', professionalId)
 
@@ -97,7 +142,7 @@ export function UpdateAppointmentDialog({
             </DialogDescription>
           </DialogHeader>
           
-          <form onSubmit={handleSubmit} className="space-y-4 py-2">
+          <form onSubmit={handlePreSubmit} className="space-y-4 py-2">
             
             {/* SELEÇÃO DE PROFISSIONAL */}
             <div className="space-y-2">
@@ -201,6 +246,28 @@ export function UpdateAppointmentDialog({
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={showOutsideHoursAlert} onOpenChange={setShowOutsideHoursAlert}>
+          <AlertDialogContent>
+              <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+                      <AlertTriangle className="h-5 w-5" />
+                      Atenção: Fora de Horário
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                      O novo horário ({time}) parece estar fora do expediente ou durante o intervalo de almoço.
+                      <br /><br />
+                      Deseja atualizar mesmo assim?
+                  </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => performSubmit()} className="bg-amber-600 hover:bg-amber-700">
+                      Sim, atualizar
+                  </AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+      </AlertDialog>
 
       {/* MODAL DE CANCELAMENTO ANINHADO */}
       <CancelAppointmentDialog 

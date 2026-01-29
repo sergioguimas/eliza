@@ -84,9 +84,12 @@ async function handleStatusChange(body: any, newStatus: 'confirmed' | 'canceled'
     const { data: candidates } = await supabase
         .from('customers')
         .select('id, name, phone')
-        .or(`phone.ilike.%${last8}, phone.ilike.%${last4}`) 
+        .or(`phone.ilike.%${last8},phone.ilike.%${last4}`) 
 
-    if (!candidates || candidates.length === 0) return
+    if (!candidates || candidates.length === 0) {
+        console.log(`⚠️ [Webhook] Cliente não encontrado para o final ${last4}`)
+        return
+    }
 
     const foundCustomer = candidates.find(c => {
         if (!c.phone) return false
@@ -108,19 +111,28 @@ async function handleStatusChange(body: any, newStatus: 'confirmed' | 'canceled'
         .limit(1)
         .single()
 
-    if (!appointment || appointment.status === newStatus) return
+    if (!appointment) {
+        console.log(`⚠️ [Webhook] Nenhum agendamento futuro encontrado para cliente ${foundCustomer.id}`)
+        return
+    }
 
     // 4. Atualiza Status
-    await supabase.from('appointments').update({ status: newStatus }).eq('id', appointment.id)
+    const { error: updateError } = await supabase
+        .from('appointments')
+        .update({ status: newStatus })
+        .eq('id', appointment.id)
+    
+    if (updateError) {
+        console.error(`🔥 [Webhook] Erro ao atualizar agendamento:`, updateError)
+        return
+    }
     
     console.log(`🎉 [Webhook] Agendamento ${appointment.id} atualizado para: ${newStatus.toUpperCase()}`)
 
-    // 5. RESPOSTA AUTOMÁTICA (CORRIGIDA COM A SUA TABELA) 🔧
-    
-    // Buscamos na tabela 'organization_settings' em vez de 'organizations'
+    // 5. RESPOSTA AUTOMÁTICA    
     const { data: settings } = await supabase
         .from('organization_settings') 
-        .select('msg_appointment_canceled') // Adicione msg_appointment_confirmed aqui se você criar essa coluna depois
+        .select('msg_appointment_canceled')
         .eq('organization_id', appointment.organization_id)
         .single()
 
@@ -138,7 +150,6 @@ async function handleStatusChange(body: any, newStatus: 'confirmed' | 'canceled'
         }
     } 
     else if (newStatus === 'canceled') {
-        // Pega a coluna exata que vimos no seu print
         const customMsg = settings?.msg_appointment_canceled 
         
         if (customMsg && customMsg.trim().length > 0) {
