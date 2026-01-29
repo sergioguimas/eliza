@@ -224,9 +224,7 @@ export default async function DashboardPage() {
             todayAppointments.map((app: any) => (
               <AppointmentContextMenu 
                 key={app.id}
-                appointment={app} 
-                customers={customersList}
-                services={servicesList}
+                appointment={app}
               >
                 <Card 
                   className="bg-card border-border p-4 border-l-10 cursor-context-menu hover:bg-accent/50 transition-all group relative overflow-hidden" 
