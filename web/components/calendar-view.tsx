@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useMemo, Suspense } from "react"
+import { useState, useEffect, useMemo, Suspense, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation" // <--- IMPORTANTE: useSearchParams
+import { createClient } from "@/utils/supabase/client"
 import { 
   format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, 
   isSameMonth, isSameDay, addMonths, subMonths, addDays, subDays, 
@@ -80,7 +81,9 @@ function CalendarContent({
 }: Props) {
   
   const router = useRouter()
-  const searchParams = useSearchParams() // <--- O SEGREDO ESTÁ AQUI
+  const searchParams = useSearchParams()
+  const supabase = createClient()
+  const isProcessingReturn = useRef<string | null>(null)
 
   const [date, setDate] = useState(new Date())
   const [view, setView] = useState<'month' | 'week' | 'day'>('month')
@@ -113,46 +116,19 @@ function CalendarContent({
     }
   }, [currentUser])
 
-  // =========================================================================
-  // LOGICA DE URL REATIVA (FIM DO PROBLEMA DE FECHAR SOZINHO)
-  // =========================================================================
+  // Garante que o prompt de retorno só abra quando o status é alterado
   useEffect(() => {
-    // 1. Monitora "Check de Retorno"
-    const returnCheckId = searchParams.get('return_check')
-    
+    const returnCheckId = searchParams.get('return_check');
     if (returnCheckId) {
-        // Se tem ID na URL, força o modal a abrir (ou reabrir)
-        const apt = appointments.find(a => a.id === returnCheckId)
-        if (apt) {
-            setReturnPromptData({ open: true, appointment: apt })
+      const apt = appointments.find(a => a.id === returnCheckId);
+      
+      if (apt && (apt.status === 'completed' || apt.status === 'finalized')) {
+        if (!returnPromptData.open) {
+          setReturnPromptData({ open: true, appointment: apt });
         }
+      }
     }
-
-    // 2. Monitora "Ação de Retorno" (Vindo da Dashboard ou do próprio Prompt)
-    const action = searchParams.get('action')
-    if (action === 'return' && !prefilledData && !isCreateOpen) {
-        const customerId = searchParams.get('customerId')
-        const serviceId = searchParams.get('serviceId')
-        const professionalId = searchParams.get('professionalId')
-        const days = searchParams.get('days')
-        
-        const targetDate = new Date()
-        if (days) targetDate.setDate(targetDate.getDate() + parseInt(days))
-        
-        setPrefilledData({
-            customerId: customerId || "",
-            serviceId: serviceId || "",
-            professionalId: professionalId || "",
-            date: targetDate
-        })
-        
-        setDate(targetDate) // Move o calendário
-        setIsCreateOpen(true) // Abre o modal
-        
-        // Limpa a URL silenciosamente para evitar loops, mas mantendo o modal aberto
-        router.replace('/agendamentos')
-    }
-  }, [searchParams, appointments, prefilledData, isCreateOpen, router]) // Depende do searchParams
+  }, [searchParams, appointments, returnPromptData.open]);
 
   const getProfessionalColor = (profId?: string) => {
     if (!profId) return PROFESSIONAL_COLORS[0]
@@ -173,7 +149,6 @@ function CalendarContent({
     )
   }
 
-  // ... (Funções de navegação next, previous, today mantidas) ...
   function next() {
     if (view === 'month') setDate(addMonths(date, 1))
     else if (view === 'week') setDate(addWeeks(date, 1))
@@ -201,14 +176,26 @@ function CalendarContent({
   // HANDLERS
   // =========================================================================
   
-  const handleStatusChange = (apt: Appointment, newStatus: string) => {
-    if (newStatus === 'completed' || newStatus === 'finalized') {
-        // Atualiza a URL IMEDIATAMENTE. O useSearchParams vai capturar isso.
-        const params = new URLSearchParams(window.location.search)
-        params.set('return_check', apt.id)
-        router.replace(`?${params.toString()}`)
+  const handleStatusChange = async (apt: any, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ status: newStatus })
+        .eq('id', apt.id);
+
+      if (error) throw error;
+
+      if (newStatus === 'completed' || newStatus === 'finalized') {
+        // Marcamos apenas a intenção na URL. 
+        // Não chamamos setReturnPromptData aqui!
+        const params = new URLSearchParams(window.location.search);
+        params.set('return_check', apt.id);
+        router.replace(`?${params.toString()}`, { scroll: false });
+      }
+    } catch (err) {
+      console.error("Erro ao mudar status:", err);
     }
-  }
+  };
 
   const handleReturnConfirm = (days: number | null) => {
     // Fecha e Limpa
@@ -248,7 +235,7 @@ function CalendarContent({
     })
     
     setDate(targetDate)
-    router.replace(`?${params.toString()}`) // Atualiza URL limpa
+    router.replace(`?${params.toString()}`)
     setIsCreateOpen(true)
   }
 
@@ -262,12 +249,10 @@ function CalendarContent({
       setReturnPromptData(prev => ({ ...prev, open: isOpen }))
   }
 
-  // ... (Renderização dos Cards e Views mantida igual) ...
   function AppointmentCard({ appointment }: { appointment: Appointment }) {
     const status = appointment.status || 'scheduled'
     const isPanorama = filterId === 'all'
     
-    // ... (Lógica de cores do card mantida) ...
     let styles = { bg: '#e0f2fe', border: '#0ea5e9', text: '#0369a1', icon: CalendarIcon }
     if (status === 'confirmed') styles = { bg: '#dcfce7', border: '#16a34a', text: '#14532d', icon: CheckCircle2 }
     else if (status === 'pending') styles = { bg: '#fef9c3', border: '#ca8a04', text: '#713f12', icon: Clock }

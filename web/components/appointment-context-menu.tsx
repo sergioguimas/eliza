@@ -22,7 +22,6 @@ import {
 import { toast } from "sonner"
 import { updateAppointmentStatus } from "@/app/actions/update-appointment-status"
 import { cancelAppointment, deleteAppointment } from "@/app/actions/delete-appointment"
-import { ReturnPromptDialog } from "./return-prompt-dialog"
 import { useState } from "react"
 import { useRouter } from "next/dist/client/components/navigation"
 
@@ -37,14 +36,18 @@ export function AppointmentContextMenu({
   onStatusChange 
 }: AppointmentContextMenuProps) {
   const router = useRouter()
-  const [isReturnOpen, setIsReturnOpen] = useState(false)
 
   async function handleStatusChange(status: string) {
     const result = await updateAppointmentStatus(appointment.id, status)
+    
     if (result.success) {
-      toast.success(`Status alterado para: ${status}`)      
+      toast.success(`Status alterado para: ${status}`)
+      
       if (status === 'completed') {
-        setIsReturnOpen(true)
+        const params = new URLSearchParams(window.location.search)
+        params.set('return_check', appointment.id)
+        
+        router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false })
       } else {
         router.refresh()
       }
@@ -62,19 +65,6 @@ export function AppointmentContextMenu({
       },
       error: 'Erro ao cancelar'
     })
-  }
-
-  const handleReturnConfirm = (days: number | null) => {
-    setIsReturnOpen(false)
-
-    const params = new URLSearchParams()
-    params.set('action', 'return')
-    if (appointment.customer_id) params.set('customerId', appointment.customer_id)
-    if (appointment.service_id) params.set('serviceId', appointment.service_id)
-    if (appointment.professional_id) params.set('professionalId', appointment.professional_id)
-    if (days) params.set('days', days.toString())
-
-    router.push(`/agendamentos?${params.toString()}`)
   }
 
   return (
@@ -117,12 +107,6 @@ export function AppointmentContextMenu({
 
         </ContextMenuContent>
       </ContextMenu>
-      <ReturnPromptDialog 
-        open={isReturnOpen}
-        onOpenChange={setIsReturnOpen}
-        onConfirm={handleReturnConfirm}
-        customerName={appointment.customers?.name}
-      />
     </>
   )
 }
