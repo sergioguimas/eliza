@@ -34,9 +34,10 @@ interface ServiceRecordListProps {
     customerId: string
     customerPhone?: string
     organizationId: string
+    initialRecords: ServiceRecord[]
 }
 
-export function ServiceRecordList({ records, customerId, customerPhone, organizationId }: ServiceRecordListProps) {
+export function ServiceRecordList({ records, customerId, customerPhone, organizationId, initialRecords }: ServiceRecordListProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editContent, setEditContent] = useState("")
   const [sendingId, setSendingId] = useState<string | null>(null) // Estado de carregamento do envio
@@ -206,7 +207,6 @@ export function ServiceRecordList({ records, customerId, customerPhone, organiza
                         variant="default" 
                         size="icon" 
                         onClick={() => handleSendWhatsappPDF(record)} 
-                        disabled={isSending || !customerPhone}
                         className={isSending ? "opacity-70" : "bg-green-300 hover:bg-green-700"}
                         title={customerPhone ? "Enviar PDF no WhatsApp" : "Cliente sem telefone"}>
                      {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendHorizonal className="h-4 w-4" />}

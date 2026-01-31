@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import { sendWhatsAppMessage } from "@/app/actions/send-whatsapp"
+import { startOfDay } from "date-fns/startOfDay"
 
 // 🟢 Palavras de Confirmação
 const CONFIRMATION_KEYWORDS = ['sim', 'confirmar', 'confirmo', 'ok', 'pode ser', 'confirmado', 'tá bom', 'ta bom', 'estarei', 'vou sim', 'claro']
@@ -21,30 +22,50 @@ export async function POST(req: Request) {
 
     const messageData = body.data
     const key = messageData.key
-    const messageContent = messageData.message
+
+    const messageTimestamp = body.data?.messageTimestamp; 
+    const nowSeconds = Math.floor(Date.now() / 1000);
 
     if (key.fromMe) {
         return NextResponse.json({ status: 'ignored_from_me' })
     }
 
+    if (messageTimestamp && (nowSeconds - messageTimestamp > 600)) {
+        return NextResponse.json({ status: 'ignored_old_message' });
+    }
+
+    // 1. Coleta o conteúdo bruto da mensagem
     let text = ''
-    if (messageContent.conversation) {
+    const messageContent = messageData.message
+
+    if (messageContent?.conversation) {
+        // Texto simples
         text = messageContent.conversation
-    } else if (messageContent.extendedTextMessage?.text) {
+    } else if (messageContent?.extendedTextMessage?.text) {
+        // Texto com links ou formatação (negrito, itálico, etc.)
         text = messageContent.extendedTextMessage.text
+    } else if (messageContent?.buttonsResponseMessage?.selectedButtonId) {
+        // Caso você use botões no futuro, captura o ID do botão
+        text = messageContent.buttonsResponseMessage.selectedButtonId
     } else {
+        // Se não houver texto tratável, ignora
         return NextResponse.json({ status: 'no_text_content' }) 
     }
+
+    // 2. Limpeza e Normalização
+    // Trim remove espaços no início/fim e toLowerCase padroniza para a busca
     text = text.trim().toLowerCase()
+
+    console.log(`📩 [Webhook] Texto recebido e normalizado: "${text}"`)
 
     console.log(`📩 [Webhook] Texto recebido: "${text}"`)
 
     if (CONFIRMATION_KEYWORDS.some(k => text.includes(k))) {
-        await handleStatusChange(body, 'confirmed')
+        await handleStatusChange(body, 'confirmed', text)
         return NextResponse.json({ status: 'processed_confirmation' })
     } 
     else if (CANCELLATION_KEYWORDS.some(k => text.includes(k))) {
-        await handleStatusChange(body, 'canceled')
+        await handleStatusChange(body, 'canceled', text)
         return NextResponse.json({ status: 'processed_cancellation' })
     }
 
@@ -56,35 +77,41 @@ export async function POST(req: Request) {
   }
 }
 
-async function handleStatusChange(body: any, newStatus: 'confirmed' | 'canceled') {
+async function handleStatusChange(body: any, newStatus: 'confirmed' | 'canceled', text: string) {
+    console.log(`🔔 [Webhook] Iniciando processo para status: ${newStatus.toUpperCase()}`)
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // 1. Extração do Número (Lógica Anti-LID)
-    let rawNumber = body.data?.key?.remoteJid
-    const participant = body.data?.key?.participant
+    // 1. Extração hierárquica (do mais preciso para o menos preciso)
+    let rawNumber = 
+        body.data?.key?.remoteJidAlt || // Opção 1: O ID alternativo real
+        body.sender ||                  // Opção 2: O remetente identificado pela API
+        body.data?.key?.participant ||  // Opção 3: O participante (comum em grupos)
+        body.data?.key?.remoteJid;      // Opção 4: O Jid padrão (pode ser @lid)
 
-    if (rawNumber && String(rawNumber).includes('@lid')) {
-        if (participant && !String(participant).includes('@lid')) {
-            rawNumber = participant
-        } else {
-            return 
-        }
+    // 2. Limpeza total de caracteres não numéricos
+    const incomingClean = String(rawNumber).replace(/@.*/, '').replace(/\D/g, '');
+    
+    // 3. Verificação de segurança: Ignora IDs de LID que não foram convertidos
+    if (incomingClean.length < 8) {
+        console.log("⚠️ [Webhook] Identificador numérico inválido ou muito curto:", incomingClean);
+        return;
     }
 
-    if (!rawNumber) return 
+    const last8 = incomingClean.slice(-8);
+    const last4 = incomingClean.slice(-4);
 
-    const incomingClean = String(rawNumber).replace(/@.*/, '').replace(/\D/g, '')
-    const last8 = incomingClean.slice(-8)
-    const last4 = incomingClean.slice(-4) 
+    console.log(`✅ [Webhook] Remetente identificado com sucesso: ${incomingClean}`);
 
     // 2. Busca Cliente
+    console.log(`🔍 Buscando cliente com final ${last4}`);
     const { data: candidates } = await supabase
         .from('customers')
         .select('id, name, phone')
         .or(`phone.ilike.%${last8},phone.ilike.%${last4}`) 
+        console.log(`🔍 Candidatos encontrados: ${candidates?.length || 0}`);
 
     if (!candidates || candidates.length === 0) {
         console.log(`⚠️ [Webhook] Cliente não encontrado para o final ${last4}`)
@@ -101,12 +128,13 @@ async function handleStatusChange(body: any, newStatus: 'confirmed' | 'canceled'
     const now = new Date().toISOString()
     
     // 3. Busca Agendamento
+    console.log(`📅 Buscando agendamento para cliente ID: ${foundCustomer.id} após ${now}`);
     const { data: appointment } = await supabase
         .from('appointments')
         .select('id, status, start_time, organization_id') 
         .eq('customer_id', foundCustomer.id)
         .in('status', ['pending', 'scheduled', 'confirmed'])
-        .gt('start_time', now)
+        .gte('start_time', startOfDay(new Date()).toISOString())
         .order('start_time', { ascending: true })
         .limit(1)
         .single()
@@ -126,6 +154,15 @@ async function handleStatusChange(body: any, newStatus: 'confirmed' | 'canceled'
         console.error(`🔥 [Webhook] Erro ao atualizar agendamento:`, updateError)
         return
     }
+
+    await supabase.from('appointment_logs').insert({
+        appointment_id: appointment.id,
+        customer_id: foundCustomer.id,
+        action: newStatus,
+        source: 'whatsapp_webhook',
+        raw_message: text,
+        push_name: body.data?.pushName || 'Desconhecido'
+    });
     
     console.log(`🎉 [Webhook] Agendamento ${appointment.id} atualizado para: ${newStatus.toUpperCase()}`)
 
@@ -139,8 +176,6 @@ async function handleStatusChange(body: any, newStatus: 'confirmed' | 'canceled'
     let replyMessage = ""
 
     if (newStatus === 'confirmed') {
-        // Se você criar uma coluna 'msg_appointment_confirmed' no futuro, mude aqui:
-        // const customMsg = settings?.msg_appointment_confirmed
         const customMsg = null 
         
         if (customMsg) {
