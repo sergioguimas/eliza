@@ -1,0 +1,144 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.appointment_logs (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  appointment_id uuid,
+  customer_id uuid,
+  action text,
+  source text,
+  raw_message text,
+  push_name text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT appointment_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT appointment_logs_appointment_id_fkey FOREIGN KEY (appointment_id) REFERENCES public.appointments(id),
+  CONSTRAINT appointment_logs_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id)
+);
+CREATE TABLE public.appointments (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL,
+  customer_id uuid NOT NULL,
+  service_id uuid,
+  professional_id uuid,
+  start_time timestamp with time zone NOT NULL,
+  end_time timestamp with time zone NOT NULL,
+  status text DEFAULT 'scheduled'::text CHECK (status = ANY (ARRAY['pending'::text, 'scheduled'::text, 'confirmed'::text, 'canceled'::text, 'completed'::text, 'no_show'::text])),
+  notes text,
+  price numeric,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT appointments_pkey PRIMARY KEY (id),
+  CONSTRAINT appointments_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id),
+  CONSTRAINT appointments_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id),
+  CONSTRAINT appointments_service_id_fkey FOREIGN KEY (service_id) REFERENCES public.services(id),
+  CONSTRAINT appointments_professional_id_fkey FOREIGN KEY (professional_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.customers (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL,
+  name text NOT NULL,
+  phone text NOT NULL,
+  email text,
+  document text,
+  birth_date date,
+  gender text,
+  address text,
+  notes text,
+  active boolean DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT customers_pkey PRIMARY KEY (id),
+  CONSTRAINT customers_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id)
+);
+CREATE TABLE public.invitations (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL,
+  email text,
+  code text NOT NULL UNIQUE,
+  role text NOT NULL DEFAULT 'staff'::text,
+  used_count integer DEFAULT 0,
+  expires_at timestamp with time zone NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT invitations_pkey PRIMARY KEY (id),
+  CONSTRAINT invitations_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id)
+);
+CREATE TABLE public.organization_settings (
+  organization_id uuid NOT NULL,
+  open_hours_start time without time zone DEFAULT '08:00:00'::time without time zone,
+  open_hours_end time without time zone DEFAULT '18:00:00'::time without time zone,
+  days_of_week ARRAY DEFAULT '{1,2,3,4,5}'::integer[],
+  appointment_duration integer DEFAULT 30,
+  msg_appointment_created text,
+  msg_appointment_reminder text,
+  msg_appointment_canceled text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  whatsapp_instance_name text,
+  lunch_start time without time zone DEFAULT '12:00:00'::time without time zone,
+  lunch_end time without time zone DEFAULT '13:00:00'::time without time zone,
+  CONSTRAINT organization_settings_pkey PRIMARY KEY (organization_id),
+  CONSTRAINT organization_settings_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id)
+);
+CREATE TABLE public.organizations (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  slug text NOT NULL UNIQUE,
+  niche text NOT NULL CHECK (niche = ANY (ARRAY['clinica'::text, 'barbearia'::text, 'salao'::text, 'generico'::text, 'advocacia'::text, 'oficina'::text, 'certificado'::text])),
+  whatsapp_instance_name text,
+  evolution_api_key text,
+  evolution_api_url text,
+  whatsapp_status text DEFAULT 'disconnected'::text,
+  stripe_customer_id text,
+  subscription_status text DEFAULT 'active'::text,
+  plan text DEFAULT 'free'::text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT organizations_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.profiles (
+  id uuid NOT NULL,
+  organization_id uuid,
+  full_name text,
+  email text,
+  avatar_url text,
+  role text DEFAULT 'staff'::text CHECK (role = ANY (ARRAY['owner'::text, 'admin'::text, 'professional'::text, 'staff'::text])),
+  professional_license text,
+  bio text,
+  color text DEFAULT '#3b82f6'::text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT profiles_pkey PRIMARY KEY (id),
+  CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id),
+  CONSTRAINT profiles_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id)
+);
+CREATE TABLE public.service_records (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL,
+  customer_id uuid NOT NULL,
+  professional_id uuid,
+  content text NOT NULL,
+  status text DEFAULT 'draft'::text CHECK (status = ANY (ARRAY['draft'::text, 'signed'::text, 'final'::text])),
+  tags ARRAY,
+  signed_at timestamp with time zone,
+  signed_by uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  signature_hash text,
+  CONSTRAINT service_records_pkey PRIMARY KEY (id),
+  CONSTRAINT service_records_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id),
+  CONSTRAINT service_records_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id),
+  CONSTRAINT service_records_professional_id_fkey FOREIGN KEY (professional_id) REFERENCES public.profiles(id),
+  CONSTRAINT service_records_signed_by_fkey FOREIGN KEY (signed_by) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.services (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL,
+  title text NOT NULL,
+  description text,
+  duration_minutes integer NOT NULL DEFAULT 30,
+  price numeric DEFAULT 0.00,
+  active boolean DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  color text DEFAULT '#3b82f6'::text,
+  CONSTRAINT services_pkey PRIMARY KEY (id),
+  CONSTRAINT services_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id)
+);
