@@ -8,7 +8,8 @@ import {
   Users,
   ShieldAlert,
   User,
-  ChevronsUpDown
+  ChevronsUpDown,
+  Clock
 } from "lucide-react"
 
 import Link from "next/link"
@@ -140,6 +141,15 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
                     <Link href="/configuracoes/equipe">
                       <Users />
                       <span>Minha Equipe</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <Link href="/configuracoes/horarios">
+                      <Clock />
+                      <span>Horários</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
