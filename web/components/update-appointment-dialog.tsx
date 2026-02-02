@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { updateAppointment } from "@/app/actions/update-appointment" // Verifique se esse caminho está certo
+import { updateAppointment } from "@/app/actions/update-appointment"
 import { toast } from "sonner"
 import { Loader2, CalendarIcon, Clock, User, Trash2, AlertTriangle } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -153,7 +153,6 @@ export function UpdateAppointmentDialog({
               <Select 
                   value={professionalId} 
                   onValueChange={setProfessionalId}
-                  disabled={currentUser?.role === 'professional'} // Médico não deve transferir pacientes (regra opcional)
               >
                   <SelectTrigger className="bg-muted/20">
                       <SelectValue placeholder="Selecione o especialista" />
@@ -161,7 +160,7 @@ export function UpdateAppointmentDialog({
                   <SelectContent>
                       {professionals.map(prof => (
                           <SelectItem key={prof.id} value={prof.id}>
-                              {prof.full_name || prof.email}
+                              {prof.name || prof.email}
                           </SelectItem>
                       ))}
                   </SelectContent>

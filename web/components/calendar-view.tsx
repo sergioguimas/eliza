@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, Suspense, useRef } from "react"
-import { useRouter, useSearchParams } from "next/navigation" // <--- IMPORTANTE: useSearchParams
+import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/utils/supabase/client"
 import { 
   format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, 
@@ -28,7 +28,6 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 
-// ... (PROFESSIONAL_COLORS e Types mantidos iguais) ...
 const PROFESSIONAL_COLORS = [
   { bg: '#e0f2fe', border: '#0ea5e9', text: '#0369a1' },
   { bg: '#f1f5f9', border: '#64748b', text: '#334155' },
@@ -61,7 +60,7 @@ type Props = {
   organization_id: string
   currentUser?: any
   settings?: any
-  initialParams?: any // (Mantido para compatibilidade, mas vamos ignorar na lógica principal)
+  initialParams?: any
 }
 
 const getRawHour = (dateString: string) => {
@@ -69,7 +68,6 @@ const getRawHour = (dateString: string) => {
   return new Date(dateString).getHours();
 };
 
-// Componente Wrapper para Suspense (Necessário ao usar useSearchParams)
 function CalendarContent({ 
   appointments = [], 
   customers = [], 
@@ -171,11 +169,7 @@ function CalendarContent({
       setCreateDate(targetDate)
       setIsCreateOpen(true)
   }
-  
-  // =========================================================================
-  // HANDLERS
-  // =========================================================================
-  
+    
   const handleStatusChange = async (apt: any, newStatus: string) => {
     try {
       const { error } = await supabase
@@ -186,8 +180,6 @@ function CalendarContent({
       if (error) throw error;
 
       if (newStatus === 'completed' || newStatus === 'finalized') {
-        // Marcamos apenas a intenção na URL. 
-        // Não chamamos setReturnPromptData aqui!
         const params = new URLSearchParams(window.location.search);
         params.set('return_check', apt.id);
         router.replace(`?${params.toString()}`, { scroll: false });

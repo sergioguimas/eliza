@@ -247,7 +247,7 @@ export function CreateAppointmentDialog({
                     <SelectContent>
                         {team.map(prof => (
                             <SelectItem key={prof.id} value={prof.id}>
-                                {prof.full_name || prof.email}
+                                {prof.name || prof.email}
                             </SelectItem>
                         ))}
                     </SelectContent>

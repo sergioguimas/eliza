@@ -36,10 +36,7 @@ export default async function DashboardPage() {
   // 3. Busca Perfil
   const { data: profile } = await supabase
     .from('profiles')
-    .select(`
-      *,
-      organizations(*)
-    `)
+    .select(`*, organizations(*)`)
     .eq('id', user.id)
     .single() as any
 

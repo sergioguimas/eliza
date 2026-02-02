@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { sendAppointmentConfirmation } from "./whatsapp-messages"
+import { sendWhatsAppMessage } from "./send-whatsapp"
 
 export async function createAppointment(formData: FormData) {
   const supabase = await createClient()
@@ -49,26 +50,20 @@ export async function createAppointment(formData: FormData) {
   }
 
   // --- 4. CÁLCULO DE TEMPO E PREÇO ---
-  let duration_minutes = 30 
-  let price = 0
+  const { data: service } = await supabase
+    .from('services')
+    .select('duration_minutes, price, title')
+    .eq('id', service_id as string)
+    .single()
 
-  if (service_id) {
-    const { data: service } = await supabase
-        .from('services')
-        .select('duration_minutes, price')
-        .eq('id', service_id)
-        .single()
-    
-    if (service) {
-        duration_minutes = service.duration_minutes || 30
-        price = service.price || 0
-    }
-  }
+  // Definição das variáveis de apoio
+  const duration_minutes = service?.duration_minutes || 30
+  const price = service?.price || 0
+  const serviceTitle = service?.title || "serviço"
 
   let timeString = start_time_raw.trim()
 
-  // Verifica se a string JÁ TEM informação de fuso (Z, +00:00, -03:00)
-  // Regex: Procura por Z ou +XX:XX ou -XX:XX no final da string
+  // Verifica se a string JÁ TEM informação de fuso
   const hasOffset = /Z|[+-]\d{2}:?\d{2}$/.test(timeString)
 
   if (!hasOffset) {      
@@ -132,14 +127,20 @@ export async function createAppointment(formData: FormData) {
   const appointmentId = newAppointment.id
 
   // --- 7. DISPARO WHATSAPP ---
-  try {
-    if (sendAppointmentConfirmation) {
-      await sendAppointmentConfirmation(appointmentId)
-    }
-  } catch (err) {
-    console.error("Erro ao enviar zap:", err)
+  const { data: prof } = await supabase
+    .from('professionals')
+    .select('name, phone')
+    .eq('id', professional_id)
+    .single()
+
+  if (prof?.phone) {
+    await sendWhatsAppMessage({
+      phone: prof.phone,
+      message: `🔔 *Novo Pré-agendamento*\n\nProfissional: ${prof.name}\nCliente: ${customer_name || 'Cliente'}\nServiço: ${serviceTitle}\nHorário: ${startTime.toLocaleString('pt-BR')}`,
+      organizationId: organization_id
+    })
   }
 
   revalidatePath('/agendamentos')
-  return { success: true }
+  return { success: true, id: newAppointment.id }
 }

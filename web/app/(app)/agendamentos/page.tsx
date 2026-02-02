@@ -56,10 +56,10 @@ export default async function AgendamentosPage({
       
     // Staff (Profissionais)
     supabase
-      .from('profiles')
-      .select('id, full_name, role')
+      .from('professionals')
+      .select('id, name, specialty, phone')
       .eq('organization_id', orgId)
-      .in('role', ['owner', 'professional']), 
+      .eq('is_active', true), 
 
     // Agendamentos
     supabase
@@ -73,7 +73,7 @@ export default async function AgendamentosPage({
         professional_id,
         customers ( name ), 
         services ( title, color ),
-        profiles ( full_name )
+        professionals ( name )
       `)
       .eq('organization_id', orgId)
       .neq('status', 'canceled'), // Esconde cancelados
@@ -97,7 +97,7 @@ export default async function AgendamentosPage({
     <div className="space-y-8">
       <RealtimeAppointments />
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Agenda de {dict.label_servicos}</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Agenda {dict.label_servicos}</h1>
         <p className="text-muted-foreground text-sm">Visualize e gerencie os atendimentos da clínica.</p>
       </div>
 
