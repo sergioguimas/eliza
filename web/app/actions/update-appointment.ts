@@ -16,9 +16,10 @@ export async function updateAppointment(formData: FormData) {
     .from('appointments')
     .select(`
       service_id, 
-      services ( duration, name ),
+      services ( duration_minutes, title ),
       customers ( name, phone ),
-      professionals ( name )
+      professionals ( name ),
+      organization_id
     `)
     .eq('id', appointmentId)
     .single()
