@@ -36,3 +36,13 @@ DROP CONSTRAINT IF EXISTS appointments_professional_id_fkey;
 ALTER TABLE appointments
 ADD CONSTRAINT appointments_professional_id_fkey 
 FOREIGN KEY (professional_id) REFERENCES professionals(id) ON DELETE SET NULL;
+
+-- Criar política de leitura
+CREATE POLICY "Usuários veem profissionais da mesma org"
+ON professionals
+FOR SELECT
+USING (
+  organization_id IN (
+    SELECT organization_id FROM profiles WHERE id = auth.uid()
+  )
+);

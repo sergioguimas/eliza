@@ -24,8 +24,8 @@ interface CreateAppointmentDialogProps {
   // Props de Pré-seleção
   preselectedDate?: Date | null
   preselectedProfessionalId?: string | null
-  preselectedCustomerId?: string | null // Novo
-  preselectedServiceId?: string | null  // Novo
+  preselectedCustomerId?: string | null
+  preselectedServiceId?: string | null
 
   settings?: any
   

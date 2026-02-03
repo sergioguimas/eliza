@@ -364,7 +364,7 @@ function CalendarContent({
                     <SelectTrigger className="w-[180px] h-7 border-0 bg-transparent focus:ring-0 p-0 text-xs text-zinc-200"><SelectValue placeholder="Todos os profissionais" /></SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all"><span className="font-semibold">Todos (Panorama)</span></SelectItem>
-                        {staff.map(prof => (<SelectItem key={prof.id} value={prof.id}><div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: getProfessionalColor(prof.id).border }} />{prof.full_name}</div></SelectItem>))}
+                        {staff.map(prof => (<SelectItem key={prof.id} value={prof.id}><div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: getProfessionalColor(prof.id).border }} />{prof.name}</div></SelectItem>))}
                     </SelectContent>
                 </Select>
             </div>
