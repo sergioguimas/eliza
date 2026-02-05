@@ -7,6 +7,7 @@ import { CheckCircle2, XCircle, Building2 } from "lucide-react"
 export const dynamic = 'force-dynamic'
 
 export default async function InvitePage({ params }: { params: { code: string } }) {
+  const { code } = await params;
   // Configura cliente Admin para ler o convite sem restrição de RLS
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   const supabaseAdmin = createClientAdmin(
@@ -18,7 +19,7 @@ export default async function InvitePage({ params }: { params: { code: string } 
   // Busca dados do convite + Nome da Organização
   const { data: invite } = await (supabaseAdmin.from('invitations') as any)
     .select(`*, organizations ( name, niche )`)
-    .eq('code', params.code)
+    .eq('code', code)
     .single()
 
   //CONVITE INVÁLIDO OU EXPIRADO
@@ -64,7 +65,7 @@ export default async function InvitePage({ params }: { params: { code: string } 
             Crie sua conta abaixo para aceitar o convite e acessar o painel imediatamente.
           </div>
 
-          <RegisterForm inviteCode={params.code} assignedEmail={invite.email} />
+          <RegisterForm inviteCode={code} assignedEmail={invite.email} />
           
         </CardContent>
       </Card>

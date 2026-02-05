@@ -10,10 +10,9 @@ export default async function HorariosPage() {
 
   if (!orgId) return <div>Erro: Organização não encontrada.</div>;
   const { data: professionals, error } = await supabase
-    .from("profiles")
-    .select("id, full_name, organization_id")
-    .eq("organization_id", orgId)
-    .in("role", ["professional", "owner", "admin"]);
+    .from("professionals")
+    .select("id, name, organization_id")
+    .eq("organization_id", orgId);
 
   const { data: allAvailabilities } = await supabase
     .from("professional_availability")
@@ -42,7 +41,7 @@ export default async function HorariosPage() {
               value={pro.id}
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
             >
-              {pro.full_name?.split(' ')[0] || 'Profissional'}
+              {pro.name?.split(' ')[0] || 'Profissional'}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -51,15 +50,15 @@ export default async function HorariosPage() {
           <TabsContent key={pro.id} value={pro.id}>
             <Card>
               <CardHeader>
-                <CardTitle>Agenda semanal de {pro.full_name || 'Profissional'}</CardTitle>
+                <CardTitle>Agenda semanal de {pro.name || 'Profissional'}</CardTitle>
                 <CardDescription>
-                  Ajuste os horários de {pro.full_name} para o assistente de IA.
+                  Ajuste os horários de {pro.name} para o assistente de IA.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <AvailabilityForm 
                   professionalId={pro.id}
-                  professionalName={pro.full_name || "Profissional"}
+                  professionalName={pro.name || "Profissional"}
                   initialData={allAvailabilities?.filter(a => a.professional_id === pro.id) || []}
                 />
               </CardContent>

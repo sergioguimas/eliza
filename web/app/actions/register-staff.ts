@@ -58,19 +58,36 @@ export async function registerStaffFromInvite(formData: FormData) {
 
     if (!authUser.user) return { error: "Erro inesperado na criação do usuário." }
 
-    // 5. O Trigger 'handle_new_user' vai rodar automaticamente e criar o Profile
-    // Pequeno delay para garantir que o trigger rodou
+    // 5. O Trigger 'handle_new_user' cria o Profile básico
+    // 5.1 Atualiza o Profile com os dados da organização e cargo
     const { error: profileError } = await (supabaseAdmin.from('profiles') as any)
       .update({
         organization_id: invite.organization_id,
-        role: invite.role, // 'staff' ou 'professional'
+        role: invite.role, 
         full_name: fullName
       })
       .eq('id', authUser.user.id)
 
     if (profileError) {
       console.error("Erro ao vincular perfil:", profileError)
-      return { error: "Conta criada, mas houve erro ao vincular à empresa. Contate o suporte." }
+      return { error: "Conta criada, mas houve erro ao vincular à empresa." }
+    }
+
+    // 5.2 NOVO: Se o cargo for 'professional', insere na tabela professionals
+    if (invite.role === 'professional' || invite.role === 'admin') {
+      const { error: professionalError } = await (supabaseAdmin.from('professionals') as any)
+        .insert({
+          user_id: authUser.user.id,
+          organization_id: invite.organization_id,
+          name: fullName,
+          role: invite.role,
+          is_active: true
+        })
+
+      if (professionalError) {
+        console.error("Erro ao criar registro profissional:", professionalError)
+        // Opcional: tratar erro específico aqui
+      }
     }
 
     // 6. Atualiza uso do convite

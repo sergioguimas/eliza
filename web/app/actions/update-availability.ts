@@ -10,17 +10,18 @@ export async function updateProfessionalAvailability(
 ) {
   const supabase = await createClient();
 
-  // 1. Validação de Segurança: O usuário só pode editar a própria agenda 
-  // ou ser um admin/owner da mesma organização.
+  // 1. Validação de Segurança
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Não autorizado");
 
-  // 2. Mapeamento para o formato da tabela professional_availability
+  // 2. Mapeamento conforme o Schema
   const upsertData = availabilities.map((item) => ({
     professional_id: professionalId,
     day_of_week: item.day_of_week,
     start_time: item.start_time,
     end_time: item.end_time,
+    break_start: (item as any).break_start || null,
+    break_end: (item as any).break_end || null,
     is_active: item.is_active,
   }));
 
@@ -36,6 +37,6 @@ export async function updateProfessionalAvailability(
     return { success: false, error: error.message };
   }
 
-  revalidatePath("/configuracoes/equipe");
+  revalidatePath("/configuracoes/horarios");
   return { success: true };
 }

@@ -35,7 +35,6 @@ export function AvailabilityForm({ professionalId, professionalName, initialData
   const [breakStart, setBreakStart] = useState(initialData[0]?.break_start?.slice(0, 5) || "12:00");
   const [breakEnd, setBreakEnd] = useState(initialData[0]?.break_end?.slice(0, 5) || "13:00");
 
-  // FUNÇÃO CORRIGIDA
   const toggleDay = (dayId: number) => {
     setSelectedDays(prev => 
       prev.includes(dayId) ? prev.filter(id => id !== dayId) : [...prev, dayId]
