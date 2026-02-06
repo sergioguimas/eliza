@@ -19,9 +19,10 @@ interface Props {
   professionalId: string;
   professionalName: string;
   initialData: any[];
+  readOnly?: boolean;
 }
 
-export function AvailabilityForm({ professionalId, professionalName, initialData }: Props) {
+export function AvailabilityForm({ professionalId, professionalName, initialData, readOnly }: Props) {
   const [loading, setLoading] = useState(false);
   
   // Estado dos dias selecionados
@@ -124,7 +125,7 @@ export function AvailabilityForm({ professionalId, professionalName, initialData
         <p className="text-[10px] text-muted-foreground italic">
           * Horário aplicado a {selectedDays.length} dias de {professionalName}.
         </p>
-        <Button onClick={onSubmit} disabled={loading || selectedDays.length === 0} size="sm">
+        <Button onClick={onSubmit} disabled={loading || readOnly} size="sm">
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Sincronizar Agenda
         </Button>

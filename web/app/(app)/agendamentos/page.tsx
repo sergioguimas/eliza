@@ -57,7 +57,7 @@ export default async function AgendamentosPage({
     // Staff (Profissionais)
     supabase
       .from('professionals')
-      .select('id, name, specialty, phone')
+      .select('id, name, specialty, phone, professional_availability (*)')
       .eq('organization_id', orgId)
       .eq('is_active', true), 
 
@@ -75,10 +75,9 @@ export default async function AgendamentosPage({
         services ( title, color ),
         professionals ( name )
       `)
-      .eq('organization_id', orgId)
-      .neq('status', 'canceled'), // Esconde cancelados
+      .eq('organization_id', orgId),
 
-      // Configurações (Horários)
+    // Configurações
     supabase
       .from('organization_settings')
       .select('*')

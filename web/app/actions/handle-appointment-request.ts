@@ -20,13 +20,11 @@ export async function handleAppointmentRequest(
 
   if (error) return { error: "Erro ao processar solicitação." }
 
-  // 2. Notifica o cliente via WhatsApp (Regra de Negócio)
+  // 2. Notifica o cliente via WhatsApp
   if (appointment?.customers?.phone) {
-  // 1. Extraímos o título com segurança
   const serviceTitle = appointment.services?.title || "procedimento";
   const customerName = appointment.customers.name || "Cliente";
 
-  // 2. Montamos a mensagem usando o fallback se o serviço for null
   const message = action === 'confirmed' 
     ? `Olá ${customerName}, o seu agendamento para ${serviceTitle} foi confirmado!`
     : `Olá ${customerName}, infelizmente não conseguimos confirmar o seu horário para ${serviceTitle}. Por favor, entre em contato para escolher outro horário.`;

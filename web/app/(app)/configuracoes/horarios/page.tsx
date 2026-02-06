@@ -5,14 +5,22 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 
 export default async function HorariosPage() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  const { data: orgId } = await supabase.rpc('get_user_org_id');
+  if (!user?.id) return <div>Não autorizado</div>;
 
-  if (!orgId) return <div>Erro: Organização não encontrada.</div>;
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, organization_id")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.organization_id) return <div>Erro: Organização não encontrada.</div>;
+  
   const { data: professionals, error } = await supabase
     .from("professionals")
-    .select("id, name, organization_id")
-    .eq("organization_id", orgId);
+    .select("id, name, user_id, organization_id")
+    .eq("organization_id", profile.organization_id);
 
   const { data: allAvailabilities } = await supabase
     .from("professional_availability")
@@ -46,25 +54,33 @@ export default async function HorariosPage() {
           ))}
         </TabsList>
 
-        {professionals.map((pro) => (
-          <TabsContent key={pro.id} value={pro.id}>
-            <Card>
-              <CardHeader>
-                <CardTitle>Agenda semanal de {pro.name || 'Profissional'}</CardTitle>
-                <CardDescription>
-                  Ajuste os horários de {pro.name} para o assistente de IA.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AvailabilityForm 
-                  professionalId={pro.id}
-                  professionalName={pro.name || "Profissional"}
-                  initialData={allAvailabilities?.filter(a => a.professional_id === pro.id) || []}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        ))}
+        {professionals.map((pro) => {
+          // Lógica de Permissão para o Frontend
+          const canEdit = 
+            ["admin", "owner"].includes(profile.role ?? "") || 
+            (pro.user_id === user.id);
+
+          return (
+            <TabsContent key={pro.id} value={pro.id}>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Agenda semanal de {pro.name || 'Profissional'}</CardTitle>
+                  <CardDescription>
+                    Ajuste os horários de {pro.name} para o assistente de IA.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AvailabilityForm 
+                    professionalId={pro.id}
+                    professionalName={pro.name || "Profissional"}
+                    initialData={allAvailabilities?.filter(a => a.professional_id === pro.id) || []}
+                    readOnly={!canEdit} // Bloqueia edição se não for dono ou admin
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          );
+        })}
       </Tabs>
     </div>
   );

@@ -37,3 +37,41 @@ export const STATUS_CONFIG: Record<string, {
     icon: XCircle
   }
 }
+
+export async function checkProfessionalAvailability(
+  supabase: any,
+  professionalId: string,
+  startTime: Date,
+  endTime: Date
+) {
+  const dayOfWeek = startTime.getDay();
+  const timeString = startTime.toTimeString().split(' ')[0]; // HH:mm:ss
+
+  // 1. BUSCA HORÁRIO INDIVIDUAL DO PROFISSIONAL
+  const { data: profAvail } = await supabase
+    .from('professional_availability')
+    .select('*')
+    .eq('professional_id', professionalId)
+    .eq('day_of_week', dayOfWeek)
+    .eq('is_active', true)
+    .single();
+
+  if (profAvail) {
+    // Valida se está dentro do turno do médico
+    if (timeString < profAvail.start_time || timeString >= profAvail.end_time) {
+      return { available: false, message: "Fora do horário de atendimento do profissional." };
+    }
+
+    // Valida se está no intervalo (almoço)
+    if (profAvail.break_start && profAvail.break_end) {
+      if (timeString >= profAvail.break_start && timeString < profAvail.break_end) {
+        return { available: false, message: "O profissional está em horário de intervalo." };
+      }
+    }
+    
+    return { available: true };
+  }
+
+  // 2. FALLBACK: Se não houver horário individual
+  return { available: false, message: "O profissional não possui horários configurados para este dia." };
+}

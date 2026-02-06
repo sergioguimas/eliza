@@ -71,7 +71,7 @@ export function CreateAppointmentDialog({
   const [notes, setNotes] = useState("")
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<string>("")
 
-  // EFEITO: Preencher formulário ao abrir
+  // Preencher formulário ao abrir ou quando as props de pré-seleção mudarem
   useEffect(() => {
     if (open) {
       // 1. Resetar campos que não foram pré-selecionados
@@ -109,14 +109,14 @@ export function CreateAppointmentDialog({
         setSelectedProfessionalId(team[0].id)
       }
 
-      // 4. Preencher Cliente (NOVO)
+      // 4. Preencher Cliente
       if (preselectedCustomerId) {
         setCustomerId(preselectedCustomerId)
       } else {
         setCustomerId("new")
       }
 
-      // 5. Preencher Serviço (NOVO)
+      // 5. Preencher Serviço
       if (preselectedServiceId) {
         setServiceId(preselectedServiceId)
       } else {
@@ -151,19 +151,63 @@ export function CreateAppointmentDialog({
     return true;
   };
 
-  const handlePreSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!date || !time) {
-        toast.error("Preencha data e hora.");
-        return;
+  const handlePreSubmit = () => {
+    // 1. Validações Básicas
+    if (!customerId && !customerName) {
+      toast.error("Selecione um cliente existente ou digite o nome de um novo.")
+      return
     }
 
-    if (!isWithinBusinessHours(date, time)) {
-        setShowOutsideHoursAlert(true);
-    } else {
-        performSubmit();
+    if (!date || !time || !selectedProfessionalId) {
+      toast.error("Preencha data, horário e profissional.")
+      return
     }
+
+    // 2. Preparação dos Dados para Validação
+    // Garante que 'date' seja um objeto Date real para pegar o dia da semana
+    const dateObj = new Date(date)
+    const dayOfWeek = dateObj.getDay()
+    const timeStr = time.length === 5 ? time + ":00" : time
+
+    // Encontra o profissional e a disponibilidade específica dele
+    const professional = professionals?.find(p => p.id === selectedProfessionalId)
+    const specificAvailability = professional?.professional_availability?.find(
+      (a: any) => a.day_of_week === dayOfWeek && a.is_active
+    )
+
+    let isOutside = false
+
+    // VERIFICAÇÃO DO PROFISSIONAL
+    if (specificAvailability) {
+        // Verifica Turno do Médico
+        const isOutsideProHours = 
+        timeStr < specificAvailability.start_time || 
+        timeStr >= specificAvailability.end_time
+
+        // Verifica Intervalo/Almoço do Médico
+        const isProLunchTime = 
+        specificAvailability.break_start && specificAvailability.break_end &&
+        timeStr >= specificAvailability.break_start && 
+        timeStr < specificAvailability.break_end
+
+        // 2. Verificação dos Horários Comerciais da Clínica
+        if (isOutsideProHours || isProLunchTime) {
+        isOutside = true
+        } else {
+        if (!isWithinBusinessHours(date, time)) {
+            isOutside = true
+        }
+        }
+    } else {
+      isOutside = true
+    }
+
+    // 3. Decisão Final
+    if (isOutside) {
+      setShowOutsideHoursAlert(true)
+      return
+    }
+    performSubmit()
   }
 
   async function performSubmit() {
@@ -353,7 +397,7 @@ export function CreateAppointmentDialog({
             </div>
 
             <div className="flex justify-end pt-2">
-                <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
+                <Button type="button" disabled={isLoading} className="w-full sm:w-auto" onClick={handlePreSubmit}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Confirmar Agendamento
                 </Button>

@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { sendAppointmentConfirmation } from "./whatsapp-messages"
 import { sendWhatsAppMessage } from "./send-whatsapp"
+import { checkProfessionalAvailability } from "@/lib/appointment-config"
 
 export async function createAppointment(formData: FormData) {
   const supabase = await createClient()
@@ -56,25 +57,19 @@ export async function createAppointment(formData: FormData) {
     .eq('id', service_id as string)
     .single()
 
-  // Definição das variáveis de apoio
   const duration_minutes = service?.duration_minutes || 30
   const price = service?.price || 0
   const serviceTitle = service?.title || "serviço"
 
   let timeString = start_time_raw.trim()
 
-  // Verifica se a string JÁ TEM informação de fuso
   const hasOffset = /Z|[+-]\d{2}:?\d{2}$/.test(timeString)
 
   if (!hasOffset) {      
-      // Verifica se TEM SEGUNDOS (formato HH:mm:ss) ou só HH:mm
       const parts = timeString.split('T')
       if (parts[1] && parts[1].length === 5) { 
-          // Se for só HH:mm, adiciona :00 para ficar padrão ISO
           timeString += ':00'
       }
-      
-      // Adiciona o offset do Brasil
       timeString += '-03:00'
   }
 
@@ -87,6 +82,19 @@ export async function createAppointment(formData: FormData) {
   }
 
   const endTime = new Date(startTime.getTime() + duration_minutes * 60000)
+
+  // --- 4.5 VERIFICAÇÃO DE DISPONIBILIDADE ---
+  const availability = await checkProfessionalAvailability(
+    supabase, 
+    professional_id, 
+    startTime, 
+    endTime
+  );
+
+  if (!availability.available) {
+    return { error: availability.message };
+  }
+
 
   // --- 5. VERIFICAÇÃO DE CONFLITO ---
   const { data: conflicts } = await supabase
