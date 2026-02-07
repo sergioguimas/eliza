@@ -7,9 +7,10 @@ import { CreateServiceDialog } from "@/components/create-service-dialog"
 import { DeleteServiceButton } from "@/components/delete-service-button"
 import { getDictionary } from "@/lib/get-dictionary" 
 import { CategoryIcon } from "@/components/category-icon"
+import { Database } from "@/utils/database.types"
 
 export async function generateMetadata(): Promise<Metadata> {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) return { title: "Eliza" }
@@ -18,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
     .from('profiles')
     .select('organizations(niche)')
     .eq('id', user.id)
-    .single() as any
+    .single()
 
   const niche = profile?.organizations?.niche || 'generico'
   const dict = getDictionary(niche)
@@ -29,7 +30,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ProcedimentosPage() {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -38,7 +39,7 @@ export default async function ProcedimentosPage() {
     .from('profiles')
     .select('organization_id')
     .eq('id', user.id)
-    .single() as any
+    .single()
 
   if (!profile?.organization_id) redirect('/setup')
 
@@ -52,7 +53,7 @@ export default async function ProcedimentosPage() {
     .from('organizations')
     .select('niche')
     .eq('id', profile.organization_id)
-    .single() as any
+    .single()
   const niche = organization?.niche || 'generico'
   const dict = getDictionary(niche)
 

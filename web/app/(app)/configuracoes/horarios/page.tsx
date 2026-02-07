@@ -2,9 +2,10 @@ import { createClient } from "@/utils/supabase/server";
 import { AvailabilityForm } from "./availability-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Database } from "@/utils/database.types"
 
 export default async function HorariosPage() {
-  const supabase = await createClient();
+  const supabase = await createClient<Database>();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user?.id) return <div>Não autorizado</div>;

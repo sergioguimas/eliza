@@ -2,9 +2,10 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { Database } from "@/utils/database.types"
 
 export async function updateProfessionalProfile(formData: FormData) {
-  const supabase = await createClient();
+  const supabase = await createClient<Database>();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return { error: "Não autorizado" };

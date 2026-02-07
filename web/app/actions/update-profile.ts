@@ -2,9 +2,10 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
+import { Database } from "@/utils/database.types"
 
 export async function updateProfile(formData: FormData) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Não autorizado" }
@@ -13,7 +14,7 @@ export async function updateProfile(formData: FormData) {
   const crm = formData.get('crm') as string
   const specialty = formData.get('specialty') as string
 
-  const { error } = await (supabase.from('profiles') as any)
+  const { error } = await (supabase.from('profiles'))
     .update({
       full_name,
       crm,

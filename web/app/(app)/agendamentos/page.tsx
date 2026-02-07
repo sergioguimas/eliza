@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { CalendarView } from "@/components/calendar-view"
 import { RealtimeAppointments } from "@/components/realtime-appointments"
 import { getDictionary } from "@/lib/get-dictionary"
+import { Database } from "@/utils/database.types"
 
 export const metadata: Metadata = {
   title: "Agenda | Eliza",
@@ -14,7 +15,7 @@ export default async function AgendamentosPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
   
   const params = await searchParams
 

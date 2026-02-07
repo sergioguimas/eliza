@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server"
 import { createClient as createClientAdmin } from "@supabase/supabase-js"
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
+import { Database } from "@/utils/database.types"
 
 export async function registerStaffFromInvite(formData: FormData) {
   const code = formData.get('invite_code') as string
@@ -19,7 +20,7 @@ export async function registerStaffFromInvite(formData: FormData) {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!serviceRoleKey) return { error: "Erro de configuração no servidor." }
 
-  const supabaseAdmin = createClientAdmin(
+  const supabaseAdmin = createClientAdmin<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     serviceRoleKey,
     { auth: { autoRefreshToken: false, persistSession: false } }
@@ -27,7 +28,7 @@ export async function registerStaffFromInvite(formData: FormData) {
 
   try {
     // 2. Validar o Convite
-    const { data: invite } = await (supabaseAdmin.from('invitations') as any)
+    const { data: invite } = await (supabaseAdmin.from('invitations'))
       .select('*')
       .eq('code', code)
       .single()
@@ -60,7 +61,7 @@ export async function registerStaffFromInvite(formData: FormData) {
 
     // 5. O Trigger 'handle_new_user' cria o Profile básico
     // 5.1 Atualiza o Profile com os dados da organização e cargo
-    const { error: profileError } = await (supabaseAdmin.from('profiles') as any)
+    const { error: profileError } = await (supabaseAdmin.from('profiles'))
       .update({
         organization_id: invite.organization_id,
         role: invite.role, 
@@ -75,7 +76,7 @@ export async function registerStaffFromInvite(formData: FormData) {
 
     // 5.2 NOVO: Se o cargo for 'professional', insere na tabela professionals
     if (invite.role === 'professional' || invite.role === 'admin') {
-      const { error: professionalError } = await (supabaseAdmin.from('professionals') as any)
+      const { error: professionalError } = await (supabaseAdmin.from('professionals'))
         .insert({
           user_id: authUser.user.id,
           organization_id: invite.organization_id,
@@ -91,7 +92,7 @@ export async function registerStaffFromInvite(formData: FormData) {
     }
 
     // 6. Atualiza uso do convite
-    await (supabaseAdmin.from('invitations') as any)
+    await (supabaseAdmin.from('invitations'))
       .update({ used_count: (invite.used_count || 0) + 1 })
       .eq('id', invite.id)
 

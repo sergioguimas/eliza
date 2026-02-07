@@ -2,12 +2,13 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { headers } from "next/headers"
+import { Database } from "@/utils/database.types"
 
 export async function generateInvite(
   organizationId: string, 
   role: 'staff' | 'professional' | 'admin' = 'staff'
 ) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   // 1. Verifica Usuário Logado
   const { data: { user } } = await supabase.auth.getUser()
@@ -40,7 +41,7 @@ export async function generateInvite(
   expiresAt.setDate(expiresAt.getDate() + 7)
 
   // 5. Salva no Banco
-  const { error } = await (supabase.from('invitations') as any)
+  const { error } = await (supabase.from('invitations'))
     .insert({
       organization_id: organizationId,
       code,

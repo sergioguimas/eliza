@@ -5,6 +5,7 @@ import { getDictionary } from "@/lib/get-dictionary"
 import { KeckleonProvider } from "@/providers/keckleon-provider"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
+import { Database } from "@/utils/database.types"
 
 // --- TIPAGEM MANUAL (BLINDAGEM) ---
 type Organization = {
@@ -28,7 +29,7 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return redirect('/login')
@@ -53,29 +54,21 @@ export default async function AppLayout({
       redirect('/setup')
   }
   
-  // 4. Lógica Camaleão (Keckleon)
   const niche = organization?.niche || 'generico'
   const dict = getDictionary(niche)
   const themeClass = `theme-${niche}`
 
   return (
-    // Injeta o Tema CSS no container principal
     <div className={`h-full ${themeClass} bg-background text-foreground`}> 
-      {/* Injeta o Dicionário e Nicho no Contexto */}
       <KeckleonProvider dictionary={dict} niche={niche}>
-        
         <SidebarProvider>
-          {/* Passamos os dados tipados (ou null) para a Sidebar */}
           <AppSidebar 
             user={user} 
-            // Casting para any aqui garante que o componente aceite, mesmo se a tipagem dele for estrita
             organization={organization as any} 
             profile={profile as any}
           />
-          
           {/* Conteúdo Principal */}
           <main className="flex-1 w-full overflow-hidden flex flex-col h-screen">
-            {/* Header Mobile/Desktop */}
             <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur px-4 supports-[backdrop-filter]:bg-background/60">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
@@ -83,8 +76,6 @@ export default async function AppLayout({
                 {organization?.name || "Eliza SaaS"}
               </h1>
             </header>
-            
-            {/* Área de Scroll */}
             <div className="flex-1 overflow-auto p-4 md:p-6 bg-muted/10">
               {children}
             </div>

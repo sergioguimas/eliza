@@ -3,12 +3,13 @@
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { sendWhatsAppMessage } from "./send-whatsapp"
+import { Database } from "@/utils/database.types"
 
 export async function handleAppointmentRequest(
   appointmentId: string, 
   action: 'confirmed' | 'canceled'
 ) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   // 1. Atualiza o status no banco
   const { data: appointment, error } = await supabase

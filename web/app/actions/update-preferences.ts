@@ -2,9 +2,10 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
+import { Database } from "@/utils/database.types"
 
 export async function updatePreferences(formData: FormData) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   const organization_id = formData.get('organizationId') as string
   const form_type = formData.get('form_type') as string
@@ -20,7 +21,7 @@ export async function updatePreferences(formData: FormData) {
           days_of_week: formData.getAll('days_of_week').map(d => parseInt(d as string))
       }
 
-      const { error } = await (supabase.from('organization_settings') as any)
+      const { error } = await (supabase.from('organization_settings'))
         .update(updates)
         .eq('organization_id', organization_id)
 
@@ -35,7 +36,7 @@ export async function updatePreferences(formData: FormData) {
           msg_appointment_canceled: formData.get('msg_appointment_canceled') as string
       }
 
-      const { error } = await (supabase.from('organization_settings') as any)
+      const { error } = await (supabase.from('organization_settings'))
         .update(updates)
         .eq('organization_id', organization_id)
 

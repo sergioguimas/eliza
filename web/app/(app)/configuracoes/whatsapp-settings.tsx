@@ -7,9 +7,6 @@ import { Badge } from "@/components/ui/badge"
 import { QrCode, Link, LogOut, Loader2, Smartphone, RefreshCw, Copy, ShieldCheck, Server, LinkIcon } from "lucide-react"
 import { toast } from "sonner"
 import { createWhatsappInstance, deleteWhatsappInstance, getWhatsappStatus } from "@/app/actions/whatsapp-connect"
-import { TabsContent } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 
 export function WhatsappSettings({ settings, organizationId }: any) {
   const [status, setStatus] = useState<'connected' | 'disconnected' | 'loading'>('loading')

@@ -19,7 +19,7 @@ const COLORS = [
   { name: 'Vermelho', value: '#ef4444' },
 ]
 
-export function CreateServiceDialog({ organization_id, serviceToEdit }: { organization_id: string, serviceToEdit?: any }) {
+export function CreateServiceDialog({ organization_id, serviceToEdit }: { organization_id: any, serviceToEdit?: any }) {
   const [open, setOpen] = useState(false)
   const [selectedColor, setSelectedColor] = useState(serviceToEdit?.color || COLORS[0].value)
   const { dict } = useKeckleon()

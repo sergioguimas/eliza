@@ -2,9 +2,10 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
+import { Database } from "@/utils/database.types"
 
 export async function updateCustomer(formData: FormData) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   const id = formData.get('id') as string
   const name = formData.get('name') as string
@@ -32,7 +33,7 @@ export async function updateCustomer(formData: FormData) {
     dataToUpdate.birth_date = null
   }
 
-  const { error } = await (supabase.from('appointments') as any)
+  const { error } = await (supabase.from('customers'))
     .update(dataToUpdate)
     .eq('id', id)
 

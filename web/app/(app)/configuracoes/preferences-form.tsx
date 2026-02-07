@@ -91,7 +91,7 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
               <Card>
                 <CardHeader>
                     <CardTitle>Horários de Funcionamento</CardTitle>
-                    <CardDescription>Defina a jornada de trabalho e intervalos.</CardDescription>
+                    <CardDescription>Defina a jornada de trabalho e intervalos da sua organização.</CardDescription>
                 </CardHeader>
                 
                 <CardContent className="space-y-6">

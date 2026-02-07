@@ -12,9 +12,14 @@ import Link from "next/link"
 import { CreateCustomerDialog } from "@/components/create-customer-dialog"
 import { getDictionary } from "@/lib/get-dictionary"
 import { CategoryIcon } from "@/components/category-icon"
+import { Database } from "@/utils/database.types"
+
+type ProfileWithOrg = Database['public']['Tables']['profiles']['Row'] & {
+  organizations: Pick<Database['public']['Tables']['organizations']['Row'], 'niche'> | null
+}
 
 export async function generateMetadata(): Promise<Metadata> {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) return { title: "Eliza" }
@@ -23,7 +28,7 @@ export async function generateMetadata(): Promise<Metadata> {
     .from('profiles')
     .select('organizations(niche)')
     .eq('id', user.id)
-    .single() as any
+    .single()
 
   const niche = profile?.organizations?.niche || 'generico'
   const dict = getDictionary(niche)
@@ -38,7 +43,7 @@ export default async function ClientesPage({
 }: {
   searchParams: Promise<{ q?: string }>
 }) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
   const query = (await searchParams)?.q || ""
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -46,9 +51,9 @@ export default async function ClientesPage({
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('organization_id')
+    .select(`*, organizations (niche)`)
     .eq('id', user.id)
-    .single() as any
+    .single()
 
   if (!profile?.organization_id) redirect('/configuracoes')
 
@@ -66,7 +71,7 @@ export default async function ClientesPage({
 
   const { data: customers } = await customerQuery as any;
 
-  const niche = profile?.organizations?.niche || 'generico'
+  const niche = (profile as ProfileWithOrg)?.organizations?.niche || 'generico';
   const dict = getDictionary(niche)
 
   return (

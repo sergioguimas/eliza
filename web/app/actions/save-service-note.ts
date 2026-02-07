@@ -2,9 +2,10 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { Database } from "@/utils/database.types"
 
 export async function saveServiceNote(formData: FormData) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   const customer_id = formData.get('customer_id') as string
   const content = formData.get('content') as string
@@ -18,7 +19,7 @@ export async function saveServiceNote(formData: FormData) {
     .from('customers')
     .select('organization_id')
     .eq('id', customer_id)
-    .single() as any
+    .single()
 
   if (!customer?.organization_id) {
     return { error: "Erro de permissão: Organização não encontrada para este cliente." }
@@ -30,7 +31,7 @@ export async function saveServiceNote(formData: FormData) {
       customer_id,
       content,
       organization_id: customer.organization_id
-    } as any)
+    })
 
   if (error) {
     return { error: "Erro ao salvar: " + error.message }

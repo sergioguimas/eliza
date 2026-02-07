@@ -2,9 +2,10 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { Database } from "@/utils/database.types"
 
 export async function updateAppointmentStatus(appointmentId: string, newStatus: string) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   const { error } = await supabase
     .from('appointments')

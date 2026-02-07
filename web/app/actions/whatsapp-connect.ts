@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server"
+import { Database } from "@/utils/database.types"
 
 // --- TIPAGEM ---
 export type WhatsappResponse = {
@@ -20,7 +21,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 export async function createWhatsappInstance(): Promise<WhatsappResponse> {
   console.log("--- [DEBUG] INICIANDO PROCESSO DE CONEXÃO WHATSAPP ---")
   
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) {
@@ -34,7 +35,7 @@ export async function createWhatsappInstance(): Promise<WhatsappResponse> {
     .from('profiles')
     .select('organization_id, organizations:organization_id(slug, evolution_api_url, evolution_api_key)')
     .eq('id', user.id)
-    .single() as any
+    .single()
 
   if (!profile?.organizations?.slug) {
     console.error("[DEBUG ERROR] Organização não encontrada para o usuário")
@@ -192,7 +193,7 @@ export async function deleteWhatsappInstance() {
         .from('profiles')
         .select('organizations(slug, evolution_api_url, evolution_api_key)')
         .eq('id', user.id)
-        .single() as any
+        .single()
 
     const org = profile?.organizations
     if (!org) return { error: "Org não encontrada" }
@@ -223,7 +224,7 @@ export async function getWhatsappStatus(): Promise<WhatsappResponse> {
         .from('profiles')
         .select('organizations(slug, evolution_api_url, evolution_api_key)')
         .eq('id', user.id)
-        .single() as any
+        .single()
     
     const org = profile?.organizations
     if (!org) return { status: 'unknown' }

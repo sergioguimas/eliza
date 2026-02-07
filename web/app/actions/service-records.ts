@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import crypto from "crypto"
+import { Database } from "@/utils/database.types"
 
 // --- TYPES ---
 export interface ServiceRecord {
@@ -18,9 +19,9 @@ export interface ServiceRecord {
 
 // 1. BUSCAR (GET)
 export async function getServiceRecords(customerId: string) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
-  const { data, error } = await (supabase.from('service_records') as any)
+  const { data, error } = await (supabase.from('service_records'))
     .select(`
       *,
       professional:profiles!service_records_professional_id_fkey (
@@ -41,7 +42,7 @@ export async function getServiceRecords(customerId: string) {
 
 // 2. CRIAR (CREATE)
 export async function createServiceRecord(formData: FormData) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
   
   const customerId = formData.get('customer_id') as string
   const content = formData.get('content') as string
@@ -59,7 +60,7 @@ export async function createServiceRecord(formData: FormData) {
 
   if (!profile?.organization_id) return { error: 'Organização não encontrada' }
 
-  const { error } = await (supabase.from('service_records') as any)
+  const { error } = await (supabase.from('service_records'))
     .insert({
       organization_id: profile.organization_id,
       customer_id: customerId,
@@ -120,7 +121,7 @@ export async function signServiceRecord(recordId: string, customerId: string) {
   const signatureString = `${record.content}|${user.id}|${new Date().toISOString()}`
   const hash = crypto.createHash('sha256').update(signatureString).digest('hex')
 
-  const { error } = await (supabase.from('service_records') as any)
+  const { error } = await (supabase.from('service_records'))
     .update({
       status: 'signed',
       signed_at: new Date().toISOString(),

@@ -2,12 +2,13 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { Database } from "@/utils/database.types"
 
 export async function upsertService(formData: FormData) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   const id = formData.get('id') as string
-  const title = formData.get('name') as string // Form envia 'name', banco espera 'title'
+  const title = formData.get('name') as string
   const duration_minutes = Number(formData.get('duration'))
   const price = Number(formData.get('price'))
   
@@ -19,7 +20,6 @@ export async function upsertService(formData: FormData) {
     return { error: "Erro interno: ID da organização não identificado." }
   }
 
-  // Objeto mapeado para inserção/atualização
   const serviceData = {
     title,
     duration_minutes,
@@ -31,8 +31,8 @@ export async function upsertService(formData: FormData) {
 
   try {
     const { error } = id 
-      ? await (supabase.from('services') as any).update(serviceData).eq('id', id)
-      : await (supabase.from('services') as any).insert(serviceData)
+      ? await (supabase.from('services')).update(serviceData).eq('id', id)
+      : await (supabase.from('services')).insert(serviceData)
 
     if (error) throw error
 
@@ -46,9 +46,9 @@ export async function upsertService(formData: FormData) {
 }
 
 export async function deleteService(id: string) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
   
-  const { error } = await (supabase.from('services') as any)
+  const { error } = await (supabase.from('services'))
     .delete()
     .eq('id', id)
 

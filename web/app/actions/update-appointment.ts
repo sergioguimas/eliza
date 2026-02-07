@@ -3,9 +3,10 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { sendWhatsAppMessage } from './send-whatsapp'
+import { Database } from "@/utils/database.types"
 
 export async function updateAppointment(formData: FormData) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   const appointmentId = formData.get('id') as string
   const dateRaw = formData.get('date') as string
@@ -31,7 +32,7 @@ export async function updateAppointment(formData: FormData) {
   const newEndTime = new Date(newStartTime.getTime() + duration * 60000)
 
   // Atualiza no Banco
-  const { error } = await (supabase.from('appointments') as any)
+  const { error } = await (supabase.from('appointments'))
     .update({
       start_time: newStartTime.toISOString(),
       end_time: newEndTime.toISOString(),

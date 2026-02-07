@@ -2,12 +2,13 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { Database } from "@/utils/database.types"
 
 export async function toggleServiceStatus(serviceId: string, currentStatus: boolean) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   try {
-    const { error } = await (supabase.from('services') as any)
+    const { error } = await (supabase.from('services'))
       .update({ active: !currentStatus }) 
       .eq('id', serviceId)
 

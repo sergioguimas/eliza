@@ -3,15 +3,15 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { sendWhatsAppMessage } from './send-whatsapp'
-
+import { Database } from "@/utils/database.types"
 
 
 //CANCELAR (Mantém registro, avisa cliente)
 export async function cancelAppointment(appointmentId: string) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   // 1. Buscar dados para a mensagem antes de atualizar
-  const { data: appointment } = await (supabase.from('appointments') as any)
+  const { data: appointment } = await (supabase.from('appointments'))
     .select(`
       *,
       services ( title )
@@ -22,7 +22,7 @@ export async function cancelAppointment(appointmentId: string) {
   if (!appointment) return { error: "Agendamento não encontrado" }
 
   // 2. Atualizar Status para 'canceled'
-  const { error } = await (supabase.from('appointments') as any)
+  const { error } = await (supabase.from('appointments'))
     .update({ status: 'canceled' })
     .eq('id', appointmentId)
 
@@ -30,7 +30,7 @@ export async function cancelAppointment(appointmentId: string) {
 
   // 3. Enviar WhatsApp de Cancelamento
   if (appointment.customer_id) {
-    const { data: client } = await (supabase.from('customers') as any)
+    const { data: client } = await (supabase.from('customers'))
       .select('name, phone')
       .eq('id', appointment.customer_id)
       .single()
@@ -46,7 +46,6 @@ export async function cancelAppointment(appointmentId: string) {
 
             const message = `Olá ${client.name}, seu agendamento de *${nomeServico}* para o dia ${dia} às ${hora} foi *cancelado*.`
             
-            // Verifica se a função existe antes de chamar
             if (sendWhatsAppMessage) {
                 await sendWhatsAppMessage({
                 phone: client.phone,
@@ -71,7 +70,7 @@ export async function deleteAppointment(appointmentId: string) {
   const supabase = await createClient()
 
   // 1. Buscar dados antes de deletar
-  const { data: appointment } = await (supabase.from('appointments') as any)
+  const { data: appointment } = await (supabase.from('appointments'))
     .select(`
       *,
       services ( title )
@@ -80,7 +79,7 @@ export async function deleteAppointment(appointmentId: string) {
     .single()
 
   // 2. Deletar o agendamento
-  const { error } = await (supabase.from('appointments') as any)
+  const { error } = await (supabase.from('appointments'))
     .delete()
     .eq('id', appointmentId)
 
@@ -88,7 +87,7 @@ export async function deleteAppointment(appointmentId: string) {
 
   // 3. Enviar WhatsApp
   if (appointment?.customer_id) {
-    const { data: client } = await (supabase.from('customers') as any)
+    const { data: client } = await (supabase.from('customers'))
       .select('name, phone')
       .eq('id', appointment.customer_id)
       .single()

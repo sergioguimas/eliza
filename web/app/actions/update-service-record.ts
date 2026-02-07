@@ -1,14 +1,15 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { Database } from "@/utils/database.types"
 
 export async function updateServiceRecord(recordId: string, content: string) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Não autorizado' }
 
-  const { error } = await (supabase.from('service_records') as any)
+  const { error } = await (supabase.from('service_records'))
     .update({ content })
     .eq('id', recordId)
     .eq('professional_id', user.id)

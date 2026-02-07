@@ -20,6 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Mail, Shield, Trash2 } from "lucide-react"
 import { InviteCard } from "@/components/invite-card"
+import { Database } from "@/utils/database.types"
 
 // --- TIPAGEM MANUAL (BLINDAGEM) ---
 type ProfileRow = {
@@ -32,12 +33,12 @@ type ProfileRow = {
 }
 
 export default async function EquipePage() {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect("/login")
 
-  // 1. Buscar Meu Perfil (Com Casting Manual)
+  // 1. Buscar Meu Perfil
   const { data: rawProfile } = await supabase
     .from('profiles')
     .select('*')
@@ -51,7 +52,7 @@ export default async function EquipePage() {
     redirect('/setup')
   }
 
-  // 2. Buscar Membros da Equipe (Com Casting Manual)
+  // 2. Buscar Membros da Equipe
   const { data: rawMembers } = await supabase
     .from('profiles')
     .select('*')

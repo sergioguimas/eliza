@@ -16,7 +16,11 @@ import { AppointmentContextMenu } from "@/components/appointment-context-menu"
 import { cn } from "@/lib/utils"
 import { AppointmentCardActions } from "@/components/appointment-card-actions"
 import { RealtimeAppointments } from '@/components/realtime-appointments'
+import { Database } from "@/utils/database.types"
 
+type ProfileWithOrg = Database['public']['Tables']['profiles']['Row'] & {
+  organizations: Pick<Database['public']['Tables']['organizations']['Row'], 'niche'> | null
+}
 
 // --- 1. FUNÇÃO DE DATA (BRASIL) ---
 function getBrazilDayRange() {
@@ -27,7 +31,7 @@ function getBrazilDayRange() {
 }
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   // 2. Verifica autenticação
   const { data: { user } } = await supabase.auth.getUser()
@@ -36,11 +40,11 @@ export default async function DashboardPage() {
   // 3. Busca Perfil
   const { data: profile } = await supabase
     .from('profiles')
-    .select(`*, organizations(*)`)
+    .select(`*, organizations(niche, name)`)
     .eq('id', user.id)
-    .single() as any
+    .single()
 
-  const organization = profile?.organizations
+  const organization = profile?.organization_id
 
   if (!profile?.organization_id) redirect('/configuracoes')
 
@@ -78,7 +82,7 @@ export default async function DashboardPage() {
       .eq('organization_id', orgId)
       .neq('status', 'canceled')
       .neq('status', 'cancelled')
-  ]) as any
+  ])
 
   // 6. Preparação dos dados
   const customersList = (resCustomers.data || []).map((c: any) => ({
@@ -109,8 +113,8 @@ export default async function DashboardPage() {
   const doctorName = profile?.full_name ? profile.full_name.split(' ')[0] : "Doutor"
 
   // 8. Dicionário e Ícone do Nicho
-  const dict = await getDictionary(organization?.niche)
-  const niche = organization?.niche || 'generico'
+  const niche = (profile as ProfileWithOrg)?.organizations?.niche || 'generico'
+  const dict = await getDictionary(niche)
 
   return (
     <div className="space-y-8">

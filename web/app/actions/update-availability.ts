@@ -3,12 +3,13 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { DayAvailability } from "@/lib/types";
+import { Database } from "@/utils/database.types"
 
 export async function updateProfessionalAvailability(
   professionalId: string,
   availabilities: DayAvailability[]
 ) {
-  const supabase = await createClient();
+  const supabase = await createClient<Database>();
 
   // 1. Validação de Segurança
   const { data: { user } } = await supabase.auth.getUser();
@@ -20,8 +21,8 @@ export async function updateProfessionalAvailability(
     day_of_week: item.day_of_week,
     start_time: item.start_time,
     end_time: item.end_time,
-    break_start: (item as any).break_start || null,
-    break_end: (item as any).break_end || null,
+    break_start: (item).break_start || null,
+    break_end: (item).break_end || null,
     is_active: item.is_active,
   }));
 

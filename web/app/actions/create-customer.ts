@@ -2,9 +2,10 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
+import { Database } from "@/utils/database.types"
 
 export async function createCustomer(formData: FormData) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   // 1. Captura e Tratamento de Dados
   const name = formData.get('name') as string
@@ -43,7 +44,7 @@ export async function createCustomer(formData: FormData) {
     }
 
     // 4. Verificação de Duplicidade
-    const query = (supabase.from('customers') as any)
+    const query = (supabase.from('customers'))
       .select('id')
       .eq('organization_id', profile.organization_id)
       .or(`phone.eq.${phone}${document ? `,document.eq.${document}` : ''}`)
@@ -55,7 +56,7 @@ export async function createCustomer(formData: FormData) {
     }
 
     // 5. Inserção
-    const { error: insertError } = await (supabase.from('customers') as any)
+    const { error: insertError } = await (supabase.from('customers'))
       .insert({
         organization_id: profile.organization_id,
         name,

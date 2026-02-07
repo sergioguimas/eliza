@@ -2,9 +2,10 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
+import { Database } from "@/utils/database.types"
 
 export async function updateSettings(formData: FormData) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
@@ -20,7 +21,7 @@ export async function updateSettings(formData: FormData) {
       const full_name = formData.get('full_name') as string
       const professional_license = formData.get('crm') as string 
 
-      const { error: profileError } = await (supabase.from('profiles') as any)
+      const { error: profileError } = await (supabase.from('profiles'))
         .update({ 
           full_name, 
           professional_license 
@@ -43,7 +44,7 @@ export async function updateSettings(formData: FormData) {
       const orgUpdateData: any = { name }
       if (niche) orgUpdateData.niche = niche
       
-      const { error: orgError } = await (supabase.from('organizations') as any)
+      const { error: orgError } = await (supabase.from('organizations'))
         .update(orgUpdateData)
         .eq('id', org_id)
         

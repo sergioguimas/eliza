@@ -1,9 +1,10 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { Database } from "@/utils/database.types"
 
 export async function deleteServiceRecord(recordId: string) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Não autorizado' }

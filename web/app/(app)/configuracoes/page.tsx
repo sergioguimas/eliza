@@ -6,9 +6,10 @@ import { PreferencesForm } from "./preferences-form";
 import { WhatsappSettings } from "./whatsapp-settings";
 import { ProfessionalProfileForm } from "./professional-profile-form";
 import { Building, UserPen, NotebookPen, BotMessageSquare } from "lucide-react";
+import { Database } from "@/utils/database.types"
 
 export default async function SettingsPage() {
-  const supabase = await createClient();
+  const supabase = await createClient<Database>();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return redirect("/login");

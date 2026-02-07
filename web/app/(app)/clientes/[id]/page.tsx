@@ -17,6 +17,7 @@ import { ServiceRecordForm } from "@/components/service-record-form"
 import { Printer } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { unstable_noStore as noStore } from "next/cache"
+import { Database } from "@/utils/database.types"
 
 
 export const dynamic = 'force-dynamic'
@@ -25,7 +26,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
   noStore()
   const { id } = await params
   const { tab } = await searchParams
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   // 1. Busca dados do cliente, agendamentos e LOGS em paralelo
   const [customerRes, appointmentsRes, serviceRecords] = await Promise.all([

@@ -5,7 +5,8 @@ import { createClient as createClientAdmin } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { z } from "zod"
-import type { Database } from "../../utils/database.types"
+import { Database } from "@/utils/database.types"
+
 
 // Tipagem auxiliar
 type OrganizationInsert = Database['public']['Tables']['organizations']['Insert']
@@ -19,8 +20,7 @@ const createOrgSchema = z.object({
 })
 
 export async function createOrganization(formData: FormData) {
-  // 1. Cliente Normal (apenas para pegar o ID do usuário logado de forma segura)
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   const { data: { user }, error: userError } = await supabase.auth.getUser()
   if (userError || !user) {
@@ -105,7 +105,6 @@ export async function createOrganization(formData: FormData) {
     return { error: "Erro interno do servidor." }
   }
 
-  // 5. Sucesso: Limpa o cache e redireciona
   revalidatePath("/", "layout")
   redirect("/dashboard")
 }

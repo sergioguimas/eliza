@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { Database } from "@/utils/database.types"
 
 // Função auxiliar para trocar as variáveis {name}, {date}, etc.
 function replaceVariables(template: string, data: any) {
@@ -16,7 +17,7 @@ function replaceVariables(template: string, data: any) {
 }
 
 export async function sendAppointmentConfirmation(appointmentId: string) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   // 1. Busca os dados COMPLETOS + Configurações de Mensagem
   const { data: appointment, error } = await supabase

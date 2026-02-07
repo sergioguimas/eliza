@@ -2,6 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/utils/supabase/server'
+import { Database } from "@/utils/database.types"
 
 export async function createTenant(formData: FormData) {
   // 1. Configurações
@@ -12,7 +13,7 @@ export async function createTenant(formData: FormData) {
   if (!serviceRoleKey || !supabaseUrl) return { error: 'Erro de configuração interna.' }
 
   // 2. Cliente Admin
-  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+  const supabaseAdmin = createClient<Database>(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false }
   })
 

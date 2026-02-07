@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from "@supabase/supabase-js"
+import { Database } from "@/utils/database.types"
 
 // 🛡️ CONFIGURAÇÃO DE SEGURANÇA (FALLBACK)
 const DEFAULT_URL = "http://localhost:8082" 
@@ -22,7 +23,7 @@ interface SendMediaProps {
 }
 
 export async function sendWhatsAppMessage({ phone, message, organizationId }: SendMessageProps) {
-  const supabase = createClient(
+  const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )

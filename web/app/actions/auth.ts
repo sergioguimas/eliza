@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
+import { Database } from "@/utils/database.types"
 
 function getRedirectUrl(formData: FormData, defaultUrl: string) {
   const next = formData.get('redirectTo') as string
@@ -40,7 +41,7 @@ export async function signUp(formData: FormData) {
   const fullName = formData.get('fullName') as string
   const redirectTo = getRedirectUrl(formData, '/setup')
 
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   const { error } = await supabase.auth.signUp({
     email,
@@ -64,7 +65,7 @@ export async function signUp(formData: FormData) {
 }
 
 export async function createCompany(formData: FormData) {
-  const supabase = await createClient() as any 
+  const supabase = await createClient<Database>() as any 
   
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
