@@ -4,11 +4,14 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { QrCode, Link, LogOut, Loader2, Smartphone, RefreshCw } from "lucide-react"
+import { QrCode, Link, LogOut, Loader2, Smartphone, RefreshCw, Copy, ShieldCheck, Server, LinkIcon } from "lucide-react"
 import { toast } from "sonner"
 import { createWhatsappInstance, deleteWhatsappInstance, getWhatsappStatus } from "@/app/actions/whatsapp-connect"
+import { TabsContent } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
-export function WhatsappSettings() {
+export function WhatsappSettings({ settings, organizationId }: any) {
   const [status, setStatus] = useState<'connected' | 'disconnected' | 'loading'>('loading')
   const [qrCode, setQrCode] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -61,6 +64,11 @@ export function WhatsappSettings() {
         setQrCode(null)
         toast.success("Desconectado.")
     }, 2000)
+  }
+
+  const copyToClipboard = (text: string) => {
+      navigator.clipboard.writeText(text)
+      toast.success("Copiado para a área de transferência")
   }
 
   return (
@@ -162,7 +170,6 @@ export function WhatsappSettings() {
                     </Button>
                 </div>
             )}
-
         </div>
       </CardContent>
     </Card>

@@ -1,124 +1,92 @@
-import { createClient } from "@/utils/supabase/server"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { SettingsForm } from "./settings-form"
-import { PreferencesForm } from "./preferences-form"
-import { Building2, CalendarClock } from "lucide-react"
-import { redirect } from "next/navigation"
+import { createClient } from "@/utils/supabase/server";
+import { redirect } from "next/navigation";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SettingsForm } from "./settings-form";
+import { PreferencesForm } from "./preferences-form";
+import { WhatsappSettings } from "./whatsapp-settings";
+import { ProfessionalProfileForm } from "./professional-profile-form";
+import { Building, UserPen, NotebookPen, BotMessageSquare } from "lucide-react";
 
-// --- TIPAGEM MANUAL (BLINDAGEM) ---
-type ProfileRow = {
-  id: string
-  organization_id: string | null
-  role: string
-  full_name: string | null
-  email: string | null
-}
+export default async function SettingsPage() {
+  const supabase = await createClient();
 
-type OrganizationRow = {
-  id: string
-  name: string
-  slug: string
-  niche: string
-  whatsapp_instance_name: string | null
-  whatsapp_status: string | null
-}
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return redirect("/login");
 
-type SettingsRow = {
-  organization_id: string
-  open_hours_start: string | null
-  open_hours_end: string | null
-  days_of_week: number[] | null
-  appointment_duration: number | null
-  msg_appointment_created: string | null
-  msg_appointment_reminder: string | null
-  msg_appointment_canceled: string | null
-  lunch_start?: string | null 
-  lunch_end?: string | null
-}
+  // 1. Busca Profile (Role e Org)
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
 
-export default async function ConfiguracoesPage() {
-  const supabase = await createClient()
-  
-  // 1. Busca Usuário
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    redirect("/login")
+  if (!profile?.organization_id) {
+    return <div>Organização não encontrada</div>;
   }
 
-  // 2. Busca Perfil (Com Casting)
-  const { data: rawProfile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-  
-  // Forçamos o tipo ProfileRow
-  const profile = rawProfile as unknown as ProfileRow
+  // 2. Busca Dados do Profissional (se existir)
+  const { data: professional } = await supabase
+    .from("professionals")
+    .select("name, license_number, specialty, phone")
+    .eq("user_id", user.id)
+    .single();
 
-  // 3. Busca Organização (Com Casting)
-  let organization: OrganizationRow | null = null
-  
-  if (profile?.organization_id) {
-    const { data: rawOrg } = await supabase
-      .from('organizations')
-      .select('*')
-      .eq('id', profile.organization_id)
-      .single()
-    
-    organization = rawOrg as unknown as OrganizationRow
+  const isAdminOrOwner = ["admin", "owner"].includes(profile.role ?? "");
+  const isProfessional = !!professional; // Verifica se tem registro na tabela professionals
+
+  // 3. Busca Dados da Organização (apenas se for admin/owner para economizar recurso)
+  let organization = null;
+  if (isAdminOrOwner) {
+    const { data: org } = await supabase
+      .from("organizations")
+      .select("*")
+      .eq("id", profile.organization_id)
+      .single();
+    organization = org;
   }
 
-  // 4. Busca Configurações (Com Casting)
-  let settings: SettingsRow | null = null
-  
-  if (profile?.organization_id) {
-    const { data: rawSettings } = await supabase
-      .from('organization_settings')
-      .select('*')
-      .eq('organization_id', profile.organization_id)
-      .single()
-      
-    settings = rawSettings as unknown as SettingsRow
-  }
+  // Define a aba padrão: Se for admin vai pra 'organization', senão vai pra 'profile'
+  const defaultTab = isAdminOrOwner ? "organization" : "profile";
 
   return (
-    <div className="container max-w-4xl py-8 space-y-8 animate-in fade-in">
+    <div className="container max-w-4xl py-6 space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
-        <p className="text-muted-foreground">Gerencie os dados da empresa, conexão e automações.</p>
+        <p className="text-muted-foreground">
+          Gerencie seus dados e as preferências do sistema.
+        </p>
       </div>
 
-      {/* ABAS */}
-      <Tabs defaultValue="geral" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-8 h-12">
-          <TabsTrigger value="geral" className="text-base gap-2">
-            <Building2 className="h-4 w-4"/> 
-            Dados & Conexão
-          </TabsTrigger>
-          <TabsTrigger value="agenda" className="text-base gap-2">
-            <CalendarClock className="h-4 w-4"/> 
-            Agenda & Bot
-          </TabsTrigger>
+      <Tabs defaultValue={defaultTab} className="space-y-4">
+        <TabsList className="w-full">
+          {isAdminOrOwner && <TabsTrigger value="organization"><Building/>Organização</TabsTrigger>}
+          {isProfessional && <TabsTrigger value="profile"><UserPen/>Meu Perfil</TabsTrigger>}
+          {isAdminOrOwner && <TabsTrigger value="preferences"><NotebookPen/>Preferencias</TabsTrigger>}
+          {isAdminOrOwner && <TabsTrigger value="whatsapp"><BotMessageSquare/>WhatsApp</TabsTrigger>}
         </TabsList>
 
-        {/* ABA 1: DADOS GERAIS */}
-        <TabsContent value="geral" className="mt-0">
-          <SettingsForm 
-             profile={profile as any} 
-             organization={organization as any} 
-          />
-        </TabsContent>
+        {/* Conteúdo Exclusivo Admin/Owner */}
+        {isAdminOrOwner && organization && (
+          <>
+            <TabsContent value="organization">
+              <SettingsForm organization={organization} />
+            </TabsContent>
+            <TabsContent value="preferences">
+              <PreferencesForm settings={organization} organizationId={organization.id}/>
+            </TabsContent>
+            <TabsContent value="whatsapp">
+              <WhatsappSettings settings={organization} organizationId={organization.id}/>
+            </TabsContent>
+          </>
+        )}
 
-        {/* ABA 2: PREFERÊNCIAS */}
-        <TabsContent value="agenda" className="mt-0">
-           <PreferencesForm 
-             settings={settings as any} 
-             organizationId={profile?.organization_id || ""}
-             organizationData={organization as any}
-           />
-        </TabsContent>
-
+        {/* Conteúdo do Profissional */}
+        {isProfessional && (
+          <TabsContent value="profile">
+            <ProfessionalProfileForm initialData={professional} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
-  )
+  );
 }

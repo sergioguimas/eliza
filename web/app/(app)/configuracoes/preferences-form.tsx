@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Clock, MessageSquare, Save, Loader2, Link as LinkIcon, Coffee, Server, ShieldCheck, Copy } from "lucide-react"
+import { Clock, MessageSquare, Save, Loader2,  Coffee } from "lucide-react"
 import { updatePreferences } from "@/app/actions/update-preferences"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -70,23 +70,15 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
       </div>
   )
 
-  const copyToClipboard = (text: string) => {
-      navigator.clipboard.writeText(text)
-      toast.success("Copiado para a área de transferência")
-  }
-
   return (
     <div className="space-y-6">
       <Tabs defaultValue="horarios" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-8 h-12">
+        <TabsList className="grid w-full grid-cols-2 mb-8 h-12">
             <TabsTrigger value="horarios" className="flex items-center gap-2">
                 <Clock className="h-4 w-4" /> Horários
             </TabsTrigger>
             <TabsTrigger value="mensagens" className="flex items-center gap-2">
                 <MessageSquare className="h-4 w-4" /> Mensagens
-            </TabsTrigger>
-            <TabsTrigger value="conexao" className="flex items-center gap-2">
-                <LinkIcon className="h-4 w-4" /> Conexão WhatsApp
             </TabsTrigger>
         </TabsList>
 
@@ -157,8 +149,11 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
                     </div>
                   </div>
                 </CardContent>
-                <div className="flex justify-end p-6 pt-0">
-                  <Button type="submit" disabled={isPending}>{isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Salvar Horários</Button>
+                <div className="flex justify-end p-6 pt-5 border-t mt-4">
+                  <Button type="submit" disabled={isPending}>
+                    {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    Salvar Horários
+                  </Button>
                 </div>
               </Card>
           </form>
@@ -219,58 +214,15 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
                     />
                   </div>
                 </CardContent>
-                <div className="flex justify-end p-6 pt-0">
-                  <Button type="submit" disabled={isPending}>{isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Salvar Mensagens</Button>
+                <div className="flex justify-end p-6 pt-5 border-t mt-4">
+                  <Button type="submit" disabled={isPending}>
+                    {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    Salvar Mensagens
+                  </Button>
                 </div>
               </Card>
           </form>
-        </TabsContent>
-
-        {/* --- ABA 3: CONEXÃO (Apenas Leitura) --- */}
-        <TabsContent value="conexao" className="animate-in fade-in zoom-in-95 duration-200">
-            <Card className="border-blue-100 bg-blue-50/20 dark:border-blue-900/50">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <LinkIcon className="w-5 h-5 text-blue-600" /> 
-                        Status da Conexão
-                    </CardTitle>
-                    <CardDescription>Informações sobre a instância do WhatsApp conectada.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    
-                    {/* Status visual */}
-                    <div className="flex items-center gap-3 p-4 bg-white dark:bg-zinc-900 rounded-lg border border-blue-100 dark:border-blue-900 shadow-sm">
-                        <div className="p-2 bg-green-100 rounded-full animate-pulse">
-                            <Server className="w-5 h-5 text-green-600" />
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">Servidor Ativo</span>
-                            <span className="text-xs text-green-600 flex items-center gap-1 font-medium">
-                                <ShieldCheck className="w-3 h-3" /> Instância Sincronizada
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label>Nome da Instância (ID Interno)</Label>
-                        <div className="flex gap-2">
-                            <Input 
-                                readOnly 
-                                disabled
-                                value={organizationData?.slug || "Não configurado"}
-                                className="bg-zinc-100 dark:bg-zinc-800 font-mono text-muted-foreground"
-                            />
-                            <Button variant="outline" size="icon" onClick={() => copyToClipboard(organizationData?.slug || "")}>
-                                <Copy className="w-4 h-4" />
-                            </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                            Este identificador é gerenciado automaticamente pelo sistema. Entre em contato com o suporte para alterações.
-                        </p>
-                    </div>
-                </CardContent>
-            </Card>
-        </TabsContent>
+        </TabsContent>        
       </Tabs>
     </div>
   )
