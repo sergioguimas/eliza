@@ -65,7 +65,7 @@ export async function signUp(formData: FormData) {
 }
 
 export async function createCompany(formData: FormData) {
-  const supabase = await createClient<Database>() as any 
+  const supabase = await createClient<Database>() 
   
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {

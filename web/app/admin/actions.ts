@@ -3,10 +3,11 @@
 import { createClient } from "@/utils/supabase/server"
 import { createClient as createClientAdmin } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
+import { Database } from "@/utils/database.types"
 
 // Verifica se é o Super Admin
 async function checkSuperAdmin() {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user || user.email !== process.env.NEXT_PUBLIC_GOD_EMAIL) {
@@ -44,7 +45,7 @@ export async function toggleOrgStatus(orgId: string, currentStatus: string) {
   // 3. Executa atualização usando o Cliente Admin (ignora RLS)
   const supabaseAdmin = getAdminClient()
 
-  const { error } = await (supabaseAdmin.from('organizations') as any)
+  const { error } = await (supabaseAdmin.from('organizations'))
     .update({ subscription_status: newStatus }) 
     .eq('id', orgId)
 

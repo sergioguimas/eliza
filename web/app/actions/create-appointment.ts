@@ -10,7 +10,7 @@ import { Database } from "@/utils/database.types"
 type AppointmentInsert = Database['public']['Tables']['appointments']['Insert']
 
 export async function createAppointment(formData: FormData) {
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   // --- 1. EXTRAÇÃO DOS DADOS ---
   const organization_id = formData.get('organization_id') as string
@@ -29,6 +29,11 @@ export async function createAppointment(formData: FormData) {
   let customer_id = formData.get('customer_id') as string | null
   const customer_name = formData.get('customer_name') as string | null
   const customer_phone = formData.get('customer_phone') as string | null
+  const customer_document = formData.get('customer_document') as string
+  const customer_birth_date = formData.get('customer_birth_date') as string
+const customer_gender = formData.get('customer_gender') as string
+
+  let customer_found_name = ""
 
   // --- 2. VALIDAÇÃO TÉCNICA ---
   if (!organization_id || !start_time_raw || !professional_id || !service_id) {
@@ -41,19 +46,33 @@ export async function createAppointment(formData: FormData) {
         return { error: "Nome e telefone do paciente são obrigatórios." }
     }
 
-    const { data: newCustomer, error: createError } = await supabase
+    const { data: customerData, error: upsertError } = await supabase
         .from('customers')
-        .insert({
-            organization_id,
-            name: customer_name,
-            phone: customer_phone,
-            active: true
-        })
-        .select('id')
+        .upsert(
+            {
+                organization_id,
+                name: customer_name,
+                phone: customer_phone,
+                document: customer_document,
+                birth_date: customer_birth_date || null,
+                gender: customer_gender || null,
+                active: true
+            },
+            { 
+              onConflict: 'document', 
+              ignoreDuplicates: false 
+            }
+        )
+        .select('id, name')
         .single()
 
-    if (createError || !newCustomer) return { error: "Erro ao cadastrar novo paciente." }
-    customer_id = newCustomer.id
+    if (upsertError || !customerData) {
+      console.error("Erro Upsert:", upsertError)
+      return { error: "Erro ao processar dados do paciente." }
+    }
+    
+    customer_id = customerData.id
+    customer_found_name = customerData.name
   }
 
   // --- 4. CÁLCULO DE TEMPO E PREÇO ---
@@ -76,7 +95,6 @@ export async function createAppointment(formData: FormData) {
   const endTime = new Date(startTime.getTime() + duration_minutes * 60000)
 
   // --- 5. VERIFICAÇÃO DE DISPONIBILIDADE ---
-  // Verifica se o médico trabalha nesse horário (Availability)
   const availability = await checkProfessionalAvailability(supabase, professional_id, startTime, endTime);
   if (!availability.available) return { error: availability.message };
 
@@ -119,13 +137,23 @@ export async function createAppointment(formData: FormData) {
     .single()
 
   if (prof?.phone) {
+    const formattedDate = startTime.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+
     await sendWhatsAppMessage({
       phone: prof.phone,
-      message: `🔔 *Novo Pré-agendamento*\n\nProfissional: ${prof.name}\nCliente: ${customer_name || 'Cliente'}\nServiço: \nHorário: ${startTime.toLocaleString('pt-BR')}`,
+      message: `🔔 *Novo Pré-agendamento*\n\nProfissional: ${prof.name}\nCliente: ${customer_name}\nServiço: ${service?.title}\nHorário: ${formattedDate}`,
       organizationId: organization_id
     })
   }
   
   revalidatePath('/agendamentos')
-  return { success: true, id: newAppointment.id }
+  return { success: true, 
+    id: newAppointment.id, 
+    foundName: customer_found_name !== customer_name ? customer_found_name : null }
 }

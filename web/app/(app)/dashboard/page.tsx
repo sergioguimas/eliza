@@ -7,7 +7,8 @@ import {
   Building2, 
   ShieldCheck,
   CheckCircle2,
-  Clock
+  Clock,
+  MessageCircleWarningIcon,
 } from 'lucide-react'
 import { getDictionary } from '@/lib/get-dictionary'
 import { nicheConfig } from '@/lib/niche-config'
@@ -17,6 +18,8 @@ import { cn } from "@/lib/utils"
 import { AppointmentCardActions } from "@/components/appointment-card-actions"
 import { RealtimeAppointments } from '@/components/realtime-appointments'
 import { Database } from "@/utils/database.types"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { PendingRequestsList } from '@/components/PendingRequestsList'
 
 type ProfileWithOrg = Database['public']['Tables']['profiles']['Row'] & {
   organizations: Pick<Database['public']['Tables']['organizations']['Row'], 'niche'> | null
@@ -83,6 +86,24 @@ export default async function DashboardPage() {
       .neq('status', 'canceled')
       .neq('status', 'cancelled')
   ])
+  
+  const { count: pendingCount } = await supabase
+    .from('appointments')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'pending')
+    .eq('organization_id', orgId);
+
+  const { data: pendingRequests } = await supabase
+    .from('appointments')
+    .select(`
+      id,
+      start_time,
+      customers (name),
+      services (title),
+      professionals (name)
+    `)
+    .eq('status', 'pending')
+    .order('start_time', { ascending: true });
 
   // 6. Preparação dos dados
   const customersList = (resCustomers.data || []).map((c: any) => ({
@@ -107,7 +128,6 @@ export default async function DashboardPage() {
   const totalCustomers = resCustomers.data?.length || 0
   const totalAllApps = resAll.data?.length || 0 
   const completedApps = resAll.data?.filter((a: any) => a.status === 'completed').length || 0
-  const presenceRate = totalAllApps > 0 ? Math.round((completedApps / totalAllApps) * 100) : 0
 
   // 7. Pega o primeiro nome do perfil ou fallback seguro
   const doctorName = profile?.full_name ? profile.full_name.split(' ')[0] : "Doutor"
@@ -150,17 +170,54 @@ export default async function DashboardPage() {
       </div>
 
       {/* Grid de Cards Clicáveis */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        
-        <Link href="/servicos" className="block group">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">        
+
+        <Dialog>
+          <DialogTrigger asChild>
+            <div className="block group cursor-pointer h-full">
+              <Card className="bg-card border-border group-hover:bg-accent/20 group-hover:border-primary/50 transition-all h-full">
+                <CardContent className="p-4 flex justify-between items-start">
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">
+                      Solicitações
+                    </p>
+                    <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                      {pendingRequests?.length || 0}
+                    </h2>
+                    <p className="text-xs text-muted-foreground">Aguardando aprovação</p>
+                  </div>
+                  <div className="p-2 bg-amber-500/10 rounded-lg group-hover:bg-amber-500/20 transition-colors">
+                    <MessageCircleWarningIcon className="h-4 w-4 text-amber-500" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </DialogTrigger>
+
+          <DialogContent className="max-w-md border-zinc-800 bg-zinc-950">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold tracking-tight">
+                Solicitações Pendentes
+              </DialogTitle>
+              <DialogDescription className="text-zinc-400">
+                Analise os pedidos de agendamento feitos diretamente pelos pacientes.
+              </DialogDescription>
+            </DialogHeader>            
+            <div className="mt-4">
+              <PendingRequestsList initialRequests={pendingRequests || []} />
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Link href="/agendamentos" className="block group">
           <Card className="bg-card border-border group-hover:bg-accent/20 group-hover:border-primary/50 transition-all cursor-pointer h-full">
             <CardContent className="p-4 flex justify-between items-start">
               <div className="space-y-1">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">{dict.label_servico}s</p>
-                <h2 className="text-2xl font-bold tracking-tight text-foreground">{totalServices}</h2>
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">Agenda Hoje</p>
+                <h2 className="text-2xl font-bold tracking-tight text-foreground">{todayAppointments.length}</h2>
               </div>
-              <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
-                <CategoryIcon name='servicos' className="h-4 w-4 text-blue-500" />
+              <div className="p-2 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
+                <CalendarDays className="h-4 w-4 text-purple-500" />
               </div>
             </CardContent>
           </Card>
@@ -180,29 +237,15 @@ export default async function DashboardPage() {
           </Card>
         </Link>
 
-        <Link href="/agendamentos" className="block group">
+        <Link href="/servicos" className="block group">
           <Card className="bg-card border-border group-hover:bg-accent/20 group-hover:border-primary/50 transition-all cursor-pointer h-full">
             <CardContent className="p-4 flex justify-between items-start">
               <div className="space-y-1">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">Agenda Hoje</p>
-                <h2 className="text-2xl font-bold tracking-tight text-foreground">{todayAppointments.length}</h2>
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">{dict.label_servico}s</p>
+                <h2 className="text-2xl font-bold tracking-tight text-foreground">{totalServices}</h2>
               </div>
-              <div className="p-2 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
-                <CalendarDays className="h-4 w-4 text-purple-500" />
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/agendamentos" className="block group">
-          <Card className="bg-card border-border group-hover:bg-accent/20 group-hover:border-primary/50 transition-all cursor-pointer h-full">
-            <CardContent className="p-4 flex justify-between items-start">
-              <div className="space-y-1">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">Presença</p>
-                <h2 className="text-2xl font-bold tracking-tight text-foreground">{presenceRate}%</h2>
-              </div>
-              <div className="p-2 bg-emerald-500/10 rounded-lg group-hover:bg-emerald-500/20 transition-colors">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+                <CategoryIcon name='servicos' className="h-4 w-4 text-blue-500" />
               </div>
             </CardContent>
           </Card>

@@ -3,12 +3,13 @@ import { notFound, redirect } from "next/navigation"
 import { PrintButton } from "@/components/print-button"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { Database } from "@/utils/database.types"
 
 export const dynamic = 'force-dynamic'
 
 export default async function PrintHistoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect("/login")
@@ -18,12 +19,12 @@ export default async function PrintHistoryPage({ params }: { params: Promise<{ i
     .from('customers')
     .select('*, organization:organizations(name)')
     .eq('id', id)
-    .single() as any
+    .single()
 
   if (!customer) notFound()
 
   // Busca TODOS os registros
-  const { data: records, error } = await (supabase.from('service_records') as any)
+  const { data: records, error } = await (supabase.from('service_records'))
     .select(`
       id,
       content,

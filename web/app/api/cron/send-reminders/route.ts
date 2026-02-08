@@ -1,7 +1,8 @@
 import { createClient } from "@/utils/supabase/server"
 import { NextResponse } from "next/server"
-import { format, addDays, subHours } from "date-fns" // Importe subHours
+import { format, addDays, subHours } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { Database } from "@/utils/database.types"
 
 export const dynamic = 'force-dynamic'
 
@@ -13,11 +14,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
-  // CORREÇÃO DE FUSO HORÁRIO (Timezone Fix)
-  // O servidor roda em UTC. Subtraímos 3 horas para simular o horário de Brasília.
-  // Assim, se for 01:00 AM UTC (dia 09), vira 22:00 BRT (dia 08).
   const nowUtc = new Date()
   const nowBrazil = subHours(nowUtc, 3) 
   
@@ -36,7 +34,7 @@ export async function GET(request: Request) {
 
   console.log(`🤖 Cron Job - Buscando entre: ${startIso} e ${endIso}`)
 
-  const { data: appointments, error } = await (supabase.from('appointments') as any)
+  const { data: appointments, error } = await (supabase.from('appointments'))
     .select(`
       id,
       start_time,

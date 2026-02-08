@@ -64,8 +64,8 @@ export default async function AppLayout({
         <SidebarProvider>
           <AppSidebar 
             user={user} 
-            organization={organization as any} 
-            profile={profile as any}
+            organization={organization} 
+            profile={profile}
           />
           {/* Conteúdo Principal */}
           <main className="flex-1 w-full overflow-hidden flex flex-col h-screen">

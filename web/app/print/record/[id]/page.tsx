@@ -3,13 +3,14 @@ import { notFound, redirect } from "next/navigation"
 import { PrintButton } from "@/components/print-button"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { Database } from "@/utils/database.types"
 
 // Cache Busting (Garante dados frescos)
 export const dynamic = 'force-dynamic'
 
 export default async function PrintRecordPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = await createClient<Database>()
 
   // 1. Autenticação
   const { data: { user } } = await supabase.auth.getUser()

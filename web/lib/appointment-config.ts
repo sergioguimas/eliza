@@ -3,7 +3,8 @@ import {
   CheckCircle2, 
   UserCheck, 
   XCircle, 
-  PlayCircle 
+  PlayCircle,
+  MessageCircleWarningIcon
 } from "lucide-react"
 
 export const STATUS_CONFIG: Record<string, { 
@@ -11,6 +12,11 @@ export const STATUS_CONFIG: Record<string, {
   color: string, 
   icon: any 
 }> = {
+  pending: {
+    label: "Pendente",
+    color: "bg-purple-500/10 border-purple-500/20 text-purple-400",
+    icon: MessageCircleWarningIcon
+  },
   scheduled: {
     label: "Agendado",
     color: "bg-blue-500/10 border-blue-500/20 text-blue-400",
@@ -74,4 +80,16 @@ export async function checkProfessionalAvailability(
 
   // 2. FALLBACK: Se não houver horário individual
   return { available: false, message: "O profissional não possui horários configurados para este dia." };
+}
+
+export function generateTimeSlots(start: string, end: string, interval: number) {
+  const slots = []
+  let current = new Date(`2026-01-01T${start}`)
+  const stop = new Date(`2026-01-01T${end}`)
+
+  while (current < stop) {
+    slots.push(current.toTimeString().slice(0, 5))
+    current = new Date(current.getTime() + interval * 60000)
+  }
+  return slots
 }

@@ -3,6 +3,7 @@ import { createClient as createClientAdmin } from "@supabase/supabase-js"
 import { RegisterForm } from "./register-form"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { CheckCircle2, XCircle, Building2 } from "lucide-react"
+import { Database } from "@/utils/database.types"
 
 export const dynamic = 'force-dynamic'
 
@@ -10,7 +11,7 @@ export default async function InvitePage({ params }: { params: { code: string } 
   const { code } = await params;
   // Configura cliente Admin para ler o convite sem restrição de RLS
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  const supabaseAdmin = createClientAdmin(
+  const supabaseAdmin = createClientAdmin<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     serviceRoleKey!,
     { auth: { autoRefreshToken: false, persistSession: false } }
