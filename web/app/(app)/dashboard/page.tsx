@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   CalendarDays, 
   Building2, 
@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Clock,
   MessageCircleWarningIcon,
+  Coins,
 } from 'lucide-react'
 import { getDictionary } from '@/lib/get-dictionary'
 import { nicheConfig } from '@/lib/niche-config'
@@ -20,6 +21,7 @@ import { RealtimeAppointments } from '@/components/realtime-appointments'
 import { Database } from "@/utils/database.types"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { PendingRequestsList } from '@/components/PendingRequestsList'
+import router from 'next/dist/shared/lib/router/router'
 
 type ProfileWithOrg = Database['public']['Tables']['profiles']['Row'] & {
   organizations: Pick<Database['public']['Tables']['organizations']['Row'], 'niche'> | null
@@ -237,16 +239,16 @@ export default async function DashboardPage() {
           </Card>
         </Link>
 
-        <Link href="/servicos" className="block group">
+        <Link href="/dashboard/financas" className="block group">
           <Card className="bg-card border-border group-hover:bg-accent/20 group-hover:border-primary/50 transition-all cursor-pointer h-full">
             <CardContent className="p-4 flex justify-between items-start">
               <div className="space-y-1">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">{dict.label_servico}s</p>
-                <h2 className="text-2xl font-bold tracking-tight text-foreground">{totalServices}</h2>
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">Financeiro</p>
+                <h2 className="text-2xl font-bold tracking-tight text-foreground">R$</h2>
               </div>
               <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
-                <CategoryIcon name='servicos' className="h-4 w-4 text-blue-500" />
-              </div>
+                <Coins className="h-4 w-4 text-blue-500" />
+              </div>              
             </CardContent>
           </Card>
         </Link>
