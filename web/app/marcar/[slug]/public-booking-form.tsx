@@ -52,10 +52,7 @@ const formSchema = z.object({
   notes: z.string().optional(),
   customer_document: z.string().min(11, "Documento inválido (mínimo 11 caracteres)"),
   customer_birth_date: z.string().min(10, "Data de nascimento obrigatória"),
-  customer_gender: z.enum(["masculino", "feminino", "outro"], {
-    required_error: "Selecione o gênero",
-    invalid_type_error: "Selecione o gênero",
-  }),
+  customer_gender: z.string().min(1, "Selecione o gênero"),
 })
 
 interface PublicBookingFormProps {
