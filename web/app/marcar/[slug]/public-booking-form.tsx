@@ -31,9 +31,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardFooter  } from "@/components/ui/card"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { addDays } from "date-fns"
 
 // Actions e Tipos
 import { createAppointment } from "@/app/actions/create-appointment"
@@ -248,13 +249,45 @@ export function PublicBookingForm({ organizationId, services, professionals }: P
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={(date) => field.onChange(date)}
-                          disabled={(date) => date < new Date() || date.getDay() === 0}
-                          initialFocus
-                        />
+                        <div className="flex flex-col">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={(date) => field.onChange(date)}
+                            month={field.value} 
+                            onMonthChange={(month) => field.onChange(month)}
+                            disabled={(date) => date < new Date() || date.getDay() === 0}
+                            initialFocus
+                            locale={ptBR}
+                          />
+                          {/* Área de Atalhos */}
+                          <div className="p-3 border-t border-border grid grid-cols-2 gap-2 bg-muted/20">
+                            {[
+                              { label: "Hoje", value: 0 },
+                              { label: "Amanhã", value: 1 },
+                              { label: "Próx. Segunda", value: (8 - new Date().getDay()) % 7 || 7 },
+                              { label: "Em 1 semana", value: 7 },
+                            ].map((preset) => (
+                              <Button
+                                key={preset.value}
+                                variant="outline"
+                                size="sm"
+                                className="text-[10px] h-8"
+                                type="button"
+                                onClick={() => {
+                                  const newDate = addDays(new Date(), preset.value);
+                                  if (newDate.getDay() !== 0) {
+                                    field.onChange(newDate);
+                                  } else {
+                                    toast.error("Este atalho cai em um domingo.");
+                                  }
+                                }}
+                              >
+                                {preset.label}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
                       </PopoverContent>
                     </Popover>
                     <FormMessage />

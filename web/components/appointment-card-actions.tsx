@@ -12,12 +12,13 @@ import {
   DropdownMenuSubContent
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { MoreHorizontal, Check, UserCheck, CheckCircle2, Ban, Trash2 } from "lucide-react"
+import { MoreHorizontal, Check, UserCheck, CheckCircle2, Ban, QrCode, CreditCard, Banknote, MoreHorizontal as MoreIcon } from "lucide-react"
 import { toast } from "sonner"
 import { updateAppointmentStatus } from "@/app/actions/update-appointment-status"
 import { cancelAppointment, deleteAppointment } from "@/app/actions/delete-appointment"
 import { useState } from "react"
 import { useRouter } from "next/dist/client/components/navigation"
+import { updateAppointmentPayment } from "@/app/actions/update-appointment-payment"
 
 export function AppointmentCardActions({ appointment }: { appointment: any }) {
   const router = useRouter()
@@ -53,6 +54,19 @@ export function AppointmentCardActions({ appointment }: { appointment: any }) {
     })
   }
 
+  async function handlePayment(method: string) {
+    const result = await updateAppointmentPayment(appointment.id, method)
+    if (result.success) {
+      toast.success(`Pagamento em ${method} confirmado!`)
+      router.refresh()
+    } else {
+      toast.error("Erro ao processar pagamento")
+    }
+  }
+
+  const isCompleted = appointment.status === 'completed'
+  const isPaid = appointment.payment_status === 'paid'
+
   return (
     <>
       <DropdownMenu>
@@ -64,31 +78,58 @@ export function AppointmentCardActions({ appointment }: { appointment: any }) {
         </DropdownMenuTrigger>
         
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>Ações Rápidas</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-
-          <DropdownMenuItem onClick={() => handleStatusChange('confirmed')}>
-            <Check className="mr-2 h-4 w-4 text-blue-500" />
-            <span>Confirmar</span>
-          </DropdownMenuItem>
-
-          <DropdownMenuItem onClick={() => handleStatusChange('arrived')}>
-            <UserCheck className="mr-2 h-4 w-4 text-amber-500" />
-            <span>Chegou (Recepção)</span>
-          </DropdownMenuItem>
-
-          <DropdownMenuItem onClick={() => handleStatusChange('completed')}>
-            <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
-            <span>Finalizar</span>
-          </DropdownMenuItem>
-
-          <DropdownMenuSeparator />
-
-          <DropdownMenuItem onClick={handleCancel} className="text-red-600 focus:text-red-600 focus:bg-red-50">
-            <Ban className="mr-2 h-4 w-4" />
-            <span>Cancelar</span>
-          </DropdownMenuItem>
-
+          {/* CASO 1: AGENDAMENTO JÁ FINALIZADO E NÃO PAGO -> MOSTRAR FINANCEIRO */}
+          {isCompleted && !isPaid ? (
+            <>
+              <DropdownMenuLabel>Confirmar Recebimento</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handlePayment('pix')}>
+                <QrCode className="mr-2 h-4 w-4 text-emerald-500" />
+                <span>Pix</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handlePayment('cartao_credito')}>
+                <CreditCard className="mr-2 h-4 w-4 text-blue-500" />
+                <span>Cartão de Crédito</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handlePayment('cartao_debito')}>
+                <CreditCard className="mr-2 h-4 w-4 text-indigo-500" />
+                <span>Cartão de Débito</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handlePayment('dinheiro')}>
+                <Banknote className="mr-2 h-4 w-4 text-amber-500" />
+                <span>Dinheiro</span>
+              </DropdownMenuItem>
+            </>
+          ) : isPaid ? (
+            // CASO 2: JÁ ESTÁ PAGO
+            <DropdownMenuItem disabled>
+              <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
+              <span>Pagamento Concluído</span>
+            </DropdownMenuItem>
+          ) : (
+            // CASO 3: FLUXO NORMAL (PENDENTE/CONFIRMADO/CHEGOU)
+            <>
+              <DropdownMenuLabel>Ações Rápidas</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleStatusChange('confirmed')}>
+                <Check className="mr-2 h-4 w-4 text-blue-500" />
+                <span>Confirmar</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleStatusChange('arrived')}>
+                <UserCheck className="mr-2 h-4 w-4 text-amber-500" />
+                <span>Chegou (Recepção)</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleStatusChange('completed')}>
+                <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
+                <span>Finalizar Atendimento</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleCancel} className="text-red-600">
+                <Ban className="mr-2 h-4 w-4" />
+                <span>Cancelar</span>
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </>

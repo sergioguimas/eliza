@@ -6,24 +6,54 @@ import { ProcedureRanking } from "@/components/procedure-ranking"
 import { RankingList } from "@/components/ranking-list"
 import { Card } from "@/components/ui/card"
 import { AddExpenseModal } from "@/components/financas-add-expense-modal"
+import { createClient } from "@/utils/supabase/server"
+import { Database } from "@/utils/database.types"
+import { redirect } from "next/dist/client/components/navigation"
+import { PeriodoFilter } from "@/components/financas-periodo-filter"
+import { parseISO, format } from "date-fns"
+import { ptBR } from "date-fns/locale"
+import { PaymentMethodChart } from "@/components/payment-method-chart"
 
-// Pegamos o ID da organização (exemplo via busca ou contexto de auth)
-const ORGANIZATION_ID = "SEU_ID_AQUI" 
+interface FinancasPageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}
 
-export default async function FinancasPage() {
-  const data = await getFinancialSummary(ORGANIZATION_ID)
+export default async function FinancasPage(props: FinancasPageProps) {
+    const searchParams = await props.searchParams;
+    const periodo = typeof searchParams.periodo === 'string' ? searchParams.periodo : undefined;
+
+    const labelPeriodo = periodo 
+        ? format(parseISO(`${periodo}-01`), "MMMM 'de' yyyy", { locale: ptBR })
+        : format(new Date(), "MMMM 'de' yyyy", { locale: ptBR });
+
+    const supabase = await createClient<Database>()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return redirect('/login')
+
+    const { data: profile } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', user.id)
+    .single()
+
+    const organizationId = profile?.organization_id || user.id
+
+    const data = await getFinancialSummary(organizationId, periodo)
+    
 
   return (
     <div className="flex-1 space-y-8 p-8 pt-6">
-      {/* Título e Cards de KPI que já fizemos */}
     <h2 className="text-3xl font-bold tracking-tight">Painel Financeiro</h2>
     <FinancialCards data={data} />
     <div className="flex items-center justify-between space-y-2">
         <div>
             <p className="text-muted-foreground">Gestão de entradas e saídas.</p>
+            <p className="text-muted-foreground capitalize">Análise de {labelPeriodo}</p>
         </div>
         <div className="flex items-center gap-2">
-            <AddExpenseModal organizationId={ORGANIZATION_ID} />
+            <PeriodoFilter />
+            <AddExpenseModal organizationId={organizationId} />
         </div>
     </div>
 
@@ -61,6 +91,7 @@ export default async function FinancasPage() {
                     </span>
                     </div>
                 ))}
+                <PaymentMethodChart data={data.porMetodo} />
             </div>
         </div>
     </div>

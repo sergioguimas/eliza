@@ -16,14 +16,18 @@ import {
   UserCheck, 
   CheckCircle2, 
   Ban, 
-  Trash2,
-  CalendarClock
+  QrCode, 
+  CreditCard, 
+  Banknote, 
+  MoreHorizontal as MoreIcon
 } from "lucide-react"
 import { toast } from "sonner"
 import { updateAppointmentStatus } from "@/app/actions/update-appointment-status"
 import { cancelAppointment, deleteAppointment } from "@/app/actions/delete-appointment"
 import { useState } from "react"
 import { useRouter } from "next/dist/client/components/navigation"
+import { updateAppointmentPayment } from "@/app/actions/update-appointment-payment"
+import { DropdownMenuItem } from "./ui/dropdown-menu"
 
 interface AppointmentContextMenuProps {
   children: React.ReactNode
@@ -67,46 +71,79 @@ export function AppointmentContextMenu({
     })
   }
 
+  async function handlePayment(method: string) {
+    const result = await updateAppointmentPayment(appointment.id, method)
+    if (result.success) {
+      toast.success(`Pagamento em ${method} confirmado!`)
+      router.refresh()
+    } else {
+      toast.error("Erro ao processar pagamento")
+    }
+  }
+
+  
+
   return (
-    <>
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          {children}
-        </ContextMenuTrigger>
-        
-        <ContextMenuContent className="w-56">
-          <ContextMenuLabel>Ações Rápidas</ContextMenuLabel>
-          <ContextMenuSeparator />
+    <ContextMenu>
+      <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
+      <ContextMenuContent className="w-56">
+        <ContextMenuLabel>Ações do Agendamento</ContextMenuLabel>
+        <ContextMenuSeparator />
 
-          {/* --- CONFIRMAR --- */}
-          <ContextMenuItem onClick={() => handleStatusChange('confirmed')}>
-            <Check className="mr-2 h-4 w-4 text-blue-500" />
-            <span>Confirmar</span>
-          </ContextMenuItem>
-
-          {/* --- CHEGOU --- */}
-          <ContextMenuItem onClick={() => handleStatusChange('arrived')}>
-            <UserCheck className="mr-2 h-4 w-4 text-amber-500" />
-            <span>Chegou (Recepção)</span>
-          </ContextMenuItem>
-
-          {/* --- FINALIZAR --- */}
-          <ContextMenuItem onClick={() => handleStatusChange('completed')}>
+        {/* REGRA: Se concluído e NÃO pago, mostra opções de pagamento */}
+        {appointment.status === 'completed' && appointment.payment_status !== 'paid' ? (
+          <>
+            <ContextMenuLabel className="text-xs text-muted-foreground">Confirmar Recebimento</ContextMenuLabel>
+            <ContextMenuItem onClick={() => handlePayment('pix')}>
+              <QrCode className="mr-2 h-4 w-4 text-emerald-500" />
+              <span>Pix</span>
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => handlePayment('cartao_credito')}>
+              <CreditCard className="mr-2 h-4 w-4 text-blue-500" />
+              <span>Cartão de Crédito</span>
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => handlePayment('cartao_debito')}>
+              <CreditCard className="mr-2 h-4 w-4 text-indigo-500" />
+              <span>Cartão de Débito</span>
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => handlePayment('dinheiro')}>
+              <Banknote className="mr-2 h-4 w-4 text-amber-500" />
+              <span>Dinheiro</span>
+            </ContextMenuItem>
+          </>
+        ) : appointment.payment_status === 'paid' ? (
+          // Se já estiver pago, mostra apenas o status
+          <ContextMenuItem disabled>
             <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
-            <span>Finalizar</span>
+            <span>Pagamento Confirmado</span>
           </ContextMenuItem>
+        ) : (
+          // Fluxo normal para qualquer outro status (Pendente, Confirmado, Chegou)
+          <>
+            <ContextMenuItem onClick={() => handleStatusChange('confirmed')}>
+              <Check className="mr-2 h-4 w-4 text-blue-500" />
+              <span>Confirmar</span>
+            </ContextMenuItem>
 
-          {/* --- REAGENDAR --- */}        
-          <ContextMenuSeparator />
+            <ContextMenuItem onClick={() => handleStatusChange('arrived')}>
+              <UserCheck className="mr-2 h-4 w-4 text-amber-500" />
+              <span>Chegou (Recepção)</span>
+            </ContextMenuItem>
 
-          {/* --- CANCELAR --- */}
-          <ContextMenuItem onClick={handleCancel} className="text-red-600 focus:text-red-600 focus:bg-red-50">
-            <Ban className="mr-2 h-4 w-4" />
-            <span>Cancelar</span>
-          </ContextMenuItem>
+            <ContextMenuItem onClick={() => handleStatusChange('completed')}>
+              <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
+              <span>Finalizar Atendimento</span>
+            </ContextMenuItem>
 
-        </ContextMenuContent>
-      </ContextMenu>
-    </>
-  )
+            <ContextMenuSeparator />
+
+            <ContextMenuItem onClick={handleCancel} className="text-red-600">
+              <Ban className="mr-2 h-4 w-4" />
+              <span>Cancelar Agendamento</span>
+            </ContextMenuItem>
+          </>
+        )}
+      </ContextMenuContent>
+    </ContextMenu>
+  );
 }

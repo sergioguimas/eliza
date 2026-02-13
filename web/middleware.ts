@@ -9,7 +9,6 @@ export async function middleware(request: NextRequest) {
   });
 
   try {
-    // Verifica se as variáveis existem antes de tentar conectar
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
        console.warn("⚠️ Middleware: Variáveis de ambiente do Supabase não encontradas. Pulando Auth.");
        return response;

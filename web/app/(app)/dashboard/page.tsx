@@ -22,6 +22,7 @@ import { Database } from "@/utils/database.types"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { PendingRequestsList } from '@/components/PendingRequestsList'
 import router from 'next/dist/shared/lib/router/router'
+import { BaixaPagamentoButton } from '@/components/payment-menu'
 
 type ProfileWithOrg = Database['public']['Tables']['profiles']['Row'] & {
   organizations: Pick<Database['public']['Tables']['organizations']['Row'], 'niche'> | null
