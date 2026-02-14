@@ -21,5 +21,7 @@ export async function updateAppointmentPayment(appointmentId: string, method?: s
   }
 
   revalidatePath('/dashboard/financas')
+  revalidatePath('/dashboard/agenda')
+  revalidatePath('/dashboard')
   return { success: true }
 }

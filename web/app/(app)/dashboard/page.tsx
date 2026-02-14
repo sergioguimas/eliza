@@ -22,7 +22,6 @@ import { Database } from "@/utils/database.types"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { PendingRequestsList } from '@/components/PendingRequestsList'
 import router from 'next/dist/shared/lib/router/router'
-import { BaixaPagamentoButton } from '@/components/payment-menu'
 
 type ProfileWithOrg = Database['public']['Tables']['profiles']['Row'] & {
   organizations: Pick<Database['public']['Tables']['organizations']['Row'], 'niche'> | null
@@ -35,6 +34,8 @@ function getBrazilDayRange() {
   const end = `${brazilDateStr}T23:59:59-03:00`
   return { start, end }
 }
+
+export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
   const supabase = await createClient<Database>()
@@ -73,6 +74,7 @@ export default async function DashboardPage() {
         customer_id,
         service_id,
         professional_id,
+        payment_status,
         customers(name), 
         services(title, color)
       `)
@@ -305,13 +307,22 @@ export default async function DashboardPage() {
                         "px-2 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider",
                         app.status === 'scheduled' && "bg-blue-500/10 text-blue-500 border-blue-500/20",
                         app.status === 'arrived' && "bg-amber-500/10 text-amber-500 border-amber-500/20",
-                        app.status === 'completed' && "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-                        app.status === 'confirmed' && "bg-green-500/10 text-green-500 border-green-500/20"
+                        app.status === 'confirmed' && "bg-green-500/10 text-green-500 border-green-500/20",
+                        // Lógica para Finalizado
+                        app.status === 'completed' && (
+                          app.payment_status === 'paid' 
+                            ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" // Tudo pronto
+                            : "bg-indigo-500/10 text-indigo-500 border-indigo-500/20"   // Aguardando pagamento
+                        )
                       )}>
-                        {app.status === 'scheduled' ? 'Agendado' : 
-                         app.status === 'arrived' ? 'Na Recepção' : 
-                         app.status === 'completed' ? 'Finalizado' : 
-                         app.status === 'confirmed' ? 'Confirmado' : app.status}
+                        {app.status === 'scheduled' && 'Agendado'}
+                        {app.status === 'arrived' && 'Na Recepção'}
+                        {app.status === 'confirmed' && 'Confirmado'}
+                        {app.status === 'completed' && (
+                          app.payment_status === 'paid' 
+                            ? `Finalizado (${app.payment_method || 'Pago'})` 
+                            : 'Finalizado (Pendente)'
+                        )}
                       </span>
 
                       {/* Ícone de 3 pontos para indicar que é clicável */}

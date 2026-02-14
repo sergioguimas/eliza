@@ -6,10 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { MoreHorizontal, Check, UserCheck, CheckCircle2, Ban, QrCode, CreditCard, Banknote, MoreHorizontal as MoreIcon } from "lucide-react"
@@ -58,14 +55,12 @@ export function AppointmentCardActions({ appointment }: { appointment: any }) {
     const result = await updateAppointmentPayment(appointment.id, method)
     if (result.success) {
       toast.success(`Pagamento em ${method} confirmado!`)
+      console.log("Pagamento processado com sucesso:", appointment.payment_status)
       router.refresh()
     } else {
       toast.error("Erro ao processar pagamento")
     }
   }
-
-  const isCompleted = appointment.status === 'completed'
-  const isPaid = appointment.payment_status === 'paid'
 
   return (
     <>
@@ -79,7 +74,7 @@ export function AppointmentCardActions({ appointment }: { appointment: any }) {
         
         <DropdownMenuContent align="end" className="w-56">
           {/* CASO 1: AGENDAMENTO JÁ FINALIZADO E NÃO PAGO -> MOSTRAR FINANCEIRO */}
-          {isCompleted && !isPaid ? (
+          {appointment.status === 'completed' && appointment.payment_status !== 'paid' ? (
             <>
               <DropdownMenuLabel>Confirmar Recebimento</DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -100,7 +95,7 @@ export function AppointmentCardActions({ appointment }: { appointment: any }) {
                 <span>Dinheiro</span>
               </DropdownMenuItem>
             </>
-          ) : isPaid ? (
+          ) : appointment.payment_status === 'paid' ? (
             // CASO 2: JÁ ESTÁ PAGO
             <DropdownMenuItem disabled>
               <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
