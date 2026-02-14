@@ -200,7 +200,6 @@ export default async function CustomerPage({ params, searchParams }: { params: P
               customerPhone={customer.phone}
               customerId={id}
               organizationId={customer.organization_id}
-              tags={customer.tags || []}
             />
         </TabsContent>
 

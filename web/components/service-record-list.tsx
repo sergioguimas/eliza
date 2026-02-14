@@ -52,12 +52,11 @@ interface ServiceRecordListProps {
     customerPhone?: string
     organizationId: string
     initialRecords: ServiceRecord[]
-    tags: string[]
     appointment_id?: string | null
     appointment_date?: string | null
 }
 
-export function ServiceRecordList({ records, customerId, customerPhone, organizationId, initialRecords, tags }: ServiceRecordListProps) {
+export function ServiceRecordList({ records, customerId, customerPhone, organizationId, initialRecords }: ServiceRecordListProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editContent, setEditContent] = useState("")
   const [sendingId, setSendingId] = useState<string | null>(null)
