@@ -9,25 +9,33 @@ import { Database } from "@/utils/database.types"
 export interface ServiceRecord {
   id: string
   content: string
+  tags: string[] | null
   status: 'draft' | 'signed'
   created_at: string
   signed_at?: string | null
   signed_by?: string | null
   professional?: { full_name: string | null }
   signature_hash?: string | null
+  appointment_id: string | null;
+  appointment?: {start_time: string;} | null;
 }
 
 // 1. BUSCAR (GET)
 export async function getServiceRecords(customerId: string) {
   const supabase = await createClient<Database>()
 
-  const { data, error } = await (supabase.from('service_records'))
+  const { data, error } = await supabase
+    .from('service_records')
     .select(`
       *,
+      appointment_id,
+      appointment:appointments (
+        start_time
+      ),
       professional:profiles!service_records_professional_id_fkey (
         full_name,
         role
-      )
+      )      
     `)
     .eq('customer_id', customerId)
     .order('created_at', { ascending: false })
@@ -41,11 +49,8 @@ export async function getServiceRecords(customerId: string) {
 }
 
 // 2. CRIAR (CREATE)
-export async function createServiceRecord(formData: FormData) {
+export async function createServiceRecord(customerId, content, organizationId, selectedTags, appointmentId) {
   const supabase = await createClient<Database>()
-  
-  const customerId = formData.get('customer_id') as string
-  const content = formData.get('content') as string
   
   if (!customerId || !content) return { error: 'Conteúdo obrigatório' }
 
@@ -66,6 +71,8 @@ export async function createServiceRecord(formData: FormData) {
       customer_id: customerId,
       professional_id: user.id,
       content,
+      tags: selectedTags,
+      appointment_id: appointmentId || null,
       status: 'draft', // Sempre nasce como rascunho
     })
 

@@ -1,0 +1,1 @@
+ALTER TABLE service_records ADD COLUMN appointment_id UUID REFERENCES appointments(id);

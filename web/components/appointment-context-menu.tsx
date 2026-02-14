@@ -7,26 +7,13 @@ import {
   ContextMenuTrigger,
   ContextMenuSeparator,
   ContextMenuLabel,
-  ContextMenuSub,
-  ContextMenuSubTrigger,
-  ContextMenuSubContent
 } from "@/components/ui/context-menu"
-import { 
-  Check, 
-  UserCheck, 
-  CheckCircle2, 
-  Ban, 
-  QrCode, 
-  CreditCard, 
-  Banknote, 
-  MoreHorizontal as MoreIcon
-} from "lucide-react"
+import { MoreHorizontal, Check, UserCheck, CheckCircle2, Ban, QrCode, CreditCard, Banknote,} from "lucide-react"
 import { toast } from "sonner"
 import { updateAppointmentStatus } from "@/app/actions/update-appointment-status"
 import { cancelAppointment, deleteAppointment } from "@/app/actions/delete-appointment"
 import { useRouter } from "next/dist/client/components/navigation"
 import { updateAppointmentPayment } from "@/app/actions/update-appointment-payment"
-import { DropdownMenuItem } from "./ui/dropdown-menu"
 
 interface AppointmentContextMenuProps {
   children: React.ReactNode
@@ -43,15 +30,14 @@ export function AppointmentContextMenu({
   async function handleStatusChange(status: string) {
     const result = await updateAppointmentStatus(appointment.id, status)
     
-    if (result.success) {
-      toast.success(`Status alterado para: ${status}`)
-      
+    if (result.success) {            
       if (status === 'completed') {
-        const params = new URLSearchParams(window.location.search)
-        params.set('return_check', appointment.id)
-        
-        router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false })
+        const targetUrl = `/clientes/${appointment.customer_id}?return_check=${appointment.id}`
+        toast.success("Consulta finalizada! Redirecionando para o prontuário...")
+        router.push(targetUrl)
+        router.refresh()
       } else {
+        toast.success(`Status alterado para: ${status}`)
         router.refresh()
       }
     } else {

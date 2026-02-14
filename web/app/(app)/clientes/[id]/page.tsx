@@ -20,13 +20,13 @@ import { unstable_noStore as noStore } from "next/cache"
 import { Database } from "@/utils/database.types"
 import { AppointmentContextMenu } from "@/components/appointment-context-menu"
 
-
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
-export default async function CustomerPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
+export default async function CustomerPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ return_check?: string }> }) {
   noStore()
   const { id } = await params
-  const { tab } = await searchParams
+  const { return_check } = await searchParams
   const supabase = await createClient<Database>()
 
   // 1. Busca dados do cliente, agendamentos e LOGS em paralelo
@@ -36,7 +36,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
       .from('appointments')
       .select(`
         *,
-        services ( title, color ),
+        services ( title, color, tags ),
         professionals ( name ),
         appointment_logs (
           action,
@@ -54,7 +54,6 @@ export default async function CustomerPage({ params, searchParams }: { params: P
 
   const customer = customerRes.data
   const appointments = appointmentsRes.data || []
-  const activeTab = tab || "history"
 
   return (
     <div className="space-y-6 pb-10">
@@ -83,7 +82,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
         </div>
       </div>
 
-      <Tabs defaultValue={activeTab || "details"} className="w-full">
+      <Tabs defaultValue={"records"} className="w-full">
         <TabsList className="grid w-full grid-cols-3 h-12 p-1 bg-gray-100/80 dark:bg-gray-800/80 rounded-xl mb-6">
           <TabsTrigger value="history">Histórico</TabsTrigger>
           <TabsTrigger value="records">Prontuário</TabsTrigger>
@@ -191,7 +190,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
 
             {/* Formulário de Novo Registro */}
             <div className="mb-8">
-                <ServiceRecordForm customerId={customer.id} />
+                <ServiceRecordForm customerId={customer.id} organizationId={customer.organization_id} defaultAppointmentId={return_check || null}/>
             </div>
 
             {/* Lista de Registros */}
@@ -201,6 +200,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
               customerPhone={customer.phone}
               customerId={id}
               organizationId={customer.organization_id}
+              tags={customer.tags || []}
             />
         </TabsContent>
 

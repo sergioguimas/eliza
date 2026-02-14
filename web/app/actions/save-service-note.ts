@@ -4,39 +4,39 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { Database } from "@/utils/database.types"
 
-export async function saveServiceNote(formData: FormData) {
-  const supabase = await createClient<Database>()
-
-  const customer_id = formData.get('customer_id') as string
-  const content = formData.get('content') as string
+export async function saveServiceNote(
+  customerId: string, 
+  content: string, 
+  organizationId: string,
+  tags: string[] = []
+) {const supabase = await createClient<Database>()
 
   if (!content || content.trim().length < 3) {
     return { error: "O prontuário está muito curto para ser salvo." }
   }
 
-  // BUSCA O organization_id DO CLIENTE PARA GARANTIR O VÍNCULO CORRETO
-  const { data: customer } = await supabase
-    .from('customers')
-    .select('organization_id')
-    .eq('id', customer_id)
-    .single()
+  const { data: {user} } = await supabase.auth.getUser()
 
-  if (!customer?.organization_id) {
-    return { error: "Erro de permissão: Organização não encontrada para este cliente." }
+  if (!user) {
+    return { error: "Usuário não autenticado." }
   }
 
   const { error } = await supabase
     .from('service_records')
     .insert({
-      customer_id,
+      customer_id: customerId,
+      organization_id: organizationId,
       content,
-      organization_id: customer.organization_id
+      tags: tags,
+      profile_id: user?.id,
+      date: new Date().toISOString(),
     })
 
   if (error) {
-    return { error: "Erro ao salvar: " + error.message }
+    console.error("Error saving service note:", error)
+    return { error: "Falha ao salvar a nota" }
   }
 
-  revalidatePath(`/clientes/${customer_id}`)
+  revalidatePath(`/clientes/${customerId}`)
   return { success: true }
 }

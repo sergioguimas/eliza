@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { MoreHorizontal, Check, UserCheck, CheckCircle2, Ban, QrCode, CreditCard, Banknote, MoreHorizontal as MoreIcon } from "lucide-react"
+import { MoreHorizontal, Check, UserCheck, CheckCircle2, Ban, QrCode, CreditCard, Banknote,} from "lucide-react"
 import { toast } from "sonner"
 import { updateAppointmentStatus } from "@/app/actions/update-appointment-status"
 import { cancelAppointment, deleteAppointment } from "@/app/actions/delete-appointment"
@@ -23,15 +23,13 @@ export function AppointmentCardActions({ appointment }: { appointment: any }) {
     const result = await updateAppointmentStatus(appointment.id, status)
     
     if (result.success) {
-      toast.success(`Status alterado para: ${status}`)
-      
       if (status === 'completed') {
-        const params = new URLSearchParams(window.location.search)
-        params.set('return_check', appointment.id)
-        
-        // router.replace para não criar histórico de "voltar" desnecessário
-        router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false })
+        const targetUrl = `/clientes/${appointment.customer_id}?return_check=${appointment.id}`
+        toast.success("Consulta finalizada! Redirecionando para o prontuário...")
+        router.push(targetUrl)
+        router.refresh()
       } else {
+        toast.success(`Status alterado para: ${status}`)
         router.refresh()
       }
     } else {
