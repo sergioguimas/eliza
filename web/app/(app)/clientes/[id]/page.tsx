@@ -36,7 +36,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
       .from('appointments')
       .select(`
         *,
-        services ( title, color, tags ),
+        services ( title, color ),
         professionals ( name ),
         appointment_logs (
           action,

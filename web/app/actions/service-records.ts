@@ -49,7 +49,7 @@ export async function getServiceRecords(customerId: string) {
 }
 
 // 2. CRIAR (CREATE)
-export async function createServiceRecord(customerId, content, organizationId, selectedTags, appointmentId) {
+export async function createServiceRecord(customerId: string, content: string, organizationId: string, selectedTags: string[], appointmentId: string | null) {
   const supabase = await createClient<Database>()
   
   if (!customerId || !content) return { error: 'Conteúdo obrigatório' }
