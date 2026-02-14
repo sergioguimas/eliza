@@ -78,7 +78,6 @@ export default async function ClientesPage({
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
         <div>
-          {/* TÍTULO DINÂMICO */}
           <h1 className="text-3xl font-bold tracking-tight text-foreground capitalize">
             {dict.label_cliente}s
           </h1>
@@ -95,7 +94,7 @@ export default async function ClientesPage({
         <form method="GET">
           <Input 
             name="q"
-            placeholder={`Buscar ${dict.label_cliente}...`} // Placeholder dinâmico
+            placeholder={`Buscar ${dict.label_cliente}...`}
             defaultValue={query}
             className="pl-10 bg-background border-input focus:ring-ring"
           />

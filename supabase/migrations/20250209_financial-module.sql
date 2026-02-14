@@ -9,3 +9,8 @@ CREATE TABLE IF NOT EXISTS expenses (
   status TEXT DEFAULT 'pending', -- 'pending' ou 'paid'
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+SELECT cc.check_clause
+FROM information_schema.check_constraints cc
+JOIN information_schema.constraint_column_usage ccu ON cc.constraint_name = ccu.constraint_name
+WHERE ccu.table_name = 'appointments' AND ccu.column_name = 'payment_method';

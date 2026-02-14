@@ -72,6 +72,7 @@ export default async function AgendamentosPage({
         end_time, 
         status, 
         professional_id,
+        payment_status,
         customers ( name ), 
         services ( title, color ),
         professionals ( name )

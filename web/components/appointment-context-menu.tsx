@@ -24,7 +24,6 @@ import {
 import { toast } from "sonner"
 import { updateAppointmentStatus } from "@/app/actions/update-appointment-status"
 import { cancelAppointment, deleteAppointment } from "@/app/actions/delete-appointment"
-import { useState } from "react"
 import { useRouter } from "next/dist/client/components/navigation"
 import { updateAppointmentPayment } from "@/app/actions/update-appointment-payment"
 import { DropdownMenuItem } from "./ui/dropdown-menu"
@@ -87,11 +86,15 @@ export function AppointmentContextMenu({
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent className="w-56">
-        <ContextMenuLabel>Ações do Agendamento</ContextMenuLabel>
+        <ContextMenuLabel>Ações rápidas</ContextMenuLabel>
         <ContextMenuSeparator />
 
-        {/* REGRA: Se concluído e NÃO pago, mostra opções de pagamento */}
-        {appointment.status === 'completed' && appointment.payment_status !== 'paid' ? (
+        {appointment.status === 'canceled' ? (
+          <ContextMenuItem disabled>
+            <Ban className="mr-2 h-4 w-4 text-red-500" />
+            <span>Agendamento Cancelado</span>
+          </ContextMenuItem>
+        ) : appointment.status === 'completed' && appointment.payment_status !== 'paid' ? (
           <>
             <ContextMenuLabel className="text-xs text-muted-foreground">Confirmar Recebimento</ContextMenuLabel>
             <ContextMenuItem onClick={() => handlePayment('pix')}>
@@ -112,13 +115,11 @@ export function AppointmentContextMenu({
             </ContextMenuItem>
           </>
         ) : appointment.payment_status === 'paid' ? (
-          // Se já estiver pago, mostra apenas o status
           <ContextMenuItem disabled>
             <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
             <span>Pagamento Confirmado</span>
           </ContextMenuItem>
         ) : (
-          // Fluxo normal para qualquer outro status (Pendente, Confirmado, Chegou)
           <>
             <ContextMenuItem onClick={() => handleStatusChange('confirmed')}>
               <Check className="mr-2 h-4 w-4 text-blue-500" />

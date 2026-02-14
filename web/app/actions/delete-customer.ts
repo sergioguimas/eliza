@@ -9,12 +9,10 @@ export async function deleteCustomer(customerId: string) {
 
   const { error } = await supabase
     .from('customers')
-    .delete()
+    .update({ deleted_at: new Date().toISOString() })
     .eq('id', customerId)
 
-  if (error) {
-    return { error: "Erro ao excluir. Verifique se o paciente possui agendamentos ativos." }
-  }
+  if (error) return { error: "Erro ao desativar cliente." }
 
   revalidatePath('/clientes')
   return { success: true }

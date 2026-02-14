@@ -13,7 +13,6 @@ import { MoreHorizontal, Check, UserCheck, CheckCircle2, Ban, QrCode, CreditCard
 import { toast } from "sonner"
 import { updateAppointmentStatus } from "@/app/actions/update-appointment-status"
 import { cancelAppointment, deleteAppointment } from "@/app/actions/delete-appointment"
-import { useState } from "react"
 import { useRouter } from "next/dist/client/components/navigation"
 import { updateAppointmentPayment } from "@/app/actions/update-appointment-payment"
 
@@ -73,8 +72,12 @@ export function AppointmentCardActions({ appointment }: { appointment: any }) {
         </DropdownMenuTrigger>
         
         <DropdownMenuContent align="end" className="w-56">
-          {/* CASO 1: AGENDAMENTO JÁ FINALIZADO E NÃO PAGO -> MOSTRAR FINANCEIRO */}
-          {appointment.status === 'completed' && appointment.payment_status !== 'paid' ? (
+          {appointment.status === 'canceled' ? (
+          <DropdownMenuItem disabled>
+            <Ban className="mr-2 h-4 w-4 text-red-500" />
+            <span>Agendamento Cancelado</span>
+          </DropdownMenuItem>
+        ) : appointment.status === 'completed' && appointment.payment_status !== 'paid' ? (
             <>
               <DropdownMenuLabel>Confirmar Recebimento</DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -96,13 +99,11 @@ export function AppointmentCardActions({ appointment }: { appointment: any }) {
               </DropdownMenuItem>
             </>
           ) : appointment.payment_status === 'paid' ? (
-            // CASO 2: JÁ ESTÁ PAGO
             <DropdownMenuItem disabled>
               <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
               <span>Pagamento Concluído</span>
             </DropdownMenuItem>
           ) : (
-            // CASO 3: FLUXO NORMAL (PENDENTE/CONFIRMADO/CHEGOU)
             <>
               <DropdownMenuLabel>Ações Rápidas</DropdownMenuLabel>
               <DropdownMenuSeparator />

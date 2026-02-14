@@ -18,6 +18,7 @@ import { Printer } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { unstable_noStore as noStore } from "next/cache"
 import { Database } from "@/utils/database.types"
+import { AppointmentContextMenu } from "@/components/appointment-context-menu"
 
 
 export const dynamic = 'force-dynamic'
@@ -36,7 +37,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
       .select(`
         *,
         services ( title, color ),
-        profiles ( full_name ),
+        professionals ( name ),
         appointment_logs (
           action,
           push_name,
@@ -51,7 +52,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
 
   if (!customerRes.data) notFound()
 
-  const customer = customerRes.data as any
+  const customer = customerRes.data
   const appointments = appointmentsRes.data || []
   const activeTab = tab || "history"
 
@@ -69,7 +70,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
             <h1 className="text-2xl font-bold tracking-tight">{customer.name}</h1>
             <div className="flex items-center gap-2 text-muted-foreground mt-1">
               <Badge variant="outline" className="font-normal capitalize">
-                {customer.status || 'Ativo'}
+                {customer.active ? 'Ativo' : 'Inativo'}
               </Badge>
               <span>•</span>
               <span className="text-sm">Cliente desde {format(new Date(customer.created_at), 'MMMM yyyy', { locale: ptBR })}</span>
@@ -82,7 +83,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
         </div>
       </div>
 
-      <Tabs defaultValue={tab || "details"} className="w-full">
+      <Tabs defaultValue={activeTab || "details"} className="w-full">
         <TabsList className="grid w-full grid-cols-3 h-12 p-1 bg-gray-100/80 dark:bg-gray-800/80 rounded-xl mb-6">
           <TabsTrigger value="history">Histórico</TabsTrigger>
           <TabsTrigger value="records">Prontuário</TabsTrigger>
@@ -99,6 +100,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
               </Card>
             ) : (
               appointments.map((apt: any) => (
+                <AppointmentContextMenu key={apt.id} appointment={apt}>
                 <Card key={apt.id} className="overflow-hidden border-l-4" style={{ borderLeftColor: getStatusColorHex(apt.status) }}>
                   <CardContent className="p-4">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -110,7 +112,8 @@ export default async function CustomerPage({ params, searchParams }: { params: P
                           <Badge className={getStatusBadgeStyle(apt.status)}>
                             {apt.status === 'confirmed' ? 'Confirmado' : 
                              apt.status === 'canceled' ? 'Cancelado' : 
-                             apt.status === 'completed' ? 'Finalizado' : apt.status}
+                             apt.status === 'completed' && apt.payment_status === 'pending' ? 'Finalizado' : 
+                             apt.status === 'completed' && apt.payment_status === 'paid' ? 'Pago' : ''}
                           </Badge>
                         </div>
                         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -160,6 +163,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
                     )}
                   </CardContent>
                 </Card>
+                </AppointmentContextMenu>
               ))
             )}
           </div>
