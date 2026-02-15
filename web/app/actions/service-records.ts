@@ -28,6 +28,7 @@ export async function getServiceRecords(customerId: string) {
     .from('service_records')
     .select(`
       *,
+      id,
       appointment_id,
       appointment:appointments (
         start_time
@@ -159,5 +160,23 @@ export async function deleteServiceRecord(recordId: string, customerId: string) 
   if (error) return { error: 'Não é possível deletar registros assinados ou erro interno.' }
 
   revalidatePath(`/clientes/${customerId}`)
+  return { success: true }
+}
+
+// 6. VINCULAR A CONSULTA
+export async function linkRecordToAppointment(recordId: string, appointmentId: string) {
+  const supabase = await createClient<Database>()
+
+  const { error } = await supabase
+    .from('service_records')
+    .update({ appointment_id: appointmentId })
+    .eq('id', recordId)
+
+  if (error) {
+    console.error('Erro ao vincular registro:', error)
+    return { success: false, error: 'Falha ao vincular' }
+  }
+
+  revalidatePath('/dashboard/clientes/[id]', 'page')
   return { success: true }
 }

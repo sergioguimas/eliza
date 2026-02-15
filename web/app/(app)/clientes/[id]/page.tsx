@@ -196,10 +196,8 @@ export default async function CustomerPage({ params, searchParams }: { params: P
             {/* Lista de Registros */}
             <ServiceRecordList 
               records={serviceRecords} 
-              initialRecords={serviceRecords}
-              customerPhone={customer.phone}
-              customerId={id}
-              organizationId={customer.organization_id}
+              availableAppointments={appointmentsRes.data || []}
+              customer={customer}
             />
         </TabsContent>
 

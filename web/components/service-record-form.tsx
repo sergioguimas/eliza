@@ -76,8 +76,8 @@ export function ServiceRecordForm({ customerId, organizationId, defaultAppointme
 
   return (
     <Card className="border-l-6 border-l-blue-500 mb-8">
-      <CardHeader className="pb-1 bg-gray-50/50">
-        <CardTitle className="text-base font-semibold text-gray-700">
+      <CardHeader className="pt-2 bg-gray-50/50">
+        <CardTitle className="text-base font-semibold text-gray-900">
           Novo Registro de Atendimento
         </CardTitle>
       </CardHeader>
@@ -104,16 +104,16 @@ export function ServiceRecordForm({ customerId, organizationId, defaultAppointme
             })}
           </div>
         </div>
-          <div className={cn(
-            "space-y-4 border rounded-lg p-4 bg-card transition-all duration-1000",
-            appointmentId && "ring-2 ring-emerald-500 shadow-lg bg-emerald-50/10"
-          )}>
-            {appointmentId && (
-              <div className="text-[10px] text-emerald-600 font-bold uppercase flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3" /> Vinculado à consulta finalizada
-              </div>
-            )}
-          </div>
+        <div className={cn(
+          "space-y-4 border rounded-lg p-4 bg-card transition-all duration-1000",
+          appointmentId && "ring-2 ring-emerald-500 shadow-lg bg-emerald-50/10"
+        )}>
+          {appointmentId && (
+            <div className="text-[10px] text-emerald-600 font-bold uppercase flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3" /> Vinculado à consulta finalizada
+            </div>
+          )}
+        </div>
         <Textarea
           placeholder="Descreva os detalhes da evolução, atendimento ou observações..."
           className="min-h-[120px] mb-4 resize-none bg-white"
