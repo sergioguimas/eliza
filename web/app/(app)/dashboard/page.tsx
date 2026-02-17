@@ -129,10 +129,7 @@ export default async function DashboardPage() {
   }))
 
   // Cálculos
-  const totalServices = resServices.count || 0
   const totalCustomers = resCustomers.data?.length || 0
-  const totalAllApps = resAll.data?.length || 0 
-  const completedApps = resAll.data?.filter((a: any) => a.status === 'completed').length || 0
 
   // 7. Pega o primeiro nome do perfil ou fallback seguro
   const doctorName = profile?.full_name ? profile.full_name.split(' ')[0] : "Doutor"

@@ -67,6 +67,11 @@ export function ServiceRecordForm({ customerId, organizationId, defaultAppointme
     } else {
       toast.success("Registro salvo com sucesso!")
       setContent("")
+      if (appointmentId) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('show_return_modal', 'true');
+        window.history.pushState({}, '', url);
+      }
       setAppointmentId(null)
       router.refresh()
     }
@@ -104,16 +109,18 @@ export function ServiceRecordForm({ customerId, organizationId, defaultAppointme
             })}
           </div>
         </div>
-        <div className={cn(
-          "space-y-4 border rounded-lg p-4 bg-card transition-all duration-1000",
-          appointmentId && "ring-2 ring-emerald-500 shadow-lg bg-emerald-50/10"
-        )}>
-          {appointmentId && (
-            <div className="text-[10px] text-emerald-600 font-bold uppercase flex items-center gap-1">
-              <CheckCircle2 className="h-3 w-3" /> Vinculado à consulta finalizada
-            </div>
-          )}
-        </div>
+        { appointmentId && (
+          <div className={cn(
+            "space-y-4 border rounded-lg p-4 bg-card transition-all duration-1000",
+            appointmentId && "ring-2 ring-emerald-500 shadow-lg bg-emerald-50/10"
+          )}>
+            {appointmentId && (
+              <div className="text-[10px] text-emerald-600 font-bold uppercase flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" /> Vinculado à consulta finalizada
+              </div>
+            )}
+          </div>
+        )}
         <Textarea
           placeholder="Descreva os detalhes da evolução, atendimento ou observações..."
           className="min-h-[120px] mb-4 resize-none bg-white"
@@ -123,6 +130,22 @@ export function ServiceRecordForm({ customerId, organizationId, defaultAppointme
         />
         
         <div className="flex items-center justify-end gap-3">
+          {appointmentId && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set('show_return_modal', 'true');
+                url.searchParams.delete('return_check');
+                window.history.pushState({}, '', url);
+                setAppointmentId(null);
+              }}
+            >
+              Pular e agendar retorno
+            </Button>
+          )}
           <Button 
             onClick={() => handleSubmit('draft')}
             disabled={isSubmitting}

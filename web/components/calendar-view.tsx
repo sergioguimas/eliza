@@ -81,52 +81,59 @@ function CalendarContent({
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
-  const isProcessingReturn = useRef<string | null>(null)
 
   const [date, setDate] = useState(new Date())
   const [view, setView] = useState<'month' | 'week' | 'day'>('month')
   
   // -- ESTADOS --
-  const [isUpdateOpen, setIsUpdateOpen] = useState(false)
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
-  const [filterId, setFilterId] = useState<string>('all')
   const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [createDate, setCreateDate] = useState<Date | null>(null)
-
-  const [returnPromptData, setReturnPromptData] = useState<{open: boolean, appointment: Appointment | null}>({
-    open: false, 
-    appointment: null
-  })
-
   const [prefilledData, setPrefilledData] = useState<{
-    customerId: string, 
-    serviceId: string, 
-    professionalId: string,
-    date: Date | null
+    customerId?: string, 
+    serviceId?: string, 
+    professionalId?: string,
+    date?: Date | null
   } | null>(null)
-
+  const [createDate, setCreateDate] = useState<Date | null>(null)
+  const [filterId, setFilterId] = useState('all')
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
+  const [isUpdateOpen, setIsUpdateOpen] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
+  const [returnPromptData, setReturnPromptData] = useState<{
+    open: boolean;
+    appointment: any | null;
+  }>({ open: false, appointment: null });
   
-  useEffect(() => {
-    setIsMounted(true)
-    if (currentUser?.role === 'professional' && currentUser?.id) {
-        setFilterId(currentUser.id)
-    }
-  }, [currentUser])
-
   // Garante que o prompt de retorno só abra quando o status é alterado
   useEffect(() => {
-    const returnCheckId = searchParams.get('return_check');
-    if (returnCheckId) {
-      const apt = appointments.find(a => a.id === returnCheckId);
+    const isNew = searchParams.get('new') === 'true'
+    const customerId = searchParams.get('customer_id')
+    const dateStr = searchParams.get('date')
+    const returnCheckId = searchParams.get('return_check') // Captura o ID do retorno
+
+    // Lógica para abrir modal de Novo Agendamento (vindo do prontuário)
+    if (isNew) {
+      setPrefilledData({
+        customerId: customerId || undefined,
+        date: dateStr ? new Date(dateStr) : new Date()
+      })
+      setIsCreateOpen(true)
       
-      if (apt && (apt.status === 'completed' || apt.status === 'finalized')) {
-        if (!returnPromptData.open) {
-          setReturnPromptData({ open: true, appointment: apt });
-        }
+      const params = new URLSearchParams(window.location.search)
+      params.delete('new'); params.delete('customer_id'); params.delete('date')
+      router.replace(`?${params.toString()}`, { scroll: false })
+    }
+
+    // Lógica para abrir o Prompt de Retorno (vindo da Dashboard)
+    if (returnCheckId) {
+      const apt = appointments.find(a => a.id === returnCheckId)
+      if (apt) {
+        setReturnPromptData({
+          open: true,
+          appointment: apt
+        })
       }
     }
-  }, [searchParams, appointments, returnPromptData.open]);
+  }, [searchParams, appointments])
 
   const getProfessionalColor = (profId?: string) => {
     if (!profId) return PROFESSIONAL_COLORS[0]
@@ -138,6 +145,10 @@ function CalendarContent({
     if (filterId === 'all') return appointments
     return appointments.filter(apt => apt.professional_id === filterId)
   }, [appointments, filterId])
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   if (!isMounted) {
     return (
@@ -190,7 +201,6 @@ function CalendarContent({
   };
 
   const handleReturnConfirm = (days: number | null) => {
-    // Fecha e Limpa
     setReturnPromptData({ ...returnPromptData, open: false })
     const params = new URLSearchParams(window.location.search)
     params.delete('return_check')
@@ -291,7 +301,7 @@ function CalendarContent({
         </div>
         <div className="grid grid-rows-5 md:grid-rows-6 h-[600px] md:h-[700px]">
           {weeks.map((week, i) => (
-            <div key={i} className="grid grid-cols-7">
+            <div key={i} className="grid grid-cols-7 min-h-0 flex-1">
               {week.map((day, j) => {
                 const dayAppointments = filteredAppointments.filter(apt => apt.start_time && isSameDay(parseISO(apt.start_time), day) && apt.status !== 'canceled').sort((a, b) => a.start_time.localeCompare(b.start_time))
                 return (
@@ -299,8 +309,8 @@ function CalendarContent({
                     <ContextMenuTrigger className="h-full w-full">
                         <div className={cn("h-full w-full border-r border-b border-zinc-800/50 p-1 md:p-2 min-h-[80px] relative hover:bg-zinc-800/30 transition-colors group flex flex-col gap-1", !isSameMonth(day, monthStart) && "bg-zinc-950/30 opacity-40", isToday(day) && "bg-zinc-900")}>
                             <span className={cn("text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full mb-1", isToday(day) ? "bg-primary text-primary-foreground" : "text-zinc-400 group-hover:text-zinc-200")}>{format(day, 'd')}</span>
-                            <div className="flex flex-col gap-1 overflow-y-auto max-h-[100px] no-scrollbar">
-                            {dayAppointments.map(apt => (<div key={apt.id} className="h-auto"><AppointmentCard appointment={apt} /></div>))}
+                            <div className="flex flex-col gap-1 overflow-y-auto max-h-[70px] no-scrollbar">
+                              {dayAppointments.map(apt => (<div key={apt.id} className="h-auto"><AppointmentCard appointment={apt} /></div>))}
                             </div>
                         </div>
                     </ContextMenuTrigger>
@@ -378,15 +388,7 @@ function CalendarContent({
               <TabsTrigger value="day">Dia</TabsTrigger>
             </TabsList>
           </Tabs>
-          <div className="h-6 w-px bg-zinc-800 mx-2 hidden md:block" />
-          
-          <CreateAppointmentDialog 
-            customers={customers} services={services} professionals={staff} organization_id={organization_id} 
-            preselectedDate={date} currentUser={currentUser} preselectedProfessionalId={filterId} settings={settings}
-            // Dados pré-preenchidos (Retorno)
-            preselectedCustomerId={prefilledData?.customerId}
-            preselectedServiceId={prefilledData?.serviceId}
-          />
+          <div className="h-6 w-px bg-zinc-800 mx-2 hidden md:block" />          
         </div>
       </div>
 
@@ -407,9 +409,18 @@ function CalendarContent({
       />
 
       <CreateAppointmentDialog 
-        customers={customers} services={services} professionals={staff} organization_id={organization_id} 
-        currentUser={currentUser} settings={settings} open={isCreateOpen}
-        onOpenChange={(val) => { setIsCreateOpen(val); if (!val) setPrefilledData(null) }}
+        open={isCreateOpen}
+        onOpenChange={(val) => {
+          setIsCreateOpen(val)
+          if (!val) setPrefilledData(null) // Limpa ao fechar
+        }}
+        customers={customers} 
+        services={services} 
+        professionals={staff} 
+        organization_id={organization_id} 
+        currentUser={currentUser} 
+        settings={settings}
+        // Passagem dinâmica de dados
         preselectedDate={prefilledData?.date || createDate || date}
         preselectedProfessionalId={prefilledData?.professionalId || filterId}
         preselectedCustomerId={prefilledData?.customerId}

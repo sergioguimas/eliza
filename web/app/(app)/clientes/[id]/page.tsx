@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -15,18 +15,19 @@ import { getServiceRecords } from "@/app/actions/service-records"
 import { ServiceRecordList } from "@/components/service-record-list"
 import { ServiceRecordForm } from "@/components/service-record-form"
 import { Printer } from "lucide-react"
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { unstable_noStore as noStore } from "next/cache"
 import { Database } from "@/utils/database.types"
 import { AppointmentContextMenu } from "@/components/appointment-context-menu"
+import { ReturnModalWrapper } from "@/components/return-modal-wrapper"
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-export default async function CustomerPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ return_check?: string }> }) {
+export default async function CustomerPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ return_check?: string, show_return_modal?: string }>}) {
   noStore()
   const { id } = await params
   const { return_check } = await searchParams
+  const { show_return_modal } = await searchParams;
   const supabase = await createClient<Database>()
 
   // 1. Busca dados do cliente, agendamentos e LOGS em paralelo
@@ -54,6 +55,18 @@ export default async function CustomerPage({ params, searchParams }: { params: P
 
   const customer = customerRes.data
   const appointments = appointmentsRes.data || []
+
+  const handleReturnConfirm = async (days: number | null) => {
+    'use server'
+    if (days === null) {
+      redirect(`/agendamentos?customer_id=${id}&mode=new`)
+    } else {
+      const date = new Date();
+      date.setDate(date.getDate() + days);
+      const formattedDate = date.toISOString().split('T')[0];
+      redirect(`/agendamentos?customer_id=${id}&date=${formattedDate}`)
+    }
+  }
 
   return (
     <div className="space-y-6 pb-10">
@@ -192,6 +205,11 @@ export default async function CustomerPage({ params, searchParams }: { params: P
             <div className="mb-8">
                 <ServiceRecordForm customerId={customer.id} organizationId={customer.organization_id} defaultAppointmentId={return_check || null}/>
             </div>
+
+            <ReturnModalWrapper 
+              customerId={id}
+              customerName={customer.name} 
+            />
 
             {/* Lista de Registros */}
             <ServiceRecordList 
