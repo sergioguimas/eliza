@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { MoreHorizontal, Trash2, FileText, Copy, Loader2, Pencil } from "lucide-react"
+import { MoreHorizontal, Trash2, Copy, Loader2, Pencil, Calculator } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { deleteCustomer } from "@/app/actions/delete-customer"
 import { UpdateCustomerDialog } from "./update-customer-dialog"
+import { EstimateModal } from "./estimate-dialog"
 import { toast } from "sonner"
 import { useKeckleon } from "@/providers/keckleon-provider"
 
@@ -25,15 +26,18 @@ interface CustomerRowActionsProps {
     phone?: string | null
     gender?: string | null
     notes?: string | null
+    organization_id: string
   }
+    professionals: any[] 
+    services: any[]
 }
 
-export function CustomerRowActions({ customer }: CustomerRowActionsProps) {
+export function CustomerRowActions({ customer, professionals, services }: CustomerRowActionsProps) {
   const [loading, setLoading] = useState(false)
-  
   const [showEditDialog, setShowEditDialog] = useState(false)
-  
-  const router = useRouter()
+  const [showEstimateDialog, setShowEstimateDialog] = useState(false)
+
+  const organizationId = customer.organization_id
 
   const { dict } = useKeckleon()
 
@@ -53,12 +57,20 @@ export function CustomerRowActions({ customer }: CustomerRowActionsProps) {
 
   return (
     <>
-      <UpdateCustomerDialog customer={customer}>
-        <Button variant="outline" size="sm">
-          <Pencil className="mr-2 h-4 w-4" />
-          Editar Dados
-        </Button>
-      </UpdateCustomerDialog>
+      <UpdateCustomerDialog 
+        customer={customer} 
+        open={showEditDialog} 
+        onOpenChange={setShowEditDialog} 
+      />
+
+      <EstimateModal
+        isOpen={showEstimateDialog}
+        onClose={() => setShowEstimateDialog(false)}
+        customerId={customer.id}
+        organizationId={organizationId}
+        professionals={professionals}
+        services={services}
+      />
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -68,25 +80,40 @@ export function CustomerRowActions({ customer }: CustomerRowActionsProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="bg-background border-border text-zinc-300">
-          <DropdownMenuLabel>Ações</DropdownMenuLabel>
-          
-          <DropdownMenuItem onClick={() => router.push(`/clientes/${customer.id}`)} className="cursor-pointer focus:bg-zinc-800">
-            <FileText className="mr-2 h-4 w-4" /> Ver {dict.label_prontuario}
+        <DropdownMenuLabel>Ações</DropdownMenuLabel>
+
+          <DropdownMenuItem 
+            onSelect={(e) => {
+              e.preventDefault()
+              setShowEditDialog(true)
+            }} className="cursor-pointer">
+            <Pencil className="mr-2 h-4 w-4" />
+            Editar Dados
           </DropdownMenuItem>
 
-          {/* 3. O BOTÃO QUE ABRE O MODAL */}
-          <DropdownMenuItem onClick={() => setShowEditDialog(true)} className="cursor-pointer focus:bg-zinc-800">
-            <Pencil className="mr-2 h-4 w-4" /> Editar Dados
+          <DropdownMenuItem 
+            onSelect={(e) => {
+              e.preventDefault()
+              setShowEstimateDialog(true)
+            }}
+            className="text-primary focus:text-primary"
+          >
+            <Calculator className="mr-2 h-4 w-4" />
+            Criar Orçamento
           </DropdownMenuItem>
 
           <DropdownMenuItem onClick={handleCopyId} className="cursor-pointer focus:bg-zinc-800">
-            <Copy className="mr-2 h-4 w-4" /> Copiar ID
+            <Button variant="outline" size="sm" className="w-full justify-start">
+              <Copy className="mr-2 h-4 w-4" /> Copiar ID
+            </Button>
           </DropdownMenuItem>
           
           <DropdownMenuSeparator className="bg-zinc-800" />
           
           <DropdownMenuItem onClick={handleDelete} className="text-red-500 focus:bg-red-950/30 focus:text-red-400 cursor-pointer">
-            <Trash2 className="mr-2 h-4 w-4" /> Excluir {dict.label_paciente}
+            <Button variant="outline" size="sm" className="w-full justify-start">
+              <Trash2 className="mr-2 h-4 w-4" /> Excluir
+            </Button>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

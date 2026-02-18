@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { CalendarDays, Phone, Mail, MapPin, Clock, User, FileText, Info, Pencil, MessageCircle } from "lucide-react"
+import { CalendarDays, Phone, Mail, MapPin, Clock, User, FileText, Calculator, Printer, MessageCircle } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { UpdateCustomerDialog } from "@/components/update-customer-dialog"
@@ -14,11 +14,11 @@ import { Badge } from "@/components/ui/badge"
 import { getServiceRecords } from "@/app/actions/service-records"
 import { ServiceRecordList } from "@/components/service-record-list"
 import { ServiceRecordForm } from "@/components/service-record-form"
-import { Printer } from "lucide-react"
 import { unstable_noStore as noStore } from "next/cache"
 import { Database } from "@/utils/database.types"
 import { AppointmentContextMenu } from "@/components/appointment-context-menu"
 import { ReturnModalWrapper } from "@/components/return-modal-wrapper"
+import { EstimateModal } from "@/components/estimate-dialog"
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -30,9 +30,35 @@ export default async function CustomerPage({ params, searchParams }: { params: P
   const { show_return_modal } = await searchParams;
   const supabase = await createClient<Database>()
 
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    redirect('/login')
+  }
+  
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', user?.id)
+    .single();
+
+  if (!profile) {
+    redirect('/login')
+  }
+
+  if (!profile?.organization_id) {
+    return <div>Erro: Organização não encontrada para este usuário.</div>;
+  }
+
+
   // 1. Busca dados do cliente, agendamentos e LOGS em paralelo
   const [customerRes, appointmentsRes, serviceRecords] = await Promise.all([
-    supabase.from('customers').select('*').eq('id', id).single(),
+    supabase
+      .from('customers')
+      .select('*')
+      .eq('id', id)
+      .eq('organization_id', profile?.organization_id)
+      .single(),
     supabase
       .from('appointments')
       .select(`
@@ -55,18 +81,18 @@ export default async function CustomerPage({ params, searchParams }: { params: P
 
   const customer = customerRes.data
   const appointments = appointmentsRes.data || []
+  
+  const { data: professionals } = await supabase
+    .from('professionals')
+    .select('id, name')
+    .eq('organization_id', profile?.organization_id)
+    .eq('is_active', true);
 
-  const handleReturnConfirm = async (days: number | null) => {
-    'use server'
-    if (days === null) {
-      redirect(`/agendamentos?customer_id=${id}&mode=new`)
-    } else {
-      const date = new Date();
-      date.setDate(date.getDate() + days);
-      const formattedDate = date.toISOString().split('T')[0];
-      redirect(`/agendamentos?customer_id=${id}&date=${formattedDate}`)
-    }
-  }
+  const { data: services } = await supabase
+    .from('services')
+    .select('id, title, price, duration_minutes')
+    .eq('organization_id', profile?.organization_id)
+    .eq('active', true);
 
   return (
     <div className="space-y-6 pb-10">
@@ -90,8 +116,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <UpdateCustomerDialog customer={customer} />
-          <CustomerRowActions customer={customer} />
+          <CustomerRowActions customer={customer} professionals={professionals || [] } services={services || []}/>
         </div>
       </div>
 
