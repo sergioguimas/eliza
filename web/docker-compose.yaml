@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  elisa-app:
+    container_name: elisa-app
+    build: .
+    restart: always
+    networks:
+      - public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.elisa-app.rule=Host(`elizasola.duckdns.org`)"
+      - "traefik.http.routers.elisa-app.entrypoints=websecure"
+      - "traefik.http.routers.elisa-app.tls.certresolver=meuresolver"
+      - "traefik.http.services.elisa-app.loadbalancer.server.port=3000"
+networks:
+  public:
+    external: true
