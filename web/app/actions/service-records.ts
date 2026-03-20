@@ -14,7 +14,7 @@ export interface ServiceRecord {
   created_at: string
   signed_at?: string | null
   signed_by?: string | null
-  professional?: { full_name: string | null }
+  professional?: { name: string | null; role?: string | null } | null
   signature_hash?: string | null
   appointment_id: string | null;
   appointment?: {start_time: string;} | null;
@@ -33,9 +33,8 @@ export async function getServiceRecords(customerId: string) {
       appointment:appointments (
         start_time
       ),
-      professional:profiles!service_records_professional_id_fkey (
-        full_name,
-        role
+      professional:professionals!service_records_professional_id_fkey (
+        name
       )      
     `)
     .eq('customer_id', customerId)

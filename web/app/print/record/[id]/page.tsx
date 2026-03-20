@@ -21,7 +21,7 @@ export default async function PrintRecordPage({ params }: { params: Promise<{ id
     .select(`
       *,
       customer:customers ( name, document, organization:organizations(name) ),
-      professional:profiles!service_records_professional_id_fkey ( full_name, role )
+      professional:profiles!service_records_professional_id_fkey ( name, role )
     `)
     .eq('id', id)
     .single()
@@ -68,7 +68,7 @@ export default async function PrintRecordPage({ params }: { params: Promise<{ id
       <footer className="mt-12 pt-4 border-t border-gray-300">
          {record.status === 'signed' ? (
              <div className="text-center">
-                <p className="font-bold text-sm uppercase">{record.professional?.full_name}</p>
+                <p className="font-bold text-sm uppercase">{record.professional?.name}</p>
                 <p className="text-xs text-gray-600 mb-2">{record.professional?.role === 'owner' ? 'Responsável Técnico' : 'Profissional'}</p>
                 
                 <div className="bg-gray-100 p-2 inline-block rounded border border-gray-200 mt-2">
@@ -83,7 +83,7 @@ export default async function PrintRecordPage({ params }: { params: Promise<{ id
          ) : (
              <div className="text-center pt-8">
                 <div className="border-t border-black w-64 mx-auto mb-2"></div>
-                <p className="text-sm">{record.professional?.full_name}</p>
+                <p className="text-sm">{record.professional?.name}</p>
                 <p className="text-xs text-gray-500">(Rascunho não assinado)</p>
              </div>
          )}

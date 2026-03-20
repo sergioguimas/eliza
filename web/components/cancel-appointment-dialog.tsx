@@ -49,7 +49,7 @@ export function CancelAppointmentDialog({
             Você está prestes a cancelar o agendamento de <br/>
             <strong className="text-foreground">{appointment?.customers?.name}</strong> 
             <br/> com <br/>
-            <strong className="text-foreground">{appointment?.profiles?.full_name || "Profissional"}</strong>.
+            <strong className="text-foreground">{appointment?.profiles?.name || "Profissional"}</strong>.
           </DialogDescription>
         </DialogHeader>
 
