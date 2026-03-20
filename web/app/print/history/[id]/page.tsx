@@ -33,7 +33,7 @@ export default async function PrintHistoryPage({ params }: { params: Promise<{ i
       signed_at,
       signed_by,
       signature_hash,
-      professional:profiles!service_records_professional_id_fkey ( name, role )
+      professional:professionals!service_records_professional_id_fkey ( name )
     `)
     .eq('customer_id', id)
     .order('created_at', { ascending: true })
