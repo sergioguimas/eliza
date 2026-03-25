@@ -53,33 +53,46 @@ export async function checkProfessionalAvailability(
   const dayOfWeek = startTime.getDay();
   const timeString = startTime.toTimeString().split(' ')[0]; // HH:mm:ss
 
-  // 1. BUSCA HORÁRIO INDIVIDUAL DO PROFISSIONAL
-  const { data: profAvail } = await supabase
+  function timeToMinutes(time: string) {
+    const [hours, minutes] = time.slice(0, 5).split(':').map(Number)
+    return hours * 60 + minutes
+  }
+
+  const { data: profAvail, error: profAvailError } = await supabase
     .from('professional_availability')
     .select('*')
     .eq('professional_id', professionalId)
     .eq('day_of_week', dayOfWeek)
     .eq('is_active', true)
-    .single();
+    .maybeSingle()
 
-  if (profAvail) {
-    // Valida se está dentro do turno do médico
-    if (timeString < profAvail.start_time || timeString >= profAvail.end_time) {
-      return { available: false, message: "Fora do horário de atendimento do profissional." };
-    }
-
-    // Valida se está no intervalo (almoço)
-    if (profAvail.break_start && profAvail.break_end) {
-      if (timeString >= profAvail.break_start && timeString < profAvail.break_end) {
-        return { available: false, message: "O profissional está em horário de intervalo." };
-      }
-    }
-    
-    return { available: true };
+  if (profAvailError) {
+    console.error('Erro ao buscar disponibilidade:', profAvailError)
+    return { available: false, message: 'Erro ao validar disponibilidade do profissional.' }
   }
 
-  // 2. FALLBACK: Se não houver horário individual
-  return { available: false, message: "O profissional não possui horários configurados para este dia." };
+  if (!profAvail) {
+    return { available: false, message: 'O profissional não possui horário configurado para este dia.' }
+  }
+
+  const selectedMinutes = timeToMinutes(timeString)
+  const startMinutes = timeToMinutes(profAvail.start_time)
+  const endMinutes = timeToMinutes(profAvail.end_time)
+
+  if (selectedMinutes < startMinutes || selectedMinutes >= endMinutes) {
+    return { available: false, message: 'Fora do horário de atendimento do profissional.' }
+  }
+
+  if (profAvail.break_start && profAvail.break_end) {
+    const breakStartMinutes = timeToMinutes(profAvail.break_start)
+    const breakEndMinutes = timeToMinutes(profAvail.break_end)
+
+    if (selectedMinutes >= breakStartMinutes && selectedMinutes < breakEndMinutes) {
+      return { available: false, message: 'O profissional está em horário de intervalo.' }
+    }
+  }
+
+  return { available: true }
 }
 
 export function generateTimeSlots(start: string, end: string, interval: number) {
