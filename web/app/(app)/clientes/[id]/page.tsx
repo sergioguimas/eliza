@@ -164,7 +164,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
                           </div>
                           <div className="flex items-center gap-1">
                             <User className="h-4 w-4" />
-                            Profissional: {apt.profiles?.full_name || 'Não atribuído'}
+                            Profissional: {apt.professionals?.name || 'Não atribuído'}
                           </div>
                         </div>
                       </div>

@@ -20,6 +20,7 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
   const createdMsgRef = useRef<HTMLTextAreaElement>(null)
   const reminderMsgRef = useRef<HTMLTextAreaElement>(null)
   const canceledMsgRef = useRef<HTMLTextAreaElement>(null)
+  const doctorSummaryMsgRef = useRef<HTMLTextAreaElement>(null)
 
   const daysMap = [
     { id: 1, label: 'Segunda' },
@@ -42,7 +43,10 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
       })
   }
 
-  const insertVariable = (ref: React.RefObject<HTMLTextAreaElement>, variable: string) => {
+  const insertVariable = (
+    ref: React.RefObject<HTMLTextAreaElement | null>,
+    variable: string
+  ) => {
     if (ref.current) {
         const start = ref.current.selectionStart
         const end = ref.current.selectionEnd
@@ -55,19 +59,25 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
     }
   }
 
-  const VariableBadges = ({ targetRef }: { targetRef: any }) => (
-      <div className="flex gap-2 mt-2 mb-1 flex-wrap">
-          {['{name}', '{date}', '{time}', '{service}'].map(v => (
-              <Badge 
-                key={v} 
-                variant="outline" 
-                className="cursor-pointer hover:bg-zinc-100 active:scale-95 transition-all"
-                onClick={() => insertVariable(targetRef, v)}
-              >
-                  {v}
-              </Badge>
-          ))}
-      </div>
+  const VariableBadges = ({
+    targetRef,
+    variables,
+  }: {
+    targetRef: React.RefObject<HTMLTextAreaElement | null>
+    variables: string[]
+  }) => (
+    <div className="flex gap-2 mt-2 mb-1 flex-wrap">
+      {variables.map((v) => (
+        <Badge
+          key={v}
+          variant="outline"
+          className="cursor-pointer hover:bg-zinc-100 active:scale-95 transition-all"
+          onClick={() => insertVariable(targetRef, v)}
+        >
+          {v}
+        </Badge>
+      ))}
+    </div>
   )
 
   return (
@@ -175,7 +185,10 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
                   <div className="space-y-2">
                     <Label className="text-base font-semibold text-green-600 flex justify-between">
                         Ao Confirmar Agendamento
-                        <VariableBadges targetRef={createdMsgRef} />
+                        <VariableBadges
+                          targetRef={createdMsgRef}
+                          variables={['{name}', '{date}', '{time}', '{service}']}
+                        />
                     </Label>
                     <Textarea 
                       ref={createdMsgRef}
@@ -188,22 +201,51 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
 
                   <div className="space-y-2">
                     <Label className="text-base font-semibold text-blue-600 flex justify-between">
-                        Lembrete (Dia Anterior)
-                        <VariableBadges targetRef={reminderMsgRef} />
+                        Lembrete (Dia da Consulta - 07:00)
+                        <VariableBadges
+                          targetRef={reminderMsgRef}
+                          variables={['{name}', '{date}', '{time}', '{service}', '{professional}']}
+                        />
                     </Label>
                     <Textarea 
                       ref={reminderMsgRef}
                       name="msg_appointment_reminder" 
                       defaultValue={settings?.msg_appointment_reminder}
-                      placeholder="Lembrete: Consulta amanhã às {time}..."
+                      placeholder="Lembrete: Consulta hoje às {time}..."
                       rows={3} 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-base font-semibold text-violet-600 flex justify-between">
+                      Resumo Diário do Médico
+                      <VariableBadges
+                        targetRef={doctorSummaryMsgRef}
+                        variables={['{name}', '{date}', '{appointments}', '{count}']}
+                      />
+                    </Label>
+                    <Textarea
+                      ref={doctorSummaryMsgRef}
+                      name="msg_doctor_daily_summary"
+                      defaultValue={settings?.msg_doctor_daily_summary}
+                      placeholder={`Bom dia, {name}!
+
+                  Sua agenda de hoje:
+
+                  {appointments}
+
+                  Total: {count} paciente(s).`}
+                      rows={5}
                     />
                   </div>
 
                   <div className="space-y-2">
                     <Label className="text-base font-semibold text-red-600 flex justify-between">
                         Ao Cancelar
-                        <VariableBadges targetRef={canceledMsgRef} />
+                        <VariableBadges
+                          targetRef={canceledMsgRef}
+                          variables={['{name}', '{date}', '{time}', '{service}']}
+                        />
                     </Label>
                     <Textarea 
                       ref={canceledMsgRef}

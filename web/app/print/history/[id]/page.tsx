@@ -33,7 +33,7 @@ export default async function PrintHistoryPage({ params }: { params: Promise<{ i
       signed_at,
       signed_by,
       signature_hash,
-      professional:profiles!service_records_professional_id_fkey ( full_name, role )
+      professional:professionals!service_records_professional_id_fkey ( name )
     `)
     .eq('customer_id', id)
     .order('created_at', { ascending: true })
@@ -78,7 +78,7 @@ export default async function PrintHistoryPage({ params }: { params: Promise<{ i
                    às {format(new Date(rec.created_at), "HH:mm")}
                 </span>
                 <span className="text-xs text-gray-600 ml-auto">
-                   Profissional: {rec.professional?.full_name}
+                   Profissional: {rec.professional?.name}
                 </span>
              </div>
              
@@ -88,7 +88,7 @@ export default async function PrintHistoryPage({ params }: { params: Promise<{ i
 
              {rec.status === 'signed' && (
                 <div className="text-center">
-                <p className="font-bold text-sm uppercase">{rec.professional?.full_name}</p>
+                <p className="font-bold text-sm uppercase">{rec.professional?.name}</p>
                 <p className="text-xs text-gray-600 mb-2">{rec.professional?.role === 'owner' ? 'Responsável Técnico' : 'Profissional'}</p>
                 
                 <div className="bg-gray-100 p-2 inline-block rounded border border-gray-200 mt-2">

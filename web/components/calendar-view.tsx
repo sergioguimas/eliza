@@ -48,7 +48,7 @@ type Appointment = {
   notes?: string
   customers: { id: string; name: string } | null
   services: { id: string; title: string; color?: string } | null
-  profiles?: { id: string; full_name: string } | null
+  profiles?: { id: string; name: string } | null
   organization_id?: string
 }
 
@@ -232,7 +232,7 @@ function CalendarContent({
     setPrefilledData({
         customerId: apt.customer_id || (apt.customers?.id as string),
         serviceId: apt.service_id || (apt.services?.id as string),
-        professionalId: apt.professional_id || (apt.profiles?.id as string),
+        professionalId: apt.professional_id || (apt.professionals?.id as string),
         date: targetDate
     })
     
@@ -276,7 +276,7 @@ function CalendarContent({
           </div>
           <div className="flex justify-between items-center opacity-85 text-[10px] gap-2">
             <span className="font-semibold tracking-tight truncate">
-               {isPanorama && appointment.profiles?.full_name ? appointment.profiles.full_name.split(' ')[0] : appointment.services?.title || "Consulta"}
+               {isPanorama && appointment.profiles?.name ? appointment.profiles.name.split(' ')[0] : appointment.services?.title || "Consulta"}
             </span>
             <span className="whitespace-nowrap font-mono text-[9px] opacity-100 font-bold">
               {new Date(appointment.start_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}

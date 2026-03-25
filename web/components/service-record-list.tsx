@@ -60,7 +60,7 @@ interface ServiceRecordItemProps {
   customer: {
     id: string;
     phone?: string | null;
-    full_name: string;
+    name: string;
     organization_id: string;
   };
 }
@@ -130,8 +130,8 @@ function ServiceRecordItem({ record, availableAppointments, customer }: ServiceR
         doc.setFontSize(10)
         doc.setFont("helvetica", "normal")
         doc.text(`Data: ${format(new Date(record.created_at), "dd/MM/yyyy 'às' HH:mm")}`, 20, 30)
-        if (record.professional?.full_name) {
-            doc.text(`Profissional: ${record.professional.full_name}`, 20, 35)
+        if (record.professional?.name) {
+            doc.text(`Profissional: ${record.professional.name}`, 20, 35)
         }
         doc.text(`Status: ${record.status === 'signed' ? 'Assinado/Finalizado' : 'Rascunho'}`, 20, 40)
 
@@ -349,7 +349,7 @@ function ServiceRecordItem({ record, availableAppointments, customer }: ServiceR
 
         {record.signature_hash && (
           <div className="w-full flex items-center justify-between text-[9px] text-zinc-500 pt-2 border-t border-zinc-200/50 italic">
-            <span>Assinado por {record.professional?.full_name || 'Profissional'}</span>
+            <span>Assinado por {record.professional?.name || 'Profissional'}</span>
             <span className="font-mono">HASH: {record.signature_hash.slice(0, 12)}...</span>
           </div>
         )}

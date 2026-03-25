@@ -31,9 +31,10 @@ export async function updatePreferences(formData: FormData) {
   // --- CENÁRIO 2: ATUALIZAR MENSAGENS ---
   else if (form_type === 'messages') {
       const updates = {
-          msg_appointment_created: formData.get('msg_appointment_created') as string,
-          msg_appointment_reminder: formData.get('msg_appointment_reminder') as string,
-          msg_appointment_canceled: formData.get('msg_appointment_canceled') as string
+        msg_appointment_created: formData.get('msg_appointment_created') as string,
+        msg_appointment_reminder: formData.get('msg_appointment_reminder') as string,
+        msg_appointment_canceled: formData.get('msg_appointment_canceled') as string,
+        msg_doctor_daily_summary: formData.get('msg_doctor_daily_summary') as string,
       }
 
       const { error } = await (supabase.from('organization_settings'))
