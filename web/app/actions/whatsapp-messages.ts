@@ -68,7 +68,7 @@ export async function sendAppointmentConfirmation(appointmentId: string) {
     date: dateStr,
     time: timeStr,
     service: appointment.services?.title || 'Consulta',
-    professional: appointment.profiles?.full_name || 'Profissional'
+    professional: appointment.professional?.name || 'Profissional'
   })
 
   console.log(`📤 Enviando confirmação personalizada para ${phone}...`)
@@ -134,7 +134,7 @@ export async function sendAppointmentCancellation(appointmentId: string) {
     date: dateStr,
     time: timeStr,
     service: appointment.services?.title || 'Consulta',
-    professional: appointment.profiles?.full_name || ''
+    professional: appointment.professional?.name || ''
   })
 
   // 5. Envia
