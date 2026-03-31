@@ -6,11 +6,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { useRef } from "react"
-import { useKeckleon } from "@/providers/keckleon-provider"
 
 export function TenantForm() {
   const formRef = useRef<HTMLFormElement>(null)
-  const { dict } = useKeckleon()
 
   async function handleSubmit(formData: FormData) {
     // 1. Chama a Server Action

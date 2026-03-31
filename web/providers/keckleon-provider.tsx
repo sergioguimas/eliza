@@ -1,36 +1,66 @@
 'use client'
 
 import { createContext, useContext } from 'react'
+import {
+  getNicheMetadata,
+  type NicheBrandConfig,
+  type NicheId,
+  type NicheMetadata,
+} from '@/lib/niche-config'
+import { dictionaries, type NicheDictionary } from '@/lib/dictionaries'
+import { getDictionary } from "@/lib/get-dictionary"
 
-// Define o formato do contexto
 type KeckleonContextType = {
-  dict: any // Ou use o tipo inferido do dictionaries.ts para autocomplete top
-  niche: string
+  dict: NicheDictionary
+  niche: NicheId
+  meta: NicheMetadata
+  brand: NicheBrandConfig
+  entities: NicheDictionary["entities"]
+  nav: NicheDictionary["nav"]
+  actions: NicheDictionary["actions"]
+  messages: NicheDictionary["messages"]
 }
 
 const KeckleonContext = createContext<KeckleonContextType | null>(null)
 
-export function KeckleonProvider({ 
-  children, 
-  dictionary, 
-  niche 
-}: { 
+export function KeckleonProvider({
+  children,
+  niche,
+}: {
   children: React.ReactNode
-  dictionary: any
   niche: string
 }) {
+  const meta = getNicheMetadata(niche)
+  const normalizedNiche = meta.id
+
+  const dict = dictionaries[normalizedNiche] || dictionaries.generico
+
   return (
-    <KeckleonContext.Provider value={{ dict: dictionary, niche }}>
+    <KeckleonContext.Provider
+      value={{
+        dict,
+        niche: normalizedNiche,
+        meta,
+        brand: meta.brand,
+
+        // atalhos diretos (isso aqui melhora MUITO o uso no dia a dia)
+        entities: dict.entities,
+        nav: dict.nav,
+        actions: dict.actions,
+        messages: dict.messages,
+      }}
+    >
       {children}
     </KeckleonContext.Provider>
   )
 }
 
-// Hook personalizado para usar fácil: const { dict } = useKeckleon()
 export function useKeckleon() {
   const context = useContext(KeckleonContext)
+
   if (!context) {
     throw new Error('useKeckleon deve ser usado dentro de um KeckleonProvider')
   }
+
   return context
 }

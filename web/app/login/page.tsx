@@ -1,7 +1,7 @@
 import { Metadata } from "next"
 import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
-import { LoginForm } from "@/components/login-form"
+import { LoginForm } from "@/components/shared/login-form"
 import { Stethoscope } from "lucide-react"
 import { Suspense } from "react"
 

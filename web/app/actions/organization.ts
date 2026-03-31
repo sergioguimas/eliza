@@ -3,18 +3,16 @@
 import { createClient } from "@/utils/supabase/server"
 import { createClient as createClientAdmin } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
-import { redirect } from "next/navigation"
 import { z } from "zod"
 import { Database } from "@/utils/database.types"
 
-
-// Tipagem auxiliar
 type OrganizationInsert = Database['public']['Tables']['organizations']['Insert']
 type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
 
 const createOrgSchema = z.object({
   name: z.string().min(3, "O nome deve ter pelo menos 3 caracteres"),
-  slug: z.string().min(3, "O slug deve ter pelo menos 3 caracteres")
+  slug: z.string()
+    .min(3, "O slug deve ter pelo menos 3 caracteres")
     .regex(/^[a-z0-9-]+$/, "Use apenas letras minúsculas, números e traços"),
   niche: z.enum(['clinica', 'barbearia', 'salao', 'advocacia', 'generico', 'certificado'])
 })
@@ -22,27 +20,31 @@ const createOrgSchema = z.object({
 export async function createOrganization(formData: FormData) {
   const supabase = await createClient<Database>()
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  const {
+    data: { user },
+    error: userError
+  } = await supabase.auth.getUser()
+
   if (userError || !user) {
     return { error: "Usuário não autenticado." }
   }
 
-  // 2. Configurar Cliente Admin (God Mode)
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  
-  if (!serviceRoleKey) {
-    console.error("ERRO CRÍTICO: SUPABASE_SERVICE_ROLE_KEY não definida.")
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+
+  if (!serviceRoleKey || !supabaseUrl) {
+    console.error("ERRO CRÍTICO: variáveis de ambiente do Supabase não definidas.")
     return { error: "Erro de configuração no servidor. Avise o suporte." }
   }
 
   const supabaseAdmin = createClientAdmin<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    supabaseUrl,
     serviceRoleKey,
     {
       auth: {
         autoRefreshToken: false,
-        persistSession: false
-      }
+        persistSession: false,
+      },
     }
   )
 
@@ -64,12 +66,11 @@ export async function createOrganization(formData: FormData) {
     const newOrg: OrganizationInsert = {
       name,
       slug,
-      niche, 
-      subscription_status: 'active',
-      plan: 'free'
+      niche,
+      subscription_status: "active",
+      plan: "free",
     }
 
-    // 3. Inserir Organização (USANDO ADMIN)
     const { data: org, error: orgError } = await supabaseAdmin
       .from("organizations")
       .insert(newOrg)
@@ -77,17 +78,17 @@ export async function createOrganization(formData: FormData) {
       .single()
 
     if (orgError) {
-      if (orgError.code === '23505') {
+      if (orgError.code === "23505") {
         return { error: "Este slug (URL) já está em uso. Escolha outro." }
       }
+
       console.error("Erro ao criar org:", orgError)
       return { error: "Erro ao criar organização." }
     }
 
-    // 4. Atualizar Perfil do Usuário para vincular à nova Organização
     const updateProfile: ProfileUpdate = {
       organization_id: org.id,
-      role: 'owner'
+      role: "owner",
     }
 
     const { error: profileError } = await supabaseAdmin
@@ -100,11 +101,14 @@ export async function createOrganization(formData: FormData) {
       return { error: "Organização criada, mas falha crítica ao vincular seu perfil." }
     }
 
+    revalidatePath("/", "layout")
+
+    return {
+      success: true,
+      redirectTo: "/dashboard",
+    }
   } catch (error) {
     console.error("Erro inesperado:", error)
     return { error: "Erro interno do servidor." }
   }
-
-  revalidatePath("/", "layout")
-  redirect("/dashboard")
 }

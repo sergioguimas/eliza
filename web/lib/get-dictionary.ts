@@ -1,7 +1,13 @@
-import { dictionaries } from "./dictionaries"
+import { dictionaries, type NicheDictionary, type NicheType } from "./dictionaries"
 
-export const getDictionary = (niche: string | null) => {
-  // Se o nicho não existir ou for inválido, usa o 'generico'
-  // @ts-ignore
-  return dictionaries[niche] || dictionaries['generico']
+export const getDictionary = (
+  niche: string | null | undefined
+): NicheDictionary => {
+  if (!niche) return dictionaries.generico
+
+  if (niche in dictionaries) {
+    return dictionaries[niche as NicheType]
+  }
+
+  return dictionaries.generico
 }

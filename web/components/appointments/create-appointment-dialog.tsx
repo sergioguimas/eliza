@@ -12,6 +12,7 @@ import { toast } from "sonner"
 import { Loader2, CalendarIcon, Clock, User, Plus, AlertTriangle } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { useKeckleon } from "@/providers/keckleon-provider"
 
 interface CreateAppointmentDialogProps {
   customers?: any[] 
@@ -60,6 +61,17 @@ export function CreateAppointmentDialog({
   const [showOutsideHoursAlert, setShowOutsideHoursAlert] = useState(false) 
   
   const team = professionals.length > 0 ? professionals : staff
+
+  const { dict } = useKeckleon()
+
+  const entities = dict.entities || {}
+  const actions = dict.actions || {}
+  const messages = dict.messages || {}
+
+  const cliente = entities.cliente || dict.label_cliente || "Cliente"
+  const profissional = entities.profissional || dict.label_profissional || "Profissional"
+  const servico = entities.servico || "Serviço"
+  const agendamento = entities.agendamento || "Agendamento"
 
   // States do formulário
   const [customerId, setCustomerId] = useState("new")
@@ -256,178 +268,210 @@ export function CreateAppointmentDialog({
   }
 
   return (
-    <>
-        <Dialog open={open} onOpenChange={setOpen}>
-        {!isControlled && (
-            <DialogTrigger asChild>
-                <Button size="sm">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Novo Agendamento
-                </Button>
-            </DialogTrigger>
-        )}
-        
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-            <DialogTitle>Novo Agendamento</DialogTitle>
-            </DialogHeader>
-            
-            <form onSubmit={handlePreSubmit} className="space-y-4 py-2">
-            
-            {/* Profissional */}
-            <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-xs font-bold uppercase text-muted-foreground">
-                    <User className="w-3 h-3" />
-                    Profissional
-                </Label>
-                <Select 
-                    value={selectedProfessionalId} 
-                    onValueChange={setSelectedProfessionalId}
-                    disabled={currentUser?.role === 'professional'} 
-                >
-                    <SelectTrigger className="bg-muted/20">
-                        <SelectValue placeholder="Selecione o especialista" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {team.map(prof => (
-                            <SelectItem key={prof.id} value={prof.id}>
-                                {prof.name || prof.email}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
+  <>
+    <Dialog open={open} onOpenChange={setOpen}>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            {actions.new || "Novo"} {agendamento}
+          </Button>
+        </DialogTrigger>
+      )}
 
-            <div className="border-t my-2" />
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {actions.new || "Novo"} {agendamento}
+          </DialogTitle>
+        </DialogHeader>
 
-            {/* Paciente */}
-            <div className="space-y-2">
-                <Label>Paciente</Label>
-                <Select value={customerId} onValueChange={setCustomerId}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Selecione ou digite novo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="new" className="font-bold text-primary">
-                            + Novo Paciente
-                        </SelectItem>
-                        {customers.map(c => (
-                            <SelectItem key={c.id} value={c.id}>
-                                {c.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+        <form onSubmit={handlePreSubmit} className="space-y-4 py-2">
 
-                {customerId === 'new' && (
-                    <div className="grid grid-cols-2 gap-2 mt-2 animate-in slide-in-from-top-2">
-                        <Input 
-                            placeholder="Nome Completo" 
-                            value={customerName} 
-                            onChange={e => setCustomerName(e.target.value)}
-                            required={customerId === 'new'}
+          {/* PROFISSIONAL */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2 text-xs font-bold uppercase text-muted-foreground">
+              <User className="w-3 h-3" />
+              {profissional}
+            </Label>
+
+            <Select
+              value={selectedProfessionalId}
+              onValueChange={setSelectedProfessionalId}
+              disabled={currentUser?.role === 'professional'}
+            >
+              <SelectTrigger className="bg-muted/20">
+                <SelectValue placeholder={`Selecione ${profissional.toLowerCase()}`} />
+              </SelectTrigger>
+
+              <SelectContent>
+                {team.map(prof => (
+                  <SelectItem key={prof.id} value={prof.id}>
+                    {prof.name || prof.email}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="border-t my-2" />
+
+          {/* CLIENTE */}
+          <div className="space-y-2">
+            <Label>{cliente}</Label>
+
+            <Select value={customerId} onValueChange={setCustomerId}>
+              <SelectTrigger>
+                <SelectValue placeholder={`Selecione ou crie um ${cliente.toLowerCase()}`} />
+              </SelectTrigger>
+
+              <SelectContent>
+                <SelectItem value="new" className="font-bold text-primary">
+                  + Novo {cliente}
+                </SelectItem>
+
+                {customers.map(c => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {customerId === 'new' && (
+              <div className="grid grid-cols-2 gap-2 mt-2 animate-in slide-in-from-top-2">
+                <Input
+                  placeholder={`Nome do ${cliente.toLowerCase()}`}
+                  value={customerName}
+                  onChange={e => setCustomerName(e.target.value)}
+                  required
+                />
+                <Input
+                  placeholder="Telefone / WhatsApp"
+                  value={customerPhone}
+                  onChange={e => setCustomerPhone(e.target.value)}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* SERVIÇO */}
+          <div className="space-y-2">
+            <Label>{servico}</Label>
+
+            <Select value={serviceId} onValueChange={setServiceId}>
+              <SelectTrigger>
+                <SelectValue placeholder={`${servico} (opcional)`} />
+              </SelectTrigger>
+
+              <SelectContent>
+                {services.map(s => (
+                  <SelectItem key={s.id} value={s.id}>
+                    <div className="flex items-center gap-2">
+                      {s.color && (
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: s.color }}
                         />
-                        <Input 
-                            placeholder="Telefone / WhatsApp" 
-                            value={customerPhone} 
-                            onChange={e => setCustomerPhone(e.target.value)} 
-                        />
+                      )}
+                      {s.title}
                     </div>
-                )}
-            </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            {/* Serviço */}
+          {/* DATA / HORA */}
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-                <Label>Procedimento / Serviço</Label>
-                <Select value={serviceId} onValueChange={setServiceId}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Selecione o serviço (Opcional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {services.map(s => (
-                            <SelectItem key={s.id} value={s.id}>
-                                <div className="flex items-center gap-2">
-                                    {s.color && (
-                                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: s.color }} />
-                                    )}
-                                    {s.title}
-                                </div>
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
+              <Label className="flex items-center gap-2">
+                <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+                {messages.date || "Data"}
+              </Label>
 
-            {/* Data e Hora */}
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                    <CalendarIcon className="w-4 h-4 text-muted-foreground" />
-                    Data
-                </Label>
-                <Input 
-                    type="date" 
-                    value={date} 
-                    onChange={e => setDate(e.target.value)}
-                    required 
-                />
-                </div>
-                <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-muted-foreground" />
-                    Horário
-                </Label>
-                <Input 
-                    type="time" 
-                    value={time} 
-                    onChange={e => setTime(e.target.value)}
-                    required 
-                />
-                </div>
+              <Input
+                type="date"
+                value={date}
+                onChange={e => setDate(e.target.value)}
+                required
+              />
             </div>
 
             <div className="space-y-2">
-                <Label>Observações</Label>
-                <Textarea 
-                    placeholder="Ex: Primeira consulta, convênio, etc..." 
-                    value={notes}
-                    onChange={e => setNotes(e.target.value)}
-                    className="resize-none"
-                />
-            </div>
+              <Label className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                {messages.time || "Horário"}
+              </Label>
 
-            <div className="flex justify-end pt-2">
-                <Button type="button" disabled={isLoading} className="w-full sm:w-auto" onClick={handlePreSubmit}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Confirmar Agendamento
-                </Button>
+              <Input
+                type="time"
+                value={time}
+                onChange={e => setTime(e.target.value)}
+                required
+              />
             </div>
-            </form>
-        </DialogContent>
-        </Dialog>
+          </div>
 
-        {/* ALERTA DE FORA DE HORÁRIO */}
-        <AlertDialog open={showOutsideHoursAlert} onOpenChange={setShowOutsideHoursAlert}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
-                        <AlertTriangle className="h-5 w-5" />
-                        Atenção: Fora de Horário
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>
-                        O horário selecionado ({time}) parece estar fora do expediente ou durante o intervalo de almoço configurado.
-                        <br /><br />
-                        Deseja agendar mesmo assim?
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => performSubmit()} className="bg-amber-600 hover:bg-amber-700">
-                        Sim, agendar
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-    </>
-  )
+          {/* OBSERVAÇÕES */}
+          <div className="space-y-2">
+            <Label>{messages.notes || "Observações"}</Label>
+
+            <Textarea
+              placeholder={messages.notes_placeholder || "Observações adicionais..."}
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              className="resize-none"
+            />
+          </div>
+
+          {/* BOTÃO */}
+          <div className="flex justify-end pt-2">
+            <Button
+              type="button"
+              disabled={isLoading}
+              className="w-full sm:w-auto"
+              onClick={handlePreSubmit}
+            >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {actions.confirm || "Confirmar"} {agendamento.toLowerCase()}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+
+    {/* ALERTA FORA DE HORÁRIO */}
+    <AlertDialog open={showOutsideHoursAlert} onOpenChange={setShowOutsideHoursAlert}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+            <AlertTriangle className="h-5 w-5" />
+            {messages.outside_hours_title || "Fora do horário"}
+          </AlertDialogTitle>
+
+          <AlertDialogDescription>
+            {messages.outside_hours_desc ||
+              `O horário selecionado (${time}) está fora do horário configurado.`}
+            <br /><br />
+            {actions.confirm_anyway || "Deseja continuar mesmo assim?"}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel>
+            {actions.cancel || "Cancelar"}
+          </AlertDialogCancel>
+
+          <AlertDialogAction
+            onClick={() => performSubmit()}
+            className="bg-amber-600 hover:bg-amber-700"
+          >
+            {actions.confirm || "Confirmar"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </>
+)
 }

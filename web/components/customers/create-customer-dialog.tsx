@@ -19,7 +19,11 @@ import { createCustomer } from "@/app/actions/create-customer"
 import { toast } from "sonner"
 import { useKeckleon } from "@/providers/keckleon-provider"
 
-export function CreateCustomerDialog() {
+type CreateCustomerDialogProps = {
+  triggerLabel?: string
+}
+
+export function CreateCustomerDialog({ triggerLabel }: CreateCustomerDialogProps) {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
 

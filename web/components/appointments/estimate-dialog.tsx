@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { useKeckleon } from "@/providers/keckleon-provider"
 
 type ProfessionalOption = {
   id: string
@@ -67,6 +68,14 @@ export function EstimateModal({
   services,
 }: EstimateModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { dict } = useKeckleon()
+
+  const entities = dict.entities || {}
+  const actions = dict.actions || {}
+  const messages = dict.messages || {}
+
+  const profissional = entities.profissional || dict.label_profissional || "Profissional"
+  const servico = entities.servico || dict.label_servico || "Serviço"
 
   const {
     control,
@@ -104,7 +113,10 @@ export function EstimateModal({
   const handleServiceChange = (index: number, serviceId: string) => {
     const selectedService = services.find((service) => service.id === serviceId)
 
-    setValue(`items.${index}.service_id`, serviceId, { shouldDirty: true, shouldTouch: true })
+    setValue(`items.${index}.service_id`, serviceId, {
+      shouldDirty: true,
+      shouldTouch: true,
+    })
 
     if (!selectedService) {
       setValue(`items.${index}.description`, "", { shouldDirty: true })
@@ -115,8 +127,16 @@ export function EstimateModal({
 
     setValue(`items.${index}.description`, selectedService.title ?? "", { shouldDirty: true })
     setValue(`items.${index}.price`, Number(selectedService.price ?? 0), { shouldDirty: true })
-    setValue(`items.${index}.duration_minutes`, Number(selectedService.duration_minutes ?? 0), { shouldDirty: true })
-    setValue(`items.${index}.quantity`, Number(watchedItems?.[index]?.quantity ?? 1) || 1, { shouldDirty: true })
+    setValue(
+      `items.${index}.duration_minutes`,
+      Number(selectedService.duration_minutes ?? 0),
+      { shouldDirty: true }
+    )
+    setValue(
+      `items.${index}.quantity`,
+      Number(watchedItems?.[index]?.quantity ?? 1) || 1,
+      { shouldDirty: true }
+    )
   }
 
   const onSubmit = async (data: EstimateFormValues) => {
@@ -146,7 +166,7 @@ export function EstimateModal({
       const result = await createEstimate(formData)
 
       if (result.success) {
-        toast.success("Orçamento gerado!")
+        toast.success(messages.estimate_created || "Orçamento gerado!")
         reset({
           professional_id: "",
           validity_days: "15",
@@ -157,9 +177,9 @@ export function EstimateModal({
         return
       }
 
-      toast.error(result.error || "Erro ao salvar")
+      toast.error(result.error || messages.error_save || "Erro ao salvar")
     } catch {
-      toast.error("Erro inesperado ao gerar orçamento")
+      toast.error(messages.unexpected_error || "Erro inesperado ao gerar orçamento")
     } finally {
       setIsSubmitting(false)
     }
@@ -176,21 +196,21 @@ export function EstimateModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Orçamento
+            {messages.estimate_title || "Orçamento"}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Profissional</Label>
+              <Label>{profissional}</Label>
               <Controller
                 control={control}
                 name="professional_id"
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Selecione o profissional..." />
+                      <SelectValue placeholder={`Selecione ${profissional.toLowerCase()}...`} />
                     </SelectTrigger>
                     <SelectContent>
                       {professionals?.map((professional) => (
@@ -205,14 +225,14 @@ export function EstimateModal({
             </div>
 
             <div className="space-y-2">
-              <Label>Validade (Dias)</Label>
+              <Label>{messages.validity_days || "Validade (dias)"}</Label>
               <Controller
                 control={control}
                 name="validity_days"
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Selecione a validade" />
+                      <SelectValue placeholder={messages.select_validity || "Selecione a validade"} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="5">5 dias</SelectItem>
@@ -228,7 +248,9 @@ export function EstimateModal({
 
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3">
-              <Label className="text-base font-semibold">Procedimentos Selecionados</Label>
+              <Label className="text-base font-semibold">
+                {messages.selected_services || `${servico}s selecionados`}
+              </Label>
               <Button
                 type="button"
                 variant="outline"
@@ -236,7 +258,7 @@ export function EstimateModal({
                 onClick={() => append({ ...emptyItem })}
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Adicionar Procedimento
+                {actions.add_service || `Adicionar ${servico}`}
               </Button>
             </div>
 
@@ -247,43 +269,44 @@ export function EstimateModal({
               >
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                  <Label className="mb-2">Serviço</Label>
-                  <Controller
-                    control={control}
-                    name={`items.${index}.service_id`}
-                    render={({ field }) => (
-                      <Select
-                        value={field.value}
-                        onValueChange={(value) => {
-                          field.onChange(value)
-                          handleServiceChange(index, value)
-                        }}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Selecione um serviço..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {services?.map((service) => (
-                            <SelectItem key={service.id} value={service.id}>
-                              {service.title ?? "Serviço sem nome"}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
+                    <Label className="mb-2">{servico}</Label>
+                    <Controller
+                      control={control}
+                      name={`items.${index}.service_id`}
+                      render={({ field }) => (
+                        <Select
+                          value={field.value}
+                          onValueChange={(value) => {
+                            field.onChange(value)
+                            handleServiceChange(index, value)
+                          }}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder={`Selecione ${servico.toLowerCase()}...`} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {services?.map((service) => (
+                              <SelectItem key={service.id} value={service.id}>
+                                {service.title ?? `${servico} sem nome`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
                   </div>
 
                   <div>
-                    <Label className="mb-2">Valor (R$)</Label>
+                    <Label className="mb-2">{messages.price || "Valor (R$)"}</Label>
                     <Input
                       type="number"
                       step="0.01"
                       {...register(`items.${index}.price`, { valueAsNumber: true })}
                     />
                   </div>
+
                   <div>
-                    <Label className="mb-2">Quantidade</Label>
+                    <Label className="mb-2">{messages.quantity || "Quantidade"}</Label>
                     <Input
                       type="number"
                       min="1"
@@ -292,7 +315,7 @@ export function EstimateModal({
                   </div>
 
                   <div>
-                    <Label className="mb-2">Duração (min)</Label>
+                    <Label className="mb-2">{messages.duration_minutes || "Duração (min)"}</Label>
                     <Input
                       type="number"
                       min="0"
@@ -300,18 +323,26 @@ export function EstimateModal({
                     />
                   </div>
                 </div>
-                  <div>
-                    <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(index)}>
-                        <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+
+                <div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive"
+                    onClick={() => remove(index)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
+              </div>
             ))}
-            
           </div>
 
           <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/10 p-4">
-            <span className="font-medium">Total Estimado</span>
+            <span className="font-medium">
+              {messages.estimated_total || "Total estimado"}
+            </span>
             <span className="text-2xl font-bold text-primary">
               {new Intl.NumberFormat("pt-BR", {
                 style: "currency",
@@ -321,19 +352,24 @@ export function EstimateModal({
           </div>
 
           <div className="space-y-2">
-            <Label>Observações</Label>
+            <Label>{messages.notes || "Observações"}</Label>
             <Textarea
               {...register("notes")}
-              placeholder="Condições de pagamento ou observações clínicas..."
+              placeholder={
+                messages.estimate_notes_placeholder ||
+                "Condições de pagamento ou observações adicionais..."
+              }
             />
           </div>
 
           <div className="flex justify-end gap-3">
             <Button type="button" variant="ghost" onClick={onClose}>
-              Cancelar
+              {actions.cancel || "Cancelar"}
             </Button>
             <Button type="submit" disabled={isSubmitting} className="min-w-[150px]">
-              {isSubmitting ? "Gravando..." : "Gerar Orçamento"}
+              {isSubmitting
+                ? messages.saving || "Gravando..."
+                : actions.generate_estimate || "Gerar orçamento"}
             </Button>
           </div>
         </form>

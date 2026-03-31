@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { ThemeProvider } from "@/providers/theme-provider";
+import { ThemeAwareToaster } from "@/components/layout/theme-aware-toaster";
 import "./globals.css";
-import { Toaster } from "@/components/ui/sonner";
-import { RealtimeAppointments } from "@/components/realtime-appointments";
+import { RealtimeAppointments } from "@/components/layout/realtime-appointments";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,11 +18,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className="dark">
+    <html lang="pt-BR" suppressHydrationWarning>
       <body className={`${inter.className} bg-background text-foreground antialiased`}>
-        <RealtimeAppointments />
-        {children}
-        <Toaster richColors theme="dark" />
+        <ThemeProvider>
+          <RealtimeAppointments />
+          {children}
+          <ThemeAwareToaster />
+        </ThemeProvider>
       </body>
     </html>
   );
