@@ -4,40 +4,71 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Plus, Pencil, Palette } from "lucide-react"
 import { upsertService } from "@/app/actions/create-service"
 import { toast } from "sonner"
 import { useKeckleon } from "@/providers/keckleon-provider"
 
 const COLORS = [
-  { name: 'Azul', value: '#3b82f6' },
-  { name: 'Verde', value: '#10b981' },
-  { name: 'Roxo', value: '#8b5cf6' },
-  { name: 'Rosa', value: '#ec4899' },
-  { name: 'Laranja', value: '#f59e0b' },
-  { name: 'Vermelho', value: '#ef4444' },
+  { name: "Azul", value: "#3b82f6" },
+  { name: "Verde", value: "#10b981" },
+  { name: "Roxo", value: "#8b5cf6" },
+  { name: "Rosa", value: "#ec4899" },
+  { name: "Laranja", value: "#f59e0b" },
+  { name: "Vermelho", value: "#ef4444" },
 ]
 
 type CreateServiceDialogProps = {
+  organization_id: string
+  serviceToEdit?: any
   triggerLabel?: string
 }
 
-export function CreateServiceDialog({ organization_id, serviceToEdit, triggerLabel }: { organization_id: any, serviceToEdit?: any, triggerLabel?: string }) {
+export function CreateServiceDialog({
+  organization_id,
+  serviceToEdit,
+  triggerLabel,
+}: CreateServiceDialogProps) {
   const [open, setOpen] = useState(false)
-  const [selectedColor, setSelectedColor] = useState(serviceToEdit?.color || COLORS[0].value)
+  const [selectedColor, setSelectedColor] = useState(
+    serviceToEdit?.color || COLORS[0].value
+  )
+
   const { dict } = useKeckleon()
+  const entities = dict.entities || {}
+  const actions = dict.actions || {}
+  const messages = dict.messages || {}
+  const fields = dict.fields || {}
+
+  const servico = entities.servico || "Serviço"
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+
     const formData = new FormData(event.currentTarget)
-    formData.append('color', selectedColor)
-    if (serviceToEdit) formData.append('id', serviceToEdit.id)
+    formData.append("color", selectedColor)
+
+    if (serviceToEdit) {
+      formData.append("id", serviceToEdit.id)
+    }
 
     const result = await upsertService(formData)
-    if (result.error) toast.error(result.error)
-    else {
-      toast.success(serviceToEdit ? "Atualizado!" : "Criado!")
+
+    if (result.error) {
+      toast.error(result.error)
+    } else {
+      toast.success(
+        serviceToEdit
+          ? messages.updated_success || `${servico} atualizado com sucesso.`
+          : messages.created_success || `${servico} criado com sucesso!`
+      )
       setOpen(false)
     }
   }
@@ -46,50 +77,100 @@ export function CreateServiceDialog({ organization_id, serviceToEdit, triggerLab
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {serviceToEdit ? (
-          <Button>
+          <Button variant="outline" size="icon">
             <Pencil className="h-4 w-4" />
           </Button>
         ) : (
-          <Button className="bg-blue-600 hover:bg-blue-700"><Plus className="mr-2 h-4 w-4" /> Novo {dict.label_servico}</Button>
+          <Button className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="mr-2 h-4 w-4" />
+            {triggerLabel || actions.create_servico || `Novo ${servico}`}
+          </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="bg-background border-border text-white">
-        <DialogHeader><DialogTitle>{serviceToEdit ? 'Editar' : 'Novo'} {dict.label_servico}</DialogTitle></DialogHeader>
+
+      <DialogContent className="bg-background border-border">
+        <DialogHeader>
+          <DialogTitle>
+            {serviceToEdit
+              ? `${actions.edit || "Editar"} ${servico}`
+              : actions.create_servico || `Novo ${servico}`}
+          </DialogTitle>
+        </DialogHeader>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <input type="hidden" name="organization_id" value={organization_id} />
+
           {serviceToEdit && (
             <input type="hidden" name="id" value={serviceToEdit.id} />
           )}
-          <div>
-            <Label>Nome</Label>
-            <br></br>
-            <Input name="name" defaultValue={serviceToEdit?.title || serviceToEdit?.name} required className="bg-zinc-950 border-border" />
+
+          <div className="space-y-2">
+            <Label htmlFor="service-name">{fields.name || "Nome"}</Label>
+            <Input
+              id="service-name"
+              name="name"
+              defaultValue={serviceToEdit?.title || serviceToEdit?.name}
+              required
+              className="bg-zinc-950 border-border"
+            />
           </div>
+
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Duração (min)</Label>
-              <br></br>
-              <Input name="duration" type="number" defaultValue={serviceToEdit?.duration_minutes} className="bg-zinc-950 border-border" />
+            <div className="space-y-2">
+              <Label htmlFor="service-duration">
+                {messages.duration_minutes || "Duração (min)"}
+              </Label>
+              <Input
+                id="service-duration"
+                name="duration"
+                type="number"
+                defaultValue={serviceToEdit?.duration_minutes}
+                className="bg-zinc-950 border-border"
+              />
             </div>
-            <div><Label>Preço (R$)</Label>
-            <br></br>
-            <Input name="price" type="number" step="0.01" defaultValue={serviceToEdit?.price} className="bg-zinc-950 border-border" /></div>
+
+            <div className="space-y-2">
+              <Label htmlFor="service-price">
+                {fields.amount || "Preço"} (R$)
+              </Label>
+              <Input
+                id="service-price"
+                name="price"
+                type="number"
+                step="0.01"
+                defaultValue={serviceToEdit?.price}
+                className="bg-zinc-950 border-border"
+              />
+            </div>
           </div>
+
           <div>
-            <Label className="flex items-center gap-2 mb-2"><Palette className="h-4 w-4" /> Cor na Agenda</Label>
+            <Label className="flex items-center gap-2 mb-2">
+              <Palette className="h-4 w-4" />
+              {messages.service_color_label || "Cor na agenda"}
+            </Label>
+
             <div className="flex gap-2">
-              {COLORS.map(c => (
+              {COLORS.map((c) => (
                 <button
                   key={c.value}
                   type="button"
                   onClick={() => setSelectedColor(c.value)}
-                  className={`h-8 w-8 rounded-full border-2 transition-all ${selectedColor === c.value ? 'border-white scale-110' : 'border-transparent'}`}
+                  title={c.name}
+                  className={`h-8 w-8 rounded-full border-2 transition-all ${
+                    selectedColor === c.value
+                      ? "border-white scale-110"
+                      : "border-transparent"
+                  }`}
                   style={{ backgroundColor: c.value }}
                 />
               ))}
             </div>
           </div>
-          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">Salvar</Button>
+
+          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
+            {actions.save || "Salvar"}
+          </Button>
         </form>
       </DialogContent>
     </Dialog>

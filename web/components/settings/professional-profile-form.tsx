@@ -4,10 +4,24 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, User, FileBadge, Stethoscope, Phone, Save } from "lucide-react";
+import {
+  Loader2,
+  User,
+  FileBadge,
+  Stethoscope,
+  Phone,
+  Save,
+} from "lucide-react";
 import { updateProfessionalProfile } from "@/app/actions/update-professional-profile";
+import { useKeckleon } from "@/providers/keckleon-provider";
 
 interface Props {
   initialData: {
@@ -20,12 +34,26 @@ interface Props {
 
 export function ProfessionalProfileForm({ initialData }: Props) {
   const [loading, setLoading] = useState(false);
+  const { dict } = useKeckleon();
+
+  const entities = dict.entities || {};
+  const actions = dict.actions || {};
+  const messages = dict.messages || {};
+  const fields = dict.fields || {};
+
+  const profissional =
+    entities.profissional || "Profissional";
+  const cliente = entities.cliente || "Cliente";
+  const agendamento = entities.agendamento || "Agendamento";
 
   if (!initialData) {
     return (
       <Card>
         <CardContent className="pt-6">
-          <p className="text-muted-foreground">Perfil profissional não encontrado.</p>
+          <p className="text-muted-foreground">
+            {messages.professional_profile_not_found ||
+              `${profissional} não encontrado.`}
+          </p>
         </CardContent>
       </Card>
     );
@@ -39,22 +67,35 @@ export function ProfessionalProfileForm({ initialData }: Props) {
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success(result.success);
+      toast.success(
+        result.success ||
+          messages.updated_success ||
+          `${profissional} atualizado com sucesso.`
+      );
     }
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Meu Perfil Profissional</CardTitle>
+        <CardTitle>
+          {messages.professional_profile_title ||
+            `Meu perfil de ${profissional.toLowerCase()}`}
+        </CardTitle>
+
         <CardDescription>
-          Essas informações aparecerão para seus clientes no agendamento.
+          {messages.professional_profile_description ||
+            `Essas informações aparecerão para seus ${cliente.toLowerCase()}s no ${agendamento.toLowerCase()}.`}
         </CardDescription>
       </CardHeader>
+
       <CardContent>
         <form action={handleSubmit} className="space-y-4">
           <div className="grid gap-2">
-            <Label htmlFor="name">Nome de Exibição</Label>
+            <Label htmlFor="name">
+              {fields.display_name || "Nome de exibição"}
+            </Label>
+
             <div className="relative">
               <User className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
@@ -62,7 +103,10 @@ export function ProfessionalProfileForm({ initialData }: Props) {
                 name="name"
                 defaultValue={initialData.name}
                 className="pl-9"
-                placeholder="Dr. Exemplo da Silva"
+                placeholder={
+                  messages.professional_display_name_placeholder ||
+                  `${profissional} exemplo`
+                }
                 required
               />
             </div>
@@ -70,7 +114,10 @@ export function ProfessionalProfileForm({ initialData }: Props) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="specialty">Especialidade</Label>
+              <Label htmlFor="specialty">
+                {fields.specialty || "Especialidade"}
+              </Label>
+
               <div className="relative">
                 <Stethoscope className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -78,13 +125,19 @@ export function ProfessionalProfileForm({ initialData }: Props) {
                   name="specialty"
                   defaultValue={initialData.specialty || ""}
                   className="pl-9"
-                  placeholder="Ex: Cardiologista, Psicólogo..."
+                  placeholder={
+                    messages.specialty_placeholder ||
+                    "Ex: área de atuação"
+                  }
                 />
               </div>
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="license_number">Registro Profissional (CRM/CRO/CRP)</Label>
+              <Label htmlFor="license_number">
+                {fields.professional_license || "Registro profissional"}
+              </Label>
+
               <div className="relative">
                 <FileBadge className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -92,14 +145,23 @@ export function ProfessionalProfileForm({ initialData }: Props) {
                   name="license_number"
                   defaultValue={initialData.license_number || ""}
                   className="pl-9"
-                  placeholder="Ex: 123456/SP"
+                  placeholder={
+                    messages.professional_license_placeholder ||
+                    "Ex: 123456/SP"
+                  }
                 />
               </div>
             </div>
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="phone">Telefone Profissional (Opcional)</Label>
+            <Label htmlFor="phone">
+              {fields.professional_phone || "Telefone profissional"}{" "}
+              <span className="text-muted-foreground">
+                ({messages.optional_label || "Opcional"})
+              </span>
+            </Label>
+
             <div className="relative">
               <Phone className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
@@ -114,8 +176,12 @@ export function ProfessionalProfileForm({ initialData }: Props) {
 
           <div className="flex justify-end p-6 pt-5 border-t mt-4">
             <Button type="submit" disabled={loading}>
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Salvar Alterações
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              {actions.save_changes || "Salvar alterações"}
             </Button>
           </div>
         </form>

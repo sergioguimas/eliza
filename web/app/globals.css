@@ -36,14 +36,16 @@
   --ring: 240 10% 3.9%;
 
   /* ---------- Branding default ---------- */
-  --brand-primary: 240 5.9% 10%;
-  --brand-primary-foreground: 0 0% 98%;
-  --brand-ring: 240 10% 3.9%;
-  --brand-soft: 240 4.8% 95.9%;
-  --brand-soft-foreground: 240 5.9% 10%;
-  --brand-border: 240 5.9% 90%;
-  --brand-glow: 240 5.9% 10%;
-  --brand-shadow-strength: 0.08;
+  --brand-primary: #6366f1;
+  --brand-primary-soft: rgba(99, 102, 241, 0.1);
+  --brand-primary-border: rgba(99, 102, 241, 0.25);
+  --brand-primary-foreground: #ffffff;
+  --brand-accent: #4f46e5;
+  --brand-accent-soft: rgba(79, 70, 229, 0.08);
+  --brand-ring: rgba(99, 102, 241, 0.35);
+  --brand-sidebar-gradient-from: rgba(99, 102, 241, 0.16);
+  --brand-sidebar-gradient-to: rgba(79, 70, 229, 0.04);
+  --brand-card-glow: 0 10px 30px rgba(99, 102, 241, 0.12);
 
   /* ---------- Tokens consumidos pela UI ---------- */
   --primary: var(--brand-primary);

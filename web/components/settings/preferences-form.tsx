@@ -12,6 +12,14 @@ import { Clock, MessageSquare, Save, Loader2,  Coffee } from "lucide-react"
 import { updatePreferences } from "@/app/actions/update-preferences"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
+import { useKeckleon } from "@/providers/keckleon-provider"
+
+const { dict } = useKeckleon()
+
+const actions = dict.actions || {}
+const messages = dict.messages || {}
+const fields = dict.fields || {}
+const sections = dict.sections || {}
 
 export function PreferencesForm({ settings, organizationId, organizationData }: { settings: any, organizationId: string, organizationData?: any }) {
   const [isPending, startTransition] = useTransition()
@@ -38,7 +46,7 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
         if (result.error) {
           toast.error(result.error)
         } else {
-          toast.success("Configurações salvas com sucesso!")
+          toast.success(messages.settings_saved || "Configurações salvas com sucesso!")
         }
       })
   }
@@ -84,12 +92,15 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
     <div className="space-y-6">
       <Tabs defaultValue="horarios" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-8 h-12">
-            <TabsTrigger value="horarios" className="flex items-center gap-2">
-                <Clock className="h-4 w-4" /> Horários
-            </TabsTrigger>
-            <TabsTrigger value="mensagens" className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" /> Mensagens
-            </TabsTrigger>
+          <TabsTrigger value="horarios" className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            {sections.schedule || "Horários"}
+          </TabsTrigger>
+
+          <TabsTrigger value="mensagens" className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            {sections.messages || "Mensagens"}
+          </TabsTrigger>
         </TabsList>
 
         {/* --- ABA 1: HORÁRIOS --- */}
@@ -100,35 +111,46 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
 
               <Card>
                 <CardHeader>
-                    <CardTitle>Horários de Funcionamento</CardTitle>
-                    <CardDescription>Defina a jornada de trabalho e intervalos da sua organização.</CardDescription>
+                  <CardTitle>
+                    {sections.business_hours || "Horários de funcionamento"}
+                  </CardTitle>
+                  <CardDescription>
+                    {messages.business_hours_description ||
+                      "Defina a jornada de trabalho e intervalos da sua organização."}
+                  </CardDescription>
                 </CardHeader>
                 
                 <CardContent className="space-y-6">
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-3 p-4 bg-zinc-50/10 rounded-lg border border-zinc-50">
-                        <Label className="flex items-center gap-2"><Clock className="w-4 h-4 text-green-600"/> Expediente</Label>
+                        <Label>
+                          <Clock className="w-4 h-4 text-green-600" />
+                          {messages.work_hours || "Expediente"}
+                        </Label>
                         <div className="grid grid-cols-2 gap-2">
                             <div>
-                                <span className="text-xs text-muted-foreground">Abertura</span>
+                                <span>{fields.opening || "Abertura"}</span>
                                 <Input type="time" name="open_hours_start" defaultValue={settings?.open_hours_start || "08:00"} />
                             </div>
                             <div>
-                                <span className="text-xs text-muted-foreground">Fechamento</span>
+                                <span>{fields.closing || "Fechamento"}</span>
                                 <Input type="time" name="open_hours_end" defaultValue={settings?.open_hours_end || "18:00"} />
                             </div>
                         </div>
                     </div>
 
                     <div className="space-y-3 p-4 bg-zinc-50/10 rounded-lg border border-zinc-50">
-                        <Label className="flex items-center gap-2"><Coffee className="w-4 h-4 text-orange-600"/> Almoço / Pausa</Label>
+                        <Label>
+                          <Coffee className="w-4 h-4 text-orange-600"/>
+                            {messages.break_label || "Almoço / Pausa"}
+                        </Label>
                         <div className="grid grid-cols-2 gap-2">
                             <div>
-                                <span className="text-xs text-muted-foreground">Início</span>
+                                <span>{fields.start || "Início"}</span>
                                 <Input type="time" name="lunch_start" defaultValue={settings?.lunch_start || "12:00"} />
                             </div>
                             <div>
-                                <span className="text-xs text-muted-foreground">Fim</span>
+                                <span>{fields.end || "Fim"}</span>
                                 <Input type="time" name="lunch_end" defaultValue={settings?.lunch_end || "13:00"} />
                             </div>
                         </div>
@@ -136,12 +158,12 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Duração da Consulta (minutos)</Label>
+                    <Label>{fields.appointment_duration || "Duração da Consulta (minutos)"}</Label>
                     <Input type="number" name="appointment_duration" defaultValue={settings?.appointment_duration || 30} className="max-w-[200px]" />
                   </div>
 
                   <div className="space-y-3">
-                    <Label>Dias de Atendimento</Label>
+                    <Label>{messages.attendance_days_label || "Dias de Atendimento"}</Label>
                     <div className="flex flex-wrap gap-4">
                       {daysMap.map((day) => (
                         <div key={day.id} className="flex items-center space-x-2 border p-3 rounded-md hover:bg-accent transition-colors cursor-pointer">
@@ -162,7 +184,7 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
                 <div className="flex justify-end p-6 pt-5 border-t mt-4">
                   <Button type="submit" disabled={isPending}>
                     {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Salvar Horários
+                    {actions.save_schedule || "Salvar Horários"}
                   </Button>
                 </div>
               </Card>
@@ -177,14 +199,14 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
 
               <Card>
                 <CardHeader>
-                    <CardTitle>Automação de Mensagens</CardTitle>
-                    <CardDescription>Personalize as mensagens automáticas enviadas pelo robô.</CardDescription>
+                    <CardTitle>{sections.automation || "Automação de Mensagens"}</CardTitle>
+                    <CardDescription>{messages.automation_description || "Personalize as mensagens automáticas enviadas pelo sistema."}</CardDescription>
                 </CardHeader>
 
                 <CardContent className="space-y-8">
                   <div className="space-y-2">
                     <Label className="text-base font-semibold text-green-600 flex justify-between">
-                        Ao Confirmar Agendamento
+                        {messages.msg_confirm || "Ao confirmar agendamento"}
                         <VariableBadges
                           targetRef={createdMsgRef}
                           variables={['{name}', '{date}', '{time}', '{service}']}
@@ -194,14 +216,14 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
                       ref={createdMsgRef}
                       name="msg_appointment_created" 
                       defaultValue={settings?.msg_appointment_created}
-                      placeholder="Olá {name}, seu agendamento..."
+                      placeholder={messages.msg_confirm_placeholder || "Olá {name}, seu agendamento para {date} às {time} foi confirmado!"}
                       rows={3} 
                     />
                   </div>
 
                   <div className="space-y-2">
                     <Label className="text-base font-semibold text-blue-600 flex justify-between">
-                        Lembrete (Dia da Consulta - 07:00)
+                        {messages.msg_reminder || "Lembrete de Consulta"}
                         <VariableBadges
                           targetRef={reminderMsgRef}
                           variables={['{name}', '{date}', '{time}', '{service}', '{professional}']}
@@ -211,14 +233,14 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
                       ref={reminderMsgRef}
                       name="msg_appointment_reminder" 
                       defaultValue={settings?.msg_appointment_reminder}
-                      placeholder="Lembrete: Consulta hoje às {time}..."
+                      placeholder={messages.msg_reminder_placeholder || "Olá {name}, este é um lembrete do seu agendamento para {date} às {time} com {professional}."}
                       rows={3} 
                     />
                   </div>
 
                   <div className="space-y-2">
                     <Label className="text-base font-semibold text-violet-600 flex justify-between">
-                      Resumo Diário do Médico
+                      {messages.msg_daily_summary || "Resumo Diário"}
                       <VariableBadges
                         targetRef={doctorSummaryMsgRef}
                         variables={['{name}', '{date}', '{appointments}', '{count}']}
@@ -241,7 +263,7 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
 
                   <div className="space-y-2">
                     <Label className="text-base font-semibold text-red-600 flex justify-between">
-                        Ao Cancelar
+                        {messages.msg_cancel || "Ao cancelar"}
                         <VariableBadges
                           targetRef={canceledMsgRef}
                           variables={['{name}', '{date}', '{time}', '{service}']}
@@ -251,7 +273,7 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
                       ref={canceledMsgRef}
                       name="msg_appointment_canceled" 
                       defaultValue={settings?.msg_appointment_canceled} 
-                      placeholder="Que pena, {name}. Agendamento cancelado."
+                      placeholder={messages.msg_cancel_placeholder || "Que pena, {name}. Agendamento cancelado."}
                       rows={3} 
                     />
                   </div>
@@ -259,7 +281,7 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
                 <div className="flex justify-end p-6 pt-5 border-t mt-4">
                   <Button type="submit" disabled={isPending}>
                     {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Salvar Mensagens
+                    {actions.save_messages || "Salvar Mensagens"}
                   </Button>
                 </div>
               </Card>

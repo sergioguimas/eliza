@@ -68,8 +68,8 @@ export function CreateAppointmentDialog({
   const actions = dict.actions || {}
   const messages = dict.messages || {}
 
-  const cliente = entities.cliente || dict.label_cliente || "Cliente"
-  const profissional = entities.profissional || dict.label_profissional || "Profissional"
+  const cliente = entities.cliente || "Cliente"
+  const profissional = entities.profissional || "Profissional"
   const servico = entities.servico || "Serviço"
   const agendamento = entities.agendamento || "Agendamento"
 

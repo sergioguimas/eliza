@@ -7,7 +7,7 @@ import { WhatsappSettings } from "@/components/settings/whatsapp-settings";
 import { ProfessionalProfileForm } from "@/components/settings/professional-profile-form";
 import { Building, UserPen, NotebookPen, BotMessageSquare } from "lucide-react";
 import { Database } from "@/utils/database.types";
-import { getDictionary } from "@/lib/get-dictionary";
+import { getDictionary } from "@/lib/dictionaries/get-dictionary";
 
 type ProfileWithOrg = Database["public"]["Tables"]["profiles"]["Row"] & {
   organizations?: Pick<
@@ -41,7 +41,7 @@ export default async function SettingsPage() {
   const dict = getDictionary(niche);
 
   const profissionalSingular =
-    dict.entities?.profissional || dict.label_profissional;
+    dict.entities?.profissional
 
   const { data: professional } = await supabase
     .from("professionals")

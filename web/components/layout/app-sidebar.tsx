@@ -57,6 +57,11 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [hydrated, setHydrated] = useState(false)
 
+  const entities = dict.entities || {}
+  const nav = dict.nav || {}
+  const actions = dict.actions || {}
+  const messages = dict.messages || {}
+
   useEffect(() => {
     const saved = window.localStorage.getItem(SIDEBAR_STORAGE_KEY)
     if (saved === "true") setCollapsed(true)
@@ -83,25 +88,70 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
 
   const operationalItems: NavItem[] = useMemo(
     () => [
-      { href: "/dashboard", label: "Dashboard", icon: Home, nicheIconName: "dashboard" },
-      { href: "/agendamentos", label: "Agendamentos", icon: Calendar, nicheIconName: "agenda" },
-      { href: "/clientes", label: `Meus ${dict.label_cliente}s`, icon: Users, nicheIconName: "clientes" },
-      { href: "/servicos", label: `Meus ${dict.label_servico}s`, icon: Clock, nicheIconName: "servicos" },
+      {
+        href: "/dashboard",
+        label: nav.dashboard || "Dashboard",
+        icon: Home,
+        nicheIconName: "dashboard",
+      },
+      {
+        href: "/agendamentos",
+        label: nav.agendamentos || entities.agendamento_plural || "Agendamentos",
+        icon: Calendar,
+        nicheIconName: "agenda",
+      },
+      {
+        href: "/clientes",
+        label: nav.clientes || entities.cliente_plural || "Clientes",
+        icon: Users,
+        nicheIconName: "clientes",
+      },
+      {
+        href: "/servicos",
+        label: nav.servicos || entities.servico_plural || "Serviços",
+        icon: Clock,
+        nicheIconName: "servicos",
+      },
     ],
-    [dict.label_cliente, dict.label_servico]
+    [nav, entities]
   )
 
   const managementItems: NavItem[] = useMemo(
     () => [
-      { href: "/configuracoes", label: "Configurações", icon: Settings, ownerOnly: true },
-      { href: "/configuracoes/equipe", label: "Minha Equipe", icon: Users, ownerOnly: true },
-      { href: "/configuracoes/horarios", label: "Horários", icon: Clock, ownerOnly: true },
+      {
+        href: "/configuracoes",
+        label: nav.configuracoes || "Configurações",
+        icon: Settings,
+        ownerOnly: true,
+      },
+      {
+        href: "/configuracoes/equipe",
+        label: nav.equipe || "Equipe",
+        icon: Users,
+        ownerOnly: true,
+      },
+      {
+        href: "/configuracoes/horarios",
+        label: nav.horarios || "Horários",
+        icon: Clock,
+        ownerOnly: true,
+      },
     ],
-    []
+    [nav]
   )
 
-  const visibleManagementItems = managementItems.filter((item) => !item.ownerOnly || isOwner)
+  const visibleManagementItems = managementItems.filter(
+    (item) => !item.ownerOnly || isOwner
+  )
+
   const mobileItems = operationalItems.slice(0, 4)
+
+  const roleLabel =
+    role === "owner"
+      ? messages.role_owner || "Admin"
+      : role === "professional"
+      ? entities.profissional || "Profissional"
+      : messages.role_staff || "Staff"
 
   return (
     <>
@@ -114,12 +164,18 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
         <button
           type="button"
           onClick={() => setCollapsed((prev) => !prev)}
-          aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
-          className={cn(
-            "sidebar-floating-toggle absolute right-[5px] top-6 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-brand bg-background text-foreground shadow-brand transition-all duration-300 hover:scale-105"
-          )}
+          aria-label={
+            collapsed
+              ? messages.expand_menu || "Expandir menu"
+              : messages.collapse_menu || "Recolher menu"
+          }
+          className="sidebar-floating-toggle absolute right-[5px] top-6 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-brand bg-background text-foreground shadow-brand transition-all duration-300 hover:scale-105"
         >
-          {collapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
+          {collapsed ? (
+            <ChevronsRight className="h-4 w-4" />
+          ) : (
+            <ChevronsLeft className="h-4 w-4" />
+          )}
         </button>
 
         <div className="flex h-20 items-center gap-3 border-b border-sidebar-border px-4">
@@ -137,14 +193,14 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
               {organization?.name || meta.appTitle}
             </p>
             <p className="truncate text-xs text-muted-foreground text-wrap">
-              {niche === "generico" ? meta.sidebarLabel : dict.msg_boas_vindas}
+              {niche === "generico" ? meta.sidebarLabel : messages.boas_vindas || "Bem-vindo ao painel!"}
             </p>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 py-4">
           <SidebarSection
-            title="Operacional"
+            title={messages.operational_section || "Operacional"}
             items={operationalItems}
             pathname={pathname}
             collapsed={collapsed}
@@ -153,7 +209,7 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
           {visibleManagementItems.length > 0 && (
             <div className="mt-6">
               <SidebarSection
-                title={meta.sidebarLabel}
+                title={messages.management_section || meta.sidebarLabel}
                 items={visibleManagementItems}
                 pathname={pathname}
                 collapsed={collapsed}
@@ -172,17 +228,21 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
                 )}
               >
                 <Avatar className="h-10 w-10 rounded-xl">
-                  <AvatarImage src={profile?.avatar_url || user?.user_metadata?.avatar_url} />
-                  <AvatarFallback className="rounded-xl">{userInitials}</AvatarFallback>
+                  <AvatarImage
+                    src={profile?.avatar_url || user?.user_metadata?.avatar_url}
+                  />
+                  <AvatarFallback className="rounded-xl">
+                    {userInitials}
+                  </AvatarFallback>
                 </Avatar>
 
                 {!collapsed && (
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">
-                      {profile?.full_name || "Usuário"}
+                      {profile?.full_name || messages.default_user || "Usuário"}
                     </p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {role === "owner" ? "Admin" : role === "professional" ? "Profissional" : "Staff"}
+                      {roleLabel}
                     </p>
                   </div>
                 )}
@@ -193,9 +253,12 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
               {isSuperAdmin && (
                 <>
                   <DropdownMenuItem asChild>
-                    <Link href="/admin" className="flex items-center cursor-pointer font-medium text-purple-600">
+                    <Link
+                      href="/admin"
+                      className="flex items-center cursor-pointer font-medium text-purple-600"
+                    >
                       <ShieldAlert className="mr-2 h-4 w-4" />
-                      Painel Super Admin
+                      {messages.super_admin_panel || "Painel Super Admin"}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -203,9 +266,12 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
               )}
 
               <DropdownMenuItem asChild>
-                <Link href="/configuracoes" className="flex items-center cursor-pointer">
+                <Link
+                  href="/configuracoes"
+                  className="flex items-center cursor-pointer"
+                >
                   <User className="mr-2 h-4 w-4" />
-                  Meu Perfil
+                  {messages.my_profile || "Meu Perfil"}
                 </Link>
               </DropdownMenuItem>
 
@@ -214,7 +280,7 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
                 className="cursor-pointer text-destructive focus:text-destructive"
               >
                 <LogOut className="mr-2 h-4 w-4" />
-                Sair do Sistema
+                {messages.sign_out || "Sair do sistema"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -225,7 +291,8 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
         <div className="mx-auto grid max-w-lg grid-cols-4 gap-1">
           {mobileItems.map((item) => {
             const active =
-              pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))
+              pathname === item.href ||
+              (item.href !== "/dashboard" && pathname.startsWith(item.href))
 
             return (
               <Link
@@ -233,9 +300,7 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
                 href={item.href}
                 className={cn(
                   "flex min-h-16 flex-col items-center justify-center rounded-2xl px-2 py-2 text-[11px] font-medium transition-all duration-200",
-                  active
-                    ? "sidebar-item-active"
-                    : "sidebar-item-hover"
+                  active ? "sidebar-item-active" : "sidebar-item-hover"
                 )}
               >
                 {item.nicheIconName ? (
@@ -243,7 +308,7 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
                 ) : (
                   <item.icon className="mb-1 h-5 w-5" />
                 )}
-                <span className="truncate">{item.label.replace("Meus ", "")}</span>
+                <span className="truncate">{item.label}</span>
               </Link>
             )
           })}
@@ -265,7 +330,9 @@ function SidebarSection({
   collapsed: boolean
 }) {
   const isSectionActive = items.some(
-    (item) => pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))
+    (item) =>
+      pathname === item.href ||
+      (item.href !== "/dashboard" && pathname.startsWith(item.href))
   )
 
   return (
@@ -284,7 +351,8 @@ function SidebarSection({
       <div className="space-y-1">
         {items.map((item) => {
           const active =
-            pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))
+            pathname === item.href ||
+            (item.href !== "/dashboard" && pathname.startsWith(item.href))
 
           return (
             <Link
@@ -303,7 +371,9 @@ function SidebarSection({
               <span
                 className={cn(
                   "flex shrink-0 items-center justify-center rounded-xl transition-colors",
-                  active ? "text-brand" : "text-muted-foreground group-hover:text-foreground"
+                  active
+                    ? "text-brand"
+                    : "text-muted-foreground group-hover:text-foreground"
                 )}
               >
                 {item.nicheIconName ? (
@@ -313,7 +383,9 @@ function SidebarSection({
                 )}
               </span>
 
-              {!collapsed && <span className="truncate text-sm font-medium">{item.label}</span>}
+              {!collapsed && (
+                <span className="truncate text-sm font-medium">{item.label}</span>
+              )}
 
               {collapsed && (
                 <span className="pointer-events-none absolute left-full top-1/2 z-30 ml-3 -translate-y-1/2 rounded-lg bg-foreground px-2 py-1 text-xs font-medium whitespace-nowrap text-background opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100">

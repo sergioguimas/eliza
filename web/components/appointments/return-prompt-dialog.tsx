@@ -32,7 +32,7 @@ export function ReturnPromptDialog({
   const actions = dict.actions || {}
   const messages = dict.messages || {}
 
-  const cliente = entities.cliente || dict.label_cliente || "Cliente"
+  const cliente = entities.cliente || "Cliente"
   const agendamento = entities.agendamento || "Agendamento"
 
   return (

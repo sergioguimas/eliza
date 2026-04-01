@@ -9,7 +9,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Database } from "@/utils/database.types";
-import { getDictionary } from "@/lib/get-dictionary";
+import { getDictionary } from "@/lib/dictionaries/get-dictionary";
 
 type ProfileWithOrg = {
   role: string | null;
@@ -44,7 +44,7 @@ export default async function HorariosPage() {
   const dict = getDictionary(niche);
 
   const profissionalSingular =
-    dict.entities?.profissional || dict.label_profissional;
+    dict.entities?.profissional
 
   const { data: professionals, error } = await supabase
     .from("professionals")

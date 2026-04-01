@@ -11,7 +11,7 @@ import { PeriodoFilter } from "@/components/finance/financas-periodo-filter"
 import { parseISO, format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { PaymentMethodChart } from "@/components/dashboard/payment-method-chart"
-import { getDictionary } from "@/lib/get-dictionary"
+import { getDictionary } from "@/lib/dictionaries/get-dictionary"
 
 interface FinancasPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
@@ -53,9 +53,9 @@ export default async function FinancasPage(props: FinancasPageProps) {
 
   const dict = getDictionary(niche)
 
-  const servicoSingular = dict.entities?.servico || dict.label_servico
+  const servicoSingular = dict.entities?.servico
   const profissionalSingular =
-    dict.entities?.profissional || dict.label_profissional
+    dict.entities?.profissional
 
   const data = await getFinancialSummary(organizationId, periodo)
 

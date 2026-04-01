@@ -36,9 +36,9 @@ export function CancelAppointmentDialog({
   const messages = dict.messages || {}
 
   const agendamentoSingular = entities.agendamento || "Agendamento"
-  const clienteSingular = entities.cliente || dict.label_cliente || "Cliente"
+  const clienteSingular = entities.cliente || "Cliente"
   const profissionalSingular =
-    entities.profissional || dict.label_profissional || "Profissional"
+    entities.profissional || "Profissional"
 
   async function handleCancel() {
     setIsLoading(true)

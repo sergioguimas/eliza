@@ -11,9 +11,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog"
-import { getDictionary } from "@/lib/get-dictionary"
+import { getDictionary } from "@/lib/dictionaries/get-dictionary"
 import { CategoryIcon } from "@/components/shared/category-icon"
 import { Database } from "@/utils/database.types"
+import { useKeckleon } from "@/providers/keckleon-provider"
 
 type ProfileWithOrg = Database["public"]["Tables"]["profiles"]["Row"] & {
   organizations: Pick<Database["public"]["Tables"]["organizations"]["Row"], "niche"> | null
@@ -37,9 +38,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const dict = getDictionary(niche)
 
   const clientesTitle =
-    dict.nav?.clientes ||
-    dict.entities?.cliente_plural ||
-    `${dict.label_cliente}s`
+    dict.nav?.clientes || "Clientes"
 
   return {
     title: `${clientesTitle} | Eliza`,
@@ -83,9 +82,10 @@ export default async function ClientesPage({
 
   const niche = (profile as ProfileWithOrg)?.organizations?.niche || "generico"
   const dict = getDictionary(niche)
+  const entities = dict.entities || {}
 
-  const clienteSingular = dict.entities?.cliente || dict.label_cliente
-  const clientePlural = dict.entities?.cliente_plural || `${dict.label_cliente}s`
+  const clienteSingular = entities.cliente || "Cliente"
+  const clientePlural = entities.cliente_plural || "Clientes"
   const pageTitle = dict.nav?.clientes || clientePlural
   const pageDescription =
     dict.messages?.clientes_empty_description ||

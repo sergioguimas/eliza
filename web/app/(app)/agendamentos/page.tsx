@@ -3,7 +3,7 @@ import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
 import { CalendarView } from "@/components/appointments/calendar-view"
 import { RealtimeAppointments } from "@/components/layout/realtime-appointments"
-import { getDictionary } from "@/lib/get-dictionary"
+import { getDictionary } from "@/lib/dictionaries/get-dictionary"
 import { Database } from "@/utils/database.types"
 
 export const metadata: Metadata = {

@@ -74,8 +74,8 @@ export function EstimateModal({
   const actions = dict.actions || {}
   const messages = dict.messages || {}
 
-  const profissional = entities.profissional || dict.label_profissional || "Profissional"
-  const servico = entities.servico || dict.label_servico || "Serviço"
+  const profissional = entities.profissional || "Profissional"
+  const servico = entities.servico || "Serviço"
 
   const {
     control,

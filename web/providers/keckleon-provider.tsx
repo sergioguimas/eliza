@@ -7,18 +7,23 @@ import {
   type NicheId,
   type NicheMetadata,
 } from '@/lib/niche-config'
-import { dictionaries, type NicheDictionary } from '@/lib/dictionaries'
-import { getDictionary } from "@/lib/get-dictionary"
+import { type NicheDictionary } from '@/lib/dictionaries/dictionaries'
+import { getDictionary } from '@/lib/dictionaries/get-dictionary'
 
 type KeckleonContextType = {
   dict: NicheDictionary
   niche: NicheId
   meta: NicheMetadata
   brand: NicheBrandConfig
-  entities: NicheDictionary["entities"]
-  nav: NicheDictionary["nav"]
-  actions: NicheDictionary["actions"]
-  messages: NicheDictionary["messages"]
+
+  entities: NicheDictionary['entities']
+  nav: NicheDictionary['nav']
+  actions: NicheDictionary['actions']
+  ui: NicheDictionary['ui']
+  fields: NicheDictionary['fields']
+  financial: NicheDictionary['financial']
+  messages: NicheDictionary['messages']
+  sections: NicheDictionary['sections']
 }
 
 const KeckleonContext = createContext<KeckleonContextType | null>(null)
@@ -32,8 +37,7 @@ export function KeckleonProvider({
 }) {
   const meta = getNicheMetadata(niche)
   const normalizedNiche = meta.id
-
-  const dict = dictionaries[normalizedNiche] || dictionaries.generico
+  const dict = getDictionary(normalizedNiche)
 
   return (
     <KeckleonContext.Provider
@@ -43,11 +47,14 @@ export function KeckleonProvider({
         meta,
         brand: meta.brand,
 
-        // atalhos diretos (isso aqui melhora MUITO o uso no dia a dia)
         entities: dict.entities,
         nav: dict.nav,
         actions: dict.actions,
+        ui: dict.ui,
+        fields: dict.fields,
+        financial: dict.financial,
         messages: dict.messages,
+        sections: dict.sections,
       }}
     >
       {children}

@@ -118,10 +118,10 @@ function CalendarContent({
 
   const agendamentoSingular = entities.agendamento || "Agendamento"
   const agendamentoPlural = entities.agendamento_plural || "Agendamentos"
-  const profissionalSingular = entities.profissional || dict.label_profissional || "Profissional"
+  const profissionalSingular = entities.profissional || "Profissional"
   const profissionalPlural =
     entities.profissional_plural || `${profissionalSingular}s`
-  const servicoSingular = entities.servico || dict.label_servico || "Serviço"
+  const servicoSingular = entities.servico || "Serviço"
 
   const [date, setDate] = useState(new Date())
   const [view, setView] = useState<"month" | "week" | "day">("month")

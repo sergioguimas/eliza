@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { CreateServiceDialog } from "@/components/services/create-service-dialog"
 import { DeleteServiceButton } from "@/components/services/delete-service-button"
-import { getDictionary } from "@/lib/get-dictionary"
+import { getDictionary } from "@/lib/dictionaries/get-dictionary"
 import { CategoryIcon } from "@/components/shared/category-icon"
 import { Database } from "@/utils/database.types"
 
@@ -35,8 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const servicosTitle =
     dict.nav?.servicos ||
-    dict.entities?.servico_plural ||
-    `${dict.label_servico}s`
+    dict.entities?.servico_plural
 
   return {
     title: `${servicosTitle} | Eliza`,
@@ -60,12 +59,13 @@ export default async function ProcedimentosPage() {
 
   if (!profile?.organization_id) redirect("/setup")
 
+  const organizationId = profile.organization_id
   const typedProfile = profile as ProfileWithOrg
   const niche = typedProfile.organizations?.niche || "generico"
   const dict = getDictionary(niche)
 
-  const servicoSingular = dict.entities?.servico || dict.label_servico
-  const servicoPlural = dict.entities?.servico_plural || `${dict.label_servico}s`
+  const servicoSingular = dict.entities?.servico
+  const servicoPlural = dict.entities?.servico_plural
   const pageTitle = dict.nav?.servicos || servicoPlural
   const pageDescription =
     dict.messages?.servicos_empty_description ||
@@ -118,7 +118,7 @@ export default async function ProcedimentosPage() {
 
                 <div className="flex gap-2">
                   <CreateServiceDialog
-                    organization_id={profile.organization_id}
+                    organization_id={organizationId}
                     serviceToEdit={service}
                   />
                   <DeleteServiceButton serviceId={service.id} />

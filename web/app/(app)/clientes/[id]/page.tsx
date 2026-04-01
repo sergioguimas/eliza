@@ -27,7 +27,7 @@ import { unstable_noStore as noStore } from "next/cache"
 import { Database } from "@/utils/database.types"
 import { AppointmentContextMenu } from "@/components/appointments/appointment-context-menu"
 import { ReturnModalWrapper } from "@/components/appointments/return-modal-wrapper"
-import { getDictionary } from "@/lib/get-dictionary"
+import { getDictionary } from "@/lib/dictionaries/get-dictionary"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
@@ -81,17 +81,17 @@ export default async function CustomerPage({
   const niche = typedProfile.organizations?.niche || "generico"
   const dict = getDictionary(niche)
 
-  const clienteSingular = dict.entities?.cliente || dict.label_cliente
-  const prontuarioSingular = dict.entities?.prontuario || dict.label_prontuario
+  const clienteSingular = dict.entities?.cliente
+  const prontuarioSingular = dict.entities?.prontuario
   const prontuarioPlural =
-    dict.entities?.prontuario_plural || `${dict.label_prontuario}s`
+    dict.entities?.prontuario_plural
   const agendamentoSingular =
     dict.entities?.agendamento || "Agendamento"
   const agendamentoPlural =
     dict.entities?.agendamento_plural || "Agendamentos"
   const profissionalSingular =
-    dict.entities?.profissional || dict.label_profissional
-  const servicoSingular = dict.entities?.servico || dict.label_servico
+    dict.entities?.profissional
+  const servicoSingular = dict.entities?.servico
 
   const [customerRes, appointmentsRes, serviceRecords] = await Promise.all([
     supabase

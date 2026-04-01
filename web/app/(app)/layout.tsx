@@ -1,7 +1,6 @@
 import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
 import { AppSidebar } from "@/components/layout/app-sidebar"
-import { getDictionary } from "@/lib/get-dictionary"
 import { KeckleonProvider } from "@/providers/keckleon-provider"
 import { Database } from "@/utils/database.types"
 import { getNicheMetadata } from "@/lib/niche-config"
@@ -51,12 +50,24 @@ export default async function AppLayout({
   }
 
   const niche = organization?.niche || "generico"
-  const dict = getDictionary(niche)
+  const meta = getNicheMetadata(niche)
   const nicheMeta = getNicheMetadata(niche)
+  const brandVars = {
+    "--brand-primary": meta.brand.primary,
+    "--brand-primary-soft": meta.brand.primarySoft,
+    "--brand-primary-border": meta.brand.primaryBorder,
+    "--brand-primary-foreground": meta.brand.primaryForeground,
+    "--brand-accent": meta.brand.accent,
+    "--brand-accent-soft": meta.brand.accentSoft,
+    "--brand-ring": meta.brand.ring,
+    "--brand-sidebar-gradient-from": meta.brand.sidebarGradientFrom,
+    "--brand-sidebar-gradient-to": meta.brand.sidebarGradientTo,
+    "--brand-card-glow": meta.brand.cardGlow,
+  } as React.CSSProperties
 
   return (
-    <div className={`min-h-screen ${nicheMeta.themeClass} bg-background text-foreground`}>
-      <KeckleonProvider dictionary={dict} niche={niche}>
+    <div className={`min-h-screen bg-background text-foreground`}>
+      <KeckleonProvider niche={niche}>
         <div className="flex min-h-screen">
           <AppSidebar user={user} organization={organization} profile={profile} />
 

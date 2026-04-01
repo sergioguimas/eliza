@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge"
 import { Mail, Shield, Trash2 } from "lucide-react"
 import { InviteCard } from "@/components/shared/invite-card"
 import { Database } from "@/utils/database.types"
-import { getDictionary } from "@/lib/get-dictionary"
+import { getDictionary } from "@/lib/dictionaries/get-dictionary"
 
 type ProfileRow = {
   id: string
@@ -60,9 +60,9 @@ export default async function EquipePage() {
   const dict = getDictionary(niche)
 
   const profissionalSingular =
-    dict.entities?.profissional || dict.label_profissional
+    dict.entities?.profissional
   const profissionalPlural =
-    dict.entities?.profissional_plural || `${dict.label_profissional}s`
+    dict.entities?.profissional_plural
 
   const { data: rawMembers } = await supabase
     .from("profiles")

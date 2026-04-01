@@ -10,7 +10,7 @@ import {
   MessageCircleWarningIcon,
   Coins,
 } from "lucide-react"
-import { getDictionary } from "@/lib/get-dictionary"
+import { getDictionary } from "@/lib/dictionaries/get-dictionary"
 import { CategoryIcon } from "@/components/shared/category-icon"
 import { AppointmentContextMenu } from "@/components/appointments/appointment-context-menu"
 import { cn } from "@/lib/utils"
@@ -64,6 +64,7 @@ export default async function DashboardPage() {
 
   const typedProfile = profile as ProfileWithOrg
   const orgId = typedProfile.organization_id
+    if (!orgId) redirect("/configuracoes")
   const niche = typedProfile.organizations?.niche || "generico"
 
   const dict = getDictionary(niche)
@@ -74,7 +75,7 @@ export default async function DashboardPage() {
     : "Usuário"
 
   const clientePlural =
-    dict.entities?.cliente_plural || `${dict.label_cliente}s`
+    dict.entities?.cliente_plural
   const agendamentoSingular = dict.entities?.agendamento || "Agendamento"
   const agendamentoPlural = dict.entities?.agendamento_plural || "Agendamentos"
 
