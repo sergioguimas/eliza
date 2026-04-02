@@ -16,16 +16,11 @@ import {
 } from "@/components/ui/card"
 import {
   Loader2,
-  Building2,
-  Store,
   Briefcase,
-  Scissors,
-  Sparkles,
   ArrowRight,
   ArrowLeft,
   CheckCircle2,
   Globe,
-  FileBadge,
   Rocket,
   Link2,
   ShieldCheck,
@@ -33,65 +28,9 @@ import {
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { AnimatePresence, motion } from "framer-motion"
+import { getSetupNicheOptions } from "@/lib/niche-config"
 
 const TOTAL_STEPS = 3 as const
-
-const NICHE_OPTIONS = [
-  {
-    id: 'clinica',
-    label: 'Saúde & Clínica',
-    description: 'Consultórios, clínicas e atendimentos em geral',
-    icon: Building2,
-    color: 'text-blue-600',
-    soft: 'from-blue-50 to-cyan-50',
-    selected: 'border-blue-500 bg-blue-50/80 ring-blue-200',
-  },
-  {
-    id: 'advocacia',
-    label: 'Advocacia',
-    description: 'Escritórios jurídicos e gestão de clientes',
-    icon: Briefcase,
-    color: 'text-rose-700',
-    soft: 'from-rose-50 to-red-50',
-    selected: 'border-rose-500 bg-rose-50/80 ring-rose-200',
-  },
-  {
-    id: 'barbearia',
-    label: 'Barbearia',
-    description: 'Atendimento, agenda e organização da equipe',
-    icon: Scissors,
-    color: 'text-orange-600',
-    soft: 'from-orange-50 to-amber-50',
-    selected: 'border-orange-500 bg-orange-50/80 ring-orange-200',
-  },
-  {
-    id: 'salao',
-    label: 'Salão de Beleza',
-    description: 'Serviços, horários e experiência do cliente',
-    icon: Sparkles,
-    color: 'text-pink-600',
-    soft: 'from-pink-50 to-fuchsia-50',
-    selected: 'border-pink-500 bg-pink-50/80 ring-pink-200',
-  },
-  {
-    id: 'certificado',
-    label: 'Certificados Digitais',
-    description: 'Fluxos operacionais e atendimento especializado',
-    icon: FileBadge,
-    color: 'text-emerald-600',
-    soft: 'from-emerald-50 to-green-50',
-    selected: 'border-emerald-500 bg-emerald-50/80 ring-emerald-200',
-  },
-  {
-    id: 'generico',
-    label: 'Outro Negócio',
-    description: 'Estrutura flexível para outras operações',
-    icon: Store,
-    color: 'text-slate-600',
-    soft: 'from-slate-50 to-zinc-50',
-    selected: 'border-slate-500 bg-slate-50/80 ring-slate-200',
-  },
-] as const
 
 type Step = 1 | 2 | 3
 
@@ -139,12 +78,13 @@ export function SetupForm() {
 
   const [errors, setErrors] = useState<FormErrors>({})
 
-  const selectedNiche = useMemo(
-    () => NICHE_OPTIONS.find((n) => n.id === formData.niche),
-    [formData.niche]
-  )
+  const nicheOptions = useMemo(() => getSetupNicheOptions(), [])
 
-  const NicheIcon = selectedNiche?.icon || Store
+  const selectedNiche = useMemo(() => {
+    return nicheOptions.find((option) => option.id === formData.niche)
+  }, [formData.niche, nicheOptions])
+
+  const NicheIcon = selectedNiche?.icon || Briefcase
 
   const router = useRouter()
 
@@ -370,7 +310,7 @@ export function SetupForm() {
             {step === 1 && (
               <motion.div key="step-1" {...panelMotion} className="space-y-3">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {NICHE_OPTIONS.map((option) => {
+                  {nicheOptions.map((option) => {
                     const Icon = option.icon
                     const isSelected = formData.niche === option.id
 

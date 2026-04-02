@@ -6,6 +6,68 @@ import {
   Scale,
   FileBadge,
 } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
+
+export type SetupNicheOption = {
+  id: string
+  label: string
+  description: string
+  icon: LucideIcon
+  color: string
+  soft: string
+  selected: string
+}
+
+const setupStylesByNiche: Record<string, Omit<SetupNicheOption, "id" | "label" | "description" | "icon">> = {
+  clinica: {
+    color: "text-blue-600",
+    soft: "from-blue-50 to-cyan-50",
+    selected: "border-blue-500 bg-blue-50/80 ring-blue-200",
+  },
+  advocacia: {
+    color: "text-rose-700",
+    soft: "from-rose-50 to-red-50",
+    selected: "border-rose-500 bg-rose-50/80 ring-rose-200",
+  },
+  barbearia: {
+    color: "text-orange-600",
+    soft: "from-orange-50 to-amber-50",
+    selected: "border-orange-500 bg-orange-50/80 ring-orange-200",
+  },
+  salao: {
+    color: "text-pink-600",
+    soft: "from-pink-50 to-fuchsia-50",
+    selected: "border-pink-500 bg-pink-50/80 ring-pink-200",
+  },
+  certificado: {
+    color: "text-emerald-600",
+    soft: "from-emerald-50 to-green-50",
+    selected: "border-emerald-500 bg-emerald-50/80 ring-emerald-200",
+  },
+  generico: {
+    color: "text-slate-600",
+    soft: "from-slate-50 to-zinc-50",
+    selected: "border-slate-500 bg-slate-50/80 ring-slate-200",
+  },
+}
+
+export const getNicheOptions = () => Object.values(nicheConfig)
+
+export function getSetupNicheOptions(): SetupNicheOption[] {
+  return Object.values(nicheConfig).map((item) => {
+    const setupStyle = setupStylesByNiche[item.id] ?? setupStylesByNiche.generico
+
+    return {
+      id: item.id,
+      label: item.label,
+      description: item.description,
+      icon: item.icon,
+      color: setupStyle.color,
+      soft: setupStyle.soft,
+      selected: setupStyle.selected,
+    }
+  })
+}
 
 export type NicheBrandConfig = {
   primary: string
