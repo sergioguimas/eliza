@@ -439,7 +439,7 @@ export function PublicBookingForm({
 
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {[
-              { step: 1 as BookingStep, label: "Atendimento" },
+              { step: 1 as BookingStep, label: "Serviço" },
               { step: 2 as BookingStep, label: "Horário" },
               { step: 3 as BookingStep, label: "Seus dados" },
             ].map((item) => {
@@ -503,7 +503,7 @@ export function PublicBookingForm({
 
                   <Card className="border-border bg-card shadow-sm">
                     <CardContent className="pt-6 space-y-6">
-                      <div className="grid grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                         <FormField
                           control={form.control}
                           name="service_id"
