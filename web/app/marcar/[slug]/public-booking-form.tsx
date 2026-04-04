@@ -503,7 +503,7 @@ export function PublicBookingForm({
 
                   <Card className="border-border bg-card shadow-sm">
                     <CardContent className="pt-6 space-y-6">
-                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-2 gap-6">
                         <FormField
                           control={form.control}
                           name="service_id"
@@ -582,7 +582,7 @@ export function PublicBookingForm({
 
                   <Card className="border-border bg-card shadow-sm">
                     <CardContent className="pt-6 space-y-6">
-                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-2 gap-6">
                         <FormField
                           control={form.control}
                           name="date"
@@ -740,7 +740,7 @@ export function PublicBookingForm({
                     <div className="space-y-6">
                       <h2 className="text-lg font-semibold">Seus dados</h2>
 
-                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-2 xl:grid-cols-2 gap-6">
                         <FormField
                           control={form.control}
                           name="customer_name"
