@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { sendWhatsAppMessage } from "./send-whatsapp"
 import { checkProfessionalAvailability } from "@/lib/appointment-config"
 import { Database } from "@/utils/database.types"
+import { sendAppointmentConfirmation } from './whatsapp-messages'
 
 type AppointmentInsert = Database['public']['Tables']['appointments']['Insert']
 
@@ -158,6 +159,25 @@ export async function createAppointment(formData: FormData) {
       })
 
       await sendWhatsAppMessage({
+  const { data: prof } = await supabase
+    .from('professionals')
+    .select('name, phone')
+    .eq('id', professional_id)
+    .single()
+
+  const notifications = [];
+
+  if (prof?.phone) {
+    const formattedDate = startTime.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+
+    notifications.push(
+      sendWhatsAppMessage({
         phone: prof.phone,
         message: `🔔 *Novo Pré-agendamento*\n\nProfissional: ${prof.name}\nCliente: ${customer_name}\nServiço: ${service?.title}\nHorário: ${formattedDate}`,
         organizationId: organization_id
@@ -172,4 +192,18 @@ export async function createAppointment(formData: FormData) {
     id: newAppointment.id,
     foundName: customer_found_name !== customer_name ? customer_found_name : null
   }
+}
+    );
+  }
+
+  notifications.push(
+    sendAppointmentConfirmation(newAppointment.id)
+  );
+
+  await Promise.allSettled(notifications);
+  
+  revalidatePath('/agendamentos')
+  return { success: true, 
+    id: newAppointment.id, 
+    foundName: customer_found_name !== customer_name ? customer_found_name : null }
 }
