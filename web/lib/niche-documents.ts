@@ -16,7 +16,7 @@ export const nicheDocuments: Record<string, NicheDocumentItem[]> = {
       id: "documento_pessoal",
       label: "Documento pessoal",
       description: "CPF, RG ou outro documento de identificação",
-      required: true,
+      required: false,
       accept: DEFAULT_DOCUMENT_ACCEPT,
     },
     {
@@ -44,7 +44,7 @@ export const nicheDocuments: Record<string, NicheDocumentItem[]> = {
       id: "documento_pessoal",
       label: "Documento pessoal",
       description: "Documento oficial do cliente",
-      required: true,
+      required: false,
       accept: DEFAULT_DOCUMENT_ACCEPT,
     },
     {
@@ -69,7 +69,7 @@ export const nicheDocuments: Record<string, NicheDocumentItem[]> = {
       id: "documento_com_foto",
       label: "Documento com foto",
       description: "RG, CNH ou documento oficial válido",
-      required: true,
+      required: false,
       accept: DEFAULT_DOCUMENT_ACCEPT,
     },
     {
