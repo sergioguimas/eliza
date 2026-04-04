@@ -1,105 +1,134 @@
-import { createClient } from '@/utils/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { createClient } from "@/utils/supabase/server"
+import { redirect } from "next/navigation"
+import Link from "next/link"
+import { Card, CardContent } from "@/components/ui/card"
 import {
-  CalendarDays, 
-  Building2, 
+  CalendarDays,
+  Building2,
   ShieldCheck,
-  CheckCircle2,
   Clock,
   MessageCircleWarningIcon,
   Coins,
-} from 'lucide-react'
-import { getDictionary } from '@/lib/get-dictionary'
-import { nicheConfig } from '@/lib/niche-config'
-import { CategoryIcon } from '@/components/category-icon'
-import { AppointmentContextMenu } from "@/components/appointment-context-menu"
+} from "lucide-react"
+import { getDictionary } from "@/lib/dictionaries/get-dictionary"
+import { CategoryIcon } from "@/components/shared/category-icon"
+import { AppointmentContextMenu } from "@/components/appointments/appointment-context-menu"
 import { cn } from "@/lib/utils"
-import { AppointmentCardActions } from "@/components/appointment-card-actions"
-import { RealtimeAppointments } from '@/components/realtime-appointments'
+import { AppointmentCardActions } from "@/components/appointments/appointment-card-actions"
+import { RealtimeAppointments } from "@/components/layout/realtime-appointments"
 import { Database } from "@/utils/database.types"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { PendingRequestsList } from '@/components/PendingRequestsList'
-import router from 'next/dist/shared/lib/router/router'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { PendingRequestsList } from "@/components/dashboard/pending-request-list"
 
-type ProfileWithOrg = Database['public']['Tables']['profiles']['Row'] & {
-  organizations: Pick<Database['public']['Tables']['organizations']['Row'], 'niche'> | null
+type ProfileWithOrg = Database["public"]["Tables"]["profiles"]["Row"] & {
+  organizations: Pick<
+    Database["public"]["Tables"]["organizations"]["Row"],
+    "niche" | "name"
+  > | null
 }
 
-// --- 1. FUNÇÃO DE DATA (BRASIL) ---
 function getBrazilDayRange() {
-  const brazilDateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+  const brazilDateStr = new Date().toLocaleDateString("en-CA", {
+    timeZone: "America/Sao_Paulo",
+  })
   const start = `${brazilDateStr}T00:00:00-03:00`
   const end = `${brazilDateStr}T23:59:59-03:00`
   return { start, end }
 }
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
 export default async function DashboardPage() {
   const supabase = await createClient<Database>()
 
-  // 2. Verifica autenticação
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return redirect('/login')
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  // 3. Busca Perfil
+  if (!user) return redirect("/login")
+
   const { data: profile } = await supabase
-    .from('profiles')
-    .select(`*, organizations(niche, name)`)
-    .eq('id', user.id)
+    .from("profiles")
+    .select("*, organizations(niche, name)")
+    .eq("id", user.id)
     .single()
 
-  const organization = profile?.organization_id
+  if (!profile?.organization_id) redirect("/configuracoes")
 
-  if (!profile?.organization_id) redirect('/configuracoes')
+  const typedProfile = profile as ProfileWithOrg
+  const orgId = typedProfile.organization_id
+    if (!orgId) redirect("/configuracoes")
+  const niche = typedProfile.organizations?.niche || "generico"
 
-  const orgId = profile.organization_id
-  const orgName = profile.organizations?.name || "Minha Clínica"
+  const dict = getDictionary(niche)
 
-  // 4. Definição do período de "Hoje"
+  const orgName = typedProfile.organizations?.name || "Minha organização"
+  const userName = typedProfile.full_name
+    ? typedProfile.full_name.split(" ")[0]
+    : "Usuário"
+
+  const clientePlural =
+    dict.entities?.cliente_plural
+  const agendamentoSingular = dict.entities?.agendamento || "Agendamento"
+  const agendamentoPlural = dict.entities?.agendamento_plural || "Agendamentos"
+
+  const dashboardTitle = dict.messages?.dashboard_title || "Visão geral"
+  const dashboardDescription =
+    dict.messages?.dashboard_description ||
+    "Aqui está o resumo operacional de hoje."
+
   const { start: todayStart, end: todayEnd } = getBrazilDayRange()
 
-  // 5. Busca de dados
   const [resServices, resCustomers, resToday, resAll] = await Promise.all([
-    supabase.from('services').select('*', { count: 'exact', head: true }).eq('organization_id', orgId).eq('is_active', true),
-    supabase.from('customers').select('*').eq('organization_id', orgId).eq('active', true),
-    
-    // --- QUERY DE AGENDA HOJE ---
     supabase
-      .from('appointments')
+      .from("services")
+      .select("*", { count: "exact", head: true })
+      .eq("organization_id", orgId)
+      .eq("is_active", true),
+
+    supabase
+      .from("customers")
+      .select("*")
+      .eq("organization_id", orgId)
+      .eq("active", true),
+
+    supabase
+      .from("appointments")
       .select(`
-        id, start_time, status,
+        id,
+        start_time,
+        status,
         customer_id,
         service_id,
         professional_id,
         payment_status,
-        customers(name), 
+        payment_method,
+        customers(name),
         services(title, color)
       `)
-      .eq('organization_id', orgId)
-      .gte('start_time', todayStart)
-      .lte('start_time', todayEnd)
-      .neq('status', 'canceled')
-      .order('start_time', { ascending: true }),
-      
-    // --- QUERY DE TODOS OS AGENDAMENTOS (Para estatística) ---
-    supabase.from('appointments')
-      .select('status')
-      .eq('organization_id', orgId)
-      .neq('status', 'canceled')
-      .neq('status', 'cancelled')
+      .eq("organization_id", orgId)
+      .gte("start_time", todayStart)
+      .lte("start_time", todayEnd)
+      .neq("status", "canceled")
+      .order("start_time", { ascending: true }),
+
+    supabase
+      .from("appointments")
+      .select("status")
+      .eq("organization_id", orgId)
+      .neq("status", "canceled")
+      .neq("status", "cancelled"),
   ])
-  
-  const { count: pendingCount } = await supabase
-    .from('appointments')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'pending')
-    .eq('organization_id', orgId);
 
   const { data: pendingRequests } = await supabase
-    .from('appointments')
+    .from("appointments")
     .select(`
       id,
       start_time,
@@ -107,73 +136,65 @@ export default async function DashboardPage() {
       services (title),
       professionals (name)
     `)
-    .eq('status', 'pending')
-    .order('start_time', { ascending: true });
-
-  // 6. Preparação dos dados
-  const customersList = (resCustomers.data || []).map((c: any) => ({
-    id: c.id,
-    name: c.name || "Sem Nome"
-  }))
-
-  const servicesList = (resServices.data || []).map((s: any) => ({
-    id: s.id,
-    title: s.title || "Serviço",
-    color: s.color
-  }))
+    .eq("status", "pending")
+    .eq("organization_id", orgId)
+    .order("start_time", { ascending: true })
 
   const todayAppointments = (resToday.data || []).map((app: any) => ({
     ...app,
-    customers: { name: app.customers?.name || "Sem Nome" },
-    services: { title: app.services?.title || "Procedimento", color: app.services?.color }
+    customers: { name: app.customers?.name || "Sem nome" },
+    services: {
+      title: app.services?.title || dict.entities?.servico || "Serviço",
+      color: app.services?.color,
+    },
   }))
 
-  // Cálculos
   const totalCustomers = resCustomers.data?.length || 0
-
-  // 7. Pega o primeiro nome do perfil ou fallback seguro
-  const doctorName = profile?.full_name ? profile.full_name.split(' ')[0] : "Doutor"
-
-  // 8. Dicionário e Ícone do Nicho
-  const niche = (profile as ProfileWithOrg)?.organizations?.niche || 'generico'
-  const dict = await getDictionary(niche)
+  const totalPendingRequests = pendingRequests?.length || 0
 
   return (
     <div className="space-y-8">
       <RealtimeAppointments />
-      
-      {/* Cabeçalho */}
+
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border pb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Visão Geral</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            {dashboardTitle}
+          </h1>
           <p className="text-muted-foreground mt-1">
-            Olá, <span className="text-foreground font-medium">{doctorName}</span>. 
-            Aqui está o resumo operacional de hoje.
+            Olá, <span className="text-foreground font-medium">{userName}</span>.{" "}
+            {dashboardDescription}
           </p>
         </div>
-        
-        <div className="flex gap-3">
+
+        <div className="flex gap-3 flex-wrap">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border border-border">
             <Building2 className="h-4 w-4 text-muted-foreground" />
             <div className="flex flex-col">
-              <span className="text-[10px] uppercase text-muted-foreground font-bold leading-none">Empresa</span>
-              <span className="text-sm font-semibold text-foreground">{orgName}</span>
+              <span className="text-[10px] uppercase text-muted-foreground font-bold leading-none">
+                Organização
+              </span>
+              <span className="text-sm font-semibold text-foreground">
+                {orgName}
+              </span>
             </div>
           </div>
 
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border border-border">
             <ShieldCheck className="h-4 w-4 text-muted-foreground" />
             <div className="flex flex-col">
-              <span className="text-[10px] uppercase text-muted-foreground font-bold leading-none">Cargo</span>
-              <span className="text-sm font-semibold text-foreground capitalize">{profile?.role === 'owner' ? 'Proprietário' : 'Colaborador'}</span>
+              <span className="text-[10px] uppercase text-muted-foreground font-bold leading-none">
+                Cargo
+              </span>
+              <span className="text-sm font-semibold text-foreground capitalize">
+                {typedProfile.role === "owner" ? "Proprietário" : "Colaborador"}
+              </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Grid de Cards Clicáveis */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">        
-
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Dialog>
           <DialogTrigger asChild>
             <div className="block group cursor-pointer h-full">
@@ -184,9 +205,11 @@ export default async function DashboardPage() {
                       Solicitações
                     </p>
                     <h2 className="text-2xl font-bold tracking-tight text-foreground">
-                      {pendingRequests?.length || 0}
+                      {totalPendingRequests}
                     </h2>
-                    <p className="text-xs text-muted-foreground">Aguardando aprovação</p>
+                    <p className="text-xs text-muted-foreground">
+                      Aguardando aprovação
+                    </p>
                   </div>
                   <div className="p-2 bg-amber-500/10 rounded-lg group-hover:bg-amber-500/20 transition-colors">
                     <MessageCircleWarningIcon className="h-4 w-4 text-amber-500" />
@@ -199,12 +222,13 @@ export default async function DashboardPage() {
           <DialogContent className="max-w-md border-zinc-800 bg-zinc-950">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold tracking-tight">
-                Solicitações Pendentes
+                Solicitações pendentes
               </DialogTitle>
               <DialogDescription className="text-zinc-400">
-                Analise os pedidos de agendamento feitos diretamente pelos pacientes.
+                Analise os pedidos recebidos antes da aprovação final.
               </DialogDescription>
-            </DialogHeader>            
+            </DialogHeader>
+
             <div className="mt-4">
               <PendingRequestsList initialRequests={pendingRequests || []} />
             </div>
@@ -215,8 +239,13 @@ export default async function DashboardPage() {
           <Card className="bg-card border-border group-hover:bg-accent/20 group-hover:border-primary/50 transition-all cursor-pointer h-full">
             <CardContent className="p-4 flex justify-between items-start">
               <div className="space-y-1">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">Agenda Hoje</p>
-                <h2 className="text-2xl font-bold tracking-tight text-foreground">{todayAppointments.length}</h2>
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">
+                  {agendamentoPlural}
+                </p>
+                <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                  {todayAppointments.length}
+                </h2>
+                <p className="text-xs text-muted-foreground">Hoje</p>
               </div>
               <div className="p-2 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
                 <CalendarDays className="h-4 w-4 text-purple-500" />
@@ -229,11 +258,15 @@ export default async function DashboardPage() {
           <Card className="bg-card border-border group-hover:bg-accent/20 group-hover:border-primary/50 transition-all cursor-pointer h-full">
             <CardContent className="p-4 flex justify-between items-start">
               <div className="space-y-1">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">{dict.label_cliente}s</p>
-                <h2 className="text-2xl font-bold tracking-tight text-foreground">{totalCustomers}</h2>
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">
+                  {clientePlural}
+                </p>
+                <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                  {totalCustomers}
+                </h2>
               </div>
               <div className="p-2 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
-                <CategoryIcon name='clientes' className="h-4 w-4 text-green-500" />
+                <CategoryIcon name="clientes" className="h-4 w-4 text-green-500" />
               </div>
             </CardContent>
           </Card>
@@ -243,22 +276,26 @@ export default async function DashboardPage() {
           <Card className="bg-card border-border group-hover:bg-accent/20 group-hover:border-primary/50 transition-all cursor-pointer h-full">
             <CardContent className="p-4 flex justify-between items-start">
               <div className="space-y-1">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">Financeiro</p>
-                <h2 className="text-2xl font-bold tracking-tight text-foreground">R$</h2>
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">
+                  Financeiro
+                </p>
+                <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                  R$
+                </h2>
               </div>
               <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
                 <Coins className="h-4 w-4 text-blue-500" />
-              </div>              
+              </div>
             </CardContent>
           </Card>
         </Link>
       </div>
 
-      {/* Lista de Atendimentos */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-medium text-foreground flex items-center gap-2">
-            <Clock className="h-5 w-5 text-blue-500" /> Próximos Atendimentos
+            <Clock className="h-5 w-5 text-blue-500" />
+            Próximos {agendamentoPlural.toLowerCase()}
           </h3>
           <span className="text-xs text-muted-foreground bg-card px-2 py-1 rounded-full border border-border">
             {todayAppointments.length} hoje
@@ -268,61 +305,59 @@ export default async function DashboardPage() {
         <div className="grid gap-3">
           {todayAppointments.length > 0 ? (
             todayAppointments.map((app: any) => (
-              <AppointmentContextMenu 
-                key={app.id}
-                appointment={app}
-              >
-                <Card 
-                  className="bg-card border-border p-4 border-l-10 cursor-context-menu hover:bg-accent/50 transition-all group relative overflow-hidden" 
-                  style={{ borderLeftColor: app.services?.color || '#3b82f6' }}
+              <AppointmentContextMenu key={app.id} appointment={app}>
+                <Card
+                  className="bg-card border-border p-4 border-l-10 cursor-context-menu hover:bg-accent/50 transition-all group relative overflow-hidden"
+                  style={{ borderLeftColor: app.services?.color || "#3b82f6" }}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      {/* Avatar */}
                       <div className="h-10 w-10 rounded-full bg-muted border border-border flex items-center justify-center font-bold text-xs text-primary group-hover:border-primary/50 transition-colors">
                         {app.customers?.name?.substring(0, 2).toUpperCase()}
                       </div>
-                      
+
                       <div>
-                        <p className="font-bold text-sm text-foreground">{app.customers?.name}</p>
+                        <p className="font-bold text-sm text-foreground">
+                          {app.customers?.name}
+                        </p>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <span>{app.services?.title}</span>
                           <span className="text-border">•</span>
                           <span className="text-primary font-medium">
-                            {new Date(app.start_time).toLocaleTimeString('pt-BR', { 
-                              hour: '2-digit', 
-                              minute: '2-digit'
+                            {new Date(app.start_time).toLocaleTimeString("pt-BR", {
+                              hour: "2-digit",
+                              minute: "2-digit",
                             })}
                           </span>
                         </div>
                       </div>
                     </div>
-                    
-                    {/* LADO DIREITO: Status + Botão de Ação Visual */}
+
                     <div className="flex items-center gap-3">
-                      <span className={cn(
-                        "px-2 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider",
-                        app.status === 'scheduled' && "bg-blue-500/10 text-blue-500 border-blue-500/20",
-                        app.status === 'arrived' && "bg-amber-500/10 text-amber-500 border-amber-500/20",
-                        app.status === 'confirmed' && "bg-green-500/10 text-green-500 border-green-500/20",
-                        // Lógica para Finalizado
-                        app.status === 'completed' && (
-                          app.payment_status === 'paid' 
-                            ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" // Tudo pronto
-                            : "bg-indigo-500/10 text-indigo-500 border-indigo-500/20"   // Aguardando pagamento
-                        )
-                      )}>
-                        {app.status === 'scheduled' && 'Agendado'}
-                        {app.status === 'arrived' && 'Na Recepção'}
-                        {app.status === 'confirmed' && 'Confirmado'}
-                        {app.status === 'completed' && (
-                          app.payment_status === 'paid' 
-                            ? `Finalizado (${app.payment_method || 'Pago'})` 
-                            : 'Finalizado (Pendente)'
+                      <span
+                        className={cn(
+                          "px-2 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider",
+                          app.status === "scheduled" &&
+                            "bg-blue-500/10 text-blue-500 border-blue-500/20",
+                          app.status === "arrived" &&
+                            "bg-amber-500/10 text-amber-500 border-amber-500/20",
+                          app.status === "confirmed" &&
+                            "bg-green-500/10 text-green-500 border-green-500/20",
+                          app.status === "completed" &&
+                            (app.payment_status === "paid"
+                              ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                              : "bg-indigo-500/10 text-indigo-500 border-indigo-500/20")
                         )}
+                      >
+                        {app.status === "scheduled" && "Agendado"}
+                        {app.status === "arrived" && "Na recepção"}
+                        {app.status === "confirmed" && "Confirmado"}
+                        {app.status === "completed" &&
+                          (app.payment_status === "paid"
+                            ? `Finalizado (${app.payment_method || "Pago"})`
+                            : "Finalizado (Pendente)")}
                       </span>
 
-                      {/* Ícone de 3 pontos para indicar que é clicável */}
                       <div className="relative z-10">
                         <AppointmentCardActions appointment={app} />
                       </div>
@@ -333,7 +368,7 @@ export default async function DashboardPage() {
             ))
           ) : (
             <div className="text-muted-foreground italic p-12 border border-dashed border-border rounded-xl text-center bg-card/50">
-              Nenhum agendamento para hoje.
+              Nenhum {agendamentoSingular.toLowerCase()} para hoje.
             </div>
           )}
         </div>

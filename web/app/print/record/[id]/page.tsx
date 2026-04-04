@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/server"
 import { notFound, redirect } from "next/navigation"
-import { PrintButton } from "@/components/print-button"
+import { PrintButton } from "@/components/shared/print-button"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Database } from "@/utils/database.types"

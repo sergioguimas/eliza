@@ -1,36 +1,73 @@
 'use client'
 
 import { createContext, useContext } from 'react'
+import {
+  getNicheMetadata,
+  type NicheBrandConfig,
+  type NicheId,
+  type NicheMetadata,
+} from '@/lib/niche-config'
+import { type NicheDictionary } from '@/lib/dictionaries/dictionaries'
+import { getDictionary } from '@/lib/dictionaries/get-dictionary'
 
-// Define o formato do contexto
 type KeckleonContextType = {
-  dict: any // Ou use o tipo inferido do dictionaries.ts para autocomplete top
-  niche: string
+  dict: NicheDictionary
+  niche: NicheId
+  meta: NicheMetadata
+  brand: NicheBrandConfig
+
+  entities: NicheDictionary['entities']
+  nav: NicheDictionary['nav']
+  actions: NicheDictionary['actions']
+  ui: NicheDictionary['ui']
+  fields: NicheDictionary['fields']
+  financial: NicheDictionary['financial']
+  messages: NicheDictionary['messages']
+  sections: NicheDictionary['sections']
 }
 
 const KeckleonContext = createContext<KeckleonContextType | null>(null)
 
-export function KeckleonProvider({ 
-  children, 
-  dictionary, 
-  niche 
-}: { 
+export function KeckleonProvider({
+  children,
+  niche,
+}: {
   children: React.ReactNode
-  dictionary: any
   niche: string
 }) {
+  const meta = getNicheMetadata(niche)
+  const normalizedNiche = meta.id
+  const dict = getDictionary(normalizedNiche)
+
   return (
-    <KeckleonContext.Provider value={{ dict: dictionary, niche }}>
+    <KeckleonContext.Provider
+      value={{
+        dict,
+        niche: normalizedNiche,
+        meta,
+        brand: meta.brand,
+
+        entities: dict.entities,
+        nav: dict.nav,
+        actions: dict.actions,
+        ui: dict.ui,
+        fields: dict.fields,
+        financial: dict.financial,
+        messages: dict.messages,
+        sections: dict.sections,
+      }}
+    >
       {children}
     </KeckleonContext.Provider>
   )
 }
 
-// Hook personalizado para usar fácil: const { dict } = useKeckleon()
 export function useKeckleon() {
   const context = useContext(KeckleonContext)
+
   if (!context) {
     throw new Error('useKeckleon deve ser usado dentro de um KeckleonProvider')
   }
+
   return context
 }

@@ -24,14 +24,16 @@ export default async function PublicBookingPage({params}: {params: Promise<{ slu
 
   return (
     <div className="min-h-screen bg-background py-10 px-4">
-      <div className="max-w-2xl mx-auto space-y-8">
+      <div className="mx-auto w-full max-w-[1400px] space-y-8">
         <header className="text-center">
           <h1 className="text-3xl font-bold tracking-tight">{organization.name}</h1>
           <p className="text-muted-foreground">Reserve seu horário em poucos cliques</p>
         </header>
 
-        <PublicBookingForm 
+        <PublicBookingForm
           organizationId={organization.id}
+          organizationNiche={organization.niche}
+          organizationName={organization.name}
           services={servicesRes.data || []}
           professionals={professionalsRes.data || []}
         />

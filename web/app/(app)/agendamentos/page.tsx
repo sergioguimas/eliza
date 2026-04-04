@@ -1,9 +1,9 @@
 import { Metadata } from "next"
 import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
-import { CalendarView } from "@/components/calendar-view"
-import { RealtimeAppointments } from "@/components/realtime-appointments"
-import { getDictionary } from "@/lib/get-dictionary"
+import { CalendarView } from "@/components/appointments/calendar-view"
+import { RealtimeAppointments } from "@/components/layout/realtime-appointments"
+import { getDictionary } from "@/lib/dictionaries/get-dictionary"
 import { Database } from "@/utils/database.types"
 
 export const metadata: Metadata = {
@@ -16,14 +16,13 @@ export default async function AgendamentosPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const supabase = await createClient<Database>()
-  
   const params = await searchParams
 
-  // 1. Verifica autenticação
+  // 1. Auth
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // 2. Busca perfil
+  // 2. Profile
   const { data: profile } = await supabase
     .from('profiles')
     .select('organization_id, role, organizations(niche)')
@@ -31,38 +30,43 @@ export default async function AgendamentosPage({
     .single()
 
   if (!profile?.organization_id) {
-    redirect('/configuracoes') 
+    redirect('/configuracoes')
   }
 
   const orgId = profile.organization_id
   const niche = profile?.organizations?.niche || 'generico'
-  const dict = getDictionary(niche)
 
-  // 3. Busca em paralelo
-  const [customersRes, servicesRes, staffRes, appointmentsRes, settingsRes] = await Promise.all([
-    // Clientes
+  // 🔥 NOVO PADRÃO
+  const dict = getDictionary(niche)
+  const { entities, messages } = dict
+
+  // 3. Data
+  const [
+    customersRes,
+    servicesRes,
+    staffRes,
+    appointmentsRes,
+    settingsRes
+  ] = await Promise.all([
     supabase
       .from('customers')
       .select('id, name')
       .eq('organization_id', orgId)
-      .eq('active', true) 
+      .eq('active', true)
       .order('name'),
 
-    // Serviços
     supabase
       .from('services')
-      .select('id, title, color') 
+      .select('id, title, color')
       .eq('organization_id', orgId)
       .eq('active', true),
-      
-    // Staff (Profissionais)
+
     supabase
       .from('professionals')
       .select('id, name, specialty, phone, professional_availability (*)')
       .eq('organization_id', orgId)
-      .eq('is_active', true), 
+      .eq('is_active', true),
 
-    // Agendamentos
     supabase
       .from('appointments')
       .select(`
@@ -79,7 +83,6 @@ export default async function AgendamentosPage({
       `)
       .eq('organization_id', orgId),
 
-    // Configurações
     supabase
       .from('organization_settings')
       .select('*')
@@ -87,7 +90,6 @@ export default async function AgendamentosPage({
       .single()
   ])
 
-  // Tratamento de arrays vazios
   const customers = customersRes.data || []
   const services = servicesRes.data || []
   const staff = staffRes.data || []
@@ -97,9 +99,16 @@ export default async function AgendamentosPage({
   return (
     <div className="space-y-8">
       <RealtimeAppointments />
+
+      {/* Header semântico via Keckleon */}
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Agenda {dict.label_servicos}</h1>
-        <p className="text-muted-foreground text-sm">Visualize e gerencie os atendimentos da clínica.</p>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">
+          {entities.agendamento_plural}
+        </h1>
+
+        <p className="text-muted-foreground text-sm">
+          {messages.agendamentos_empty_description}
+        </p>
       </div>
 
       <CalendarView 

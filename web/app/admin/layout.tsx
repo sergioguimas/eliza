@@ -1,5 +1,5 @@
 import { KeckleonProvider } from "@/providers/keckleon-provider"
-import { getDictionary } from "@/lib/get-dictionary"
+import { getDictionary } from "@/lib/dictionaries/get-dictionary"
 
 export default function AdminLayout({
   children,
@@ -12,7 +12,7 @@ export default function AdminLayout({
   const themeClass = `theme-${niche}`
 
   return (
-    <KeckleonProvider dictionary={dict} niche={niche}>
+    <KeckleonProvider niche={niche}>
       <div className={`${themeClass} min-h-screen bg-background text-foreground`}>
         {children}
       </div>
