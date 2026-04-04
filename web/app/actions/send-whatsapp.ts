@@ -4,8 +4,8 @@ import { createClient } from "@supabase/supabase-js"
 import { Database } from "@/utils/database.types"
 
 // 🛡️ CONFIGURAÇÃO DE SEGURANÇA (FALLBACK)
-const DEFAULT_URL = "http://localhost:8082" 
-const DEFAULT_KEY = "medagenda123"
+const DEFAULT_URL =  process.env.NEXT_PUBLIC_EVOLUTION_API_URL || ""
+const DEFAULT_KEY = process.env.EVOLUTION_API_KEY || ""
 const DEFAULT_INSTANCE = "admin-painel-1768703535"
 
 interface SendMessageProps {
@@ -42,16 +42,10 @@ export async function sendWhatsAppMessage({ phone, message, organizationId }: Se
     console.error("❌ [SendWhatsApp] Erro real ao buscar organização:", error.message)
   }
 
-  // 2. Lógica Blindada de Variáveis
-  let evolutionUrl = org?.evolution_api_url
-  
-  if (!evolutionUrl || evolutionUrl.trim() === "") {
-      evolutionUrl = DEFAULT_URL
-  }
+  let evolutionUrl = process.env.EVOLUTION_API_URL || org?.evolution_api_url || DEFAULT_URL  
   evolutionUrl = evolutionUrl.replace(/\/$/, "")
-
-  const apiKey = (org?.evolution_api_key || DEFAULT_KEY) as string
-  const instanceName = org?.slug || DEFAULT_INSTANCE
+  const apiKey = (process.env.EVOLUTION_API_KEY || org?.evolution_api_key || DEFAULT_KEY) as string
+  const instanceName = DEFAULT_INSTANCE
 
   // 3. Tratamento do Telefone
   let cleanPhone = phone.replace(/\D/g, '')
@@ -109,10 +103,11 @@ export async function sendWhatsAppMedia({ phone, caption, media, fileName, organ
     .eq('id', organizationId)
     .single()
 
-  let evolutionUrl = org?.evolution_api_url || DEFAULT_URL
+  let evolutionUrl = process.env.EVOLUTION_API_URL || org?.evolution_api_url || DEFAULT_URL
   evolutionUrl = evolutionUrl.replace(/\/$/, "")
-  const apiKey = (org?.evolution_api_key || DEFAULT_KEY) as string
-  const instanceName = org?.slug || DEFAULT_INSTANCE
+  const apiKey = (process.env.EVOLUTION_API_KEY || org?.evolution_api_key || DEFAULT_KEY) as string
+  const instanceName = DEFAULT_INSTANCE
+
 
   // 2. Tratamento do Telefone
   let cleanPhone = phone.replace(/\D/g, '')

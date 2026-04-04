@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { sendWhatsAppMessage } from "./send-whatsapp"
 import { checkProfessionalAvailability } from "@/lib/appointment-config"
 import { Database } from "@/utils/database.types"
+import { sendAppointmentConfirmation } from './whatsapp-messages'
 
 // Tipagem baseada no banco gerado
 type AppointmentInsert = Database['public']['Tables']['appointments']['Insert']
@@ -136,6 +137,8 @@ const customer_gender = formData.get('customer_gender') as string
     .eq('id', professional_id)
     .single()
 
+  const notifications = [];
+
   if (prof?.phone) {
     const formattedDate = startTime.toLocaleString('pt-BR', {
       day: '2-digit',
@@ -145,12 +148,20 @@ const customer_gender = formData.get('customer_gender') as string
       minute: '2-digit'
     })
 
-    await sendWhatsAppMessage({
-      phone: prof.phone,
-      message: `🔔 *Novo Pré-agendamento*\n\nProfissional: ${prof.name}\nCliente: ${customer_name}\nServiço: ${service?.title}\nHorário: ${formattedDate}`,
-      organizationId: organization_id
-    })
+    notifications.push(
+      sendWhatsAppMessage({
+        phone: prof.phone,
+        message: `🔔 *Novo Pré-agendamento*\n\nProfissional: ${prof.name}\nCliente: ${customer_name}\nServiço: ${service?.title}\nHorário: ${formattedDate}`,
+        organizationId: organization_id
+      })
+    );
   }
+
+  notifications.push(
+    sendAppointmentConfirmation(newAppointment.id)
+  );
+
+  await Promise.allSettled(notifications);
   
   revalidatePath('/agendamentos')
   return { success: true, 

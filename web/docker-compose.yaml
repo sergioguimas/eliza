@@ -7,12 +7,18 @@ services:
     restart: always
     networks:
       - public
+      - private
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.elisa-app.rule=Host(`elizasola.duckdns.org`)"
+      - "traefik.docker.network=public"
+      - "traefik.http.routers.elisa-app.rule=Host(`eliza.sgdev.cloud`)"
       - "traefik.http.routers.elisa-app.entrypoints=websecure"
       - "traefik.http.routers.elisa-app.tls.certresolver=meuresolver"
       - "traefik.http.services.elisa-app.loadbalancer.server.port=3000"
+    env_file:
+      - .env
 networks:
   public:
+    external: true
+  private:
     external: true
