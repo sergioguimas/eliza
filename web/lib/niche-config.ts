@@ -51,8 +51,6 @@ const setupStylesByNiche: Record<string, Omit<SetupNicheOption, "id" | "label" |
   },
 }
 
-export const getNicheOptions = () => Object.values(nicheConfig)
-
 export function getSetupNicheOptions(): SetupNicheOption[] {
   return Object.values(nicheConfig).map((item) => {
     const setupStyle = setupStylesByNiche[item.id] ?? setupStylesByNiche.generico
@@ -225,4 +223,5 @@ export function getNicheMetadata(niche: string | null | undefined): NicheMetadat
   return nicheConfig[niche]
 }
 
+export const getNicheOptions = () => Object.values(nicheConfig)
 export type NicheId = keyof typeof nicheConfig

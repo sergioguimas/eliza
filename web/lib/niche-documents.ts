@@ -39,54 +39,9 @@ export const nicheDocuments: Record<string, NicheDocumentItem[]> = {
 
   salao: [],
 
-  advocacia: [
-    {
-      id: "documento_pessoal",
-      label: "Documento pessoal",
-      description: "Documento oficial do cliente",
-      required: false,
-      accept: DEFAULT_DOCUMENT_ACCEPT,
-    },
-    {
-      id: "comprovante_endereco",
-      label: "Comprovante de endereço",
-      description: "Se necessário para o cadastro ou contrato",
-      required: false,
-      accept: DEFAULT_DOCUMENT_ACCEPT,
-    },
-    {
-      id: "documentos_do_caso",
-      label: "Documentos do caso",
-      description: "Arquivos relevantes para análise inicial",
-      required: false,
-      accept: DEFAULT_DOCUMENT_ACCEPT,
-      multiple: true,
-    },
-  ],
+  advocacia: [],
 
-  certificado: [
-    {
-      id: "documento_com_foto",
-      label: "Documento com foto",
-      description: "RG, CNH ou documento oficial válido",
-      required: false,
-      accept: DEFAULT_DOCUMENT_ACCEPT,
-    },
-    {
-      id: "cpf",
-      label: "CPF",
-      description: "Caso não conste no documento principal",
-      required: false,
-      accept: DEFAULT_DOCUMENT_ACCEPT,
-    },
-    {
-      id: "comprovante_endereco",
-      label: "Comprovante de endereço",
-      description: "Documento recente",
-      required: false,
-      accept: DEFAULT_DOCUMENT_ACCEPT,
-    },
-  ],
+  certificado: [],
 
   generico: [],
 }
