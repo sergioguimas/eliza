@@ -274,6 +274,7 @@ export const nicheDictionaries = {
       agendamento_plural: "Agendamentos",
     },
   }),
+  
 } as const
 
 export type NicheKey = keyof typeof nicheDictionaries
