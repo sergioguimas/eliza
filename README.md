@@ -34,7 +34,7 @@ O Eliza é um sistema completo para clínicas que permite:
 - **Backend:** API Routes (Next.js)
 - **Banco:** Supabase (PostgreSQL)
 - **Autenticação:** Supabase Auth
-- **Infra:** VPS (Nginx + subdomínios)
+- **Infra:** VPS (Docker + Traefik)
 
 
 ### 🧠 Conceitos principais
@@ -63,7 +63,7 @@ Essa separação permite maior flexibilidade na gestão de usuários.
 
 #### 🔹 Lógica baseada em eventos
 
-- Preparado para receber webhooks (ex: Google Chat)
+- Preparado para receber webhooks (ex: WhatsApp)
 - Atualizações externas de status via comandos
 
 
