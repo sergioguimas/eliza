@@ -3,8 +3,7 @@
 import { createClient } from "@supabase/supabase-js"
 import { Database } from "@/utils/database.types"
 
-// 🛡️ CONFIGURAÇÃO DE SEGURANÇA (FALLBACK)
-const DEFAULT_URL =  process.env.NEXT_PUBLIC_EVOLUTION_API_URL || ""
+const DEFAULT_URL = process.env.NEXT_PUBLIC_EVOLUTION_API_URL || ""
 const DEFAULT_KEY = process.env.EVOLUTION_API_KEY || ""
 const DEFAULT_INSTANCE = "admin-painel-1768703535"
 
@@ -22,7 +21,21 @@ interface SendMediaProps {
   organizationId: string
 }
 
-export async function sendWhatsAppMessage({ phone, message, organizationId }: SendMessageProps) {
+function normalizePhone(phone: string) {
+  let cleanPhone = phone.replace(/\D/g, "")
+
+  if (cleanPhone.length >= 10 && cleanPhone.length <= 11) {
+    cleanPhone = `55${cleanPhone}`
+  }
+
+  return cleanPhone
+}
+
+export async function sendWhatsAppMessage({
+  phone,
+  message,
+  organizationId,
+}: SendMessageProps) {
   const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -30,46 +43,65 @@ export async function sendWhatsAppMessage({ phone, message, organizationId }: Se
 
   console.log(`📤 [SendWhatsApp] Iniciando envio para Org ID: ${organizationId}`)
 
-  // 1. Busca Configurações no Banco (Agora com permissão total)
-  const { data: org, error } = await supabase
-    .from('organizations')
-    .select('slug, evolution_api_url, evolution_api_key')
-    .eq('id', organizationId)
+  const { data: org, error: orgError } = await supabase
+    .from("organizations")
+    .select("slug, evolution_api_url, evolution_api_key")
+    .eq("id", organizationId)
     .single()
 
-  if (error) {
-    // Agora esse erro só vai aparecer se o ID realmente não existir
-    console.error("❌ [SendWhatsApp] Erro real ao buscar organização:", error.message)
+  if (orgError) {
+    console.error("❌ [SendWhatsApp] Erro ao buscar organização:", orgError.message)
   }
 
-  let evolutionUrl = process.env.EVOLUTION_API_URL || org?.evolution_api_url || DEFAULT_URL  
+  const { data: settings, error: settingsError } = await supabase
+    .from("organization_settings")
+    .select("whatsapp_instance_name")
+    .eq("organization_id", organizationId)
+    .maybeSingle()
+
+  if (settingsError) {
+    console.error("❌ [SendWhatsApp] Erro ao buscar settings:", settingsError.message)
+  }
+
+  let evolutionUrl =
+    process.env.EVOLUTION_API_URL ||
+    org?.evolution_api_url ||
+    DEFAULT_URL
+
   evolutionUrl = evolutionUrl.replace(/\/$/, "")
-  const apiKey = (process.env.EVOLUTION_API_KEY || org?.evolution_api_key || DEFAULT_KEY) as string
-  const instanceName = DEFAULT_INSTANCE
 
-  // 3. Tratamento do Telefone
-  let cleanPhone = phone.replace(/\D/g, '')
-  if (cleanPhone.length >= 10 && cleanPhone.length <= 11) {
-    cleanPhone = '55' + cleanPhone
+  const apiKey =
+    process.env.EVOLUTION_API_KEY ||
+    org?.evolution_api_key ||
+    DEFAULT_KEY
+
+  const instanceName =
+    settings?.whatsapp_instance_name ||
+    DEFAULT_INSTANCE
+
+  if (!evolutionUrl || !apiKey || !instanceName) {
+    return {
+      success: false,
+      error: "Configuração da Evolution API incompleta.",
+    }
   }
 
-  // 4. Montagem da URL Final
+  const cleanPhone = normalizePhone(phone)
   const finalEndpoint = `${evolutionUrl}/message/sendText/${instanceName}`
 
-  // 5. Disparo
   try {
     const response = await fetch(finalEndpoint, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'apikey': apiKey
+        "Content-Type": "application/json",
+        apikey: apiKey,
       },
       body: JSON.stringify({
         number: cleanPhone,
         text: message,
         linkPreview: false,
-        delay: 1200
-      })
+        delay: 1200,
+      }),
     })
 
     const data = await response.json()
@@ -81,59 +113,80 @@ export async function sendWhatsAppMessage({ phone, message, organizationId }: Se
 
     console.log("✅ [SendWhatsApp] Enviado com sucesso!")
     return { success: true, data }
-
   } catch (err: any) {
-    console.error("🔥 [SendWhatsApp] Falha de Conexão:", err.message)
+    console.error("🔥 [SendWhatsApp] Falha de conexão:", err.message)
     return { success: false, error: "Erro de conexão com API" }
   }
 }
 
-export async function sendWhatsAppMedia({ phone, caption, media, fileName, organizationId }: SendMediaProps) {
-  const supabase = createClient(
+export async function sendWhatsAppMedia({
+  phone,
+  caption,
+  media,
+  fileName,
+  organizationId,
+}: SendMediaProps) {
+  const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
   console.log(`📤 [SendMedia] Preparando envio de arquivo para Org: ${organizationId}`)
 
-  // 1. Busca Configurações
   const { data: org } = await supabase
-    .from('organizations')
-    .select('slug, evolution_api_url, evolution_api_key')
-    .eq('id', organizationId)
+    .from("organizations")
+    .select("slug, evolution_api_url, evolution_api_key")
+    .eq("id", organizationId)
     .single()
 
-  let evolutionUrl = process.env.EVOLUTION_API_URL || org?.evolution_api_url || DEFAULT_URL
+  const { data: settings } = await supabase
+    .from("organization_settings")
+    .select("whatsapp_instance_name")
+    .eq("organization_id", organizationId)
+    .maybeSingle()
+
+  let evolutionUrl =
+    process.env.EVOLUTION_API_URL ||
+    org?.evolution_api_url ||
+    DEFAULT_URL
+
   evolutionUrl = evolutionUrl.replace(/\/$/, "")
-  const apiKey = (process.env.EVOLUTION_API_KEY || org?.evolution_api_key || DEFAULT_KEY) as string
-  const instanceName = DEFAULT_INSTANCE
 
+  const apiKey =
+    process.env.EVOLUTION_API_KEY ||
+    org?.evolution_api_key ||
+    DEFAULT_KEY
 
-  // 2. Tratamento do Telefone
-  let cleanPhone = phone.replace(/\D/g, '')
-  if (cleanPhone.length >= 10 && cleanPhone.length <= 11) {
-    cleanPhone = '55' + cleanPhone
+  const instanceName =
+    settings?.whatsapp_instance_name ||
+    DEFAULT_INSTANCE
+
+  if (!evolutionUrl || !apiKey || !instanceName) {
+    return {
+      success: false,
+      error: "Configuração da Evolution API incompleta.",
+    }
   }
 
-  // 3. Endpoint de Mídia da Evolution API
+  const cleanPhone = normalizePhone(phone)
   const finalEndpoint = `${evolutionUrl}/message/sendMedia/${instanceName}`
 
   try {
     const response = await fetch(finalEndpoint, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'apikey': apiKey
+        "Content-Type": "application/json",
+        apikey: apiKey,
       },
       body: JSON.stringify({
         number: cleanPhone,
-        media: media,
+        media,
         mediatype: "document",
         mimetype: "application/pdf",
-        fileName: fileName,
-        caption: caption,
-        delay: 1200
-      })
+        fileName,
+        caption,
+        delay: 1200,
+      }),
     })
 
     const data = await response.json()
@@ -145,9 +198,8 @@ export async function sendWhatsAppMedia({ phone, caption, media, fileName, organ
 
     console.log("✅ [SendMedia] Arquivo enviado com sucesso!")
     return { success: true, data }
-
   } catch (err: any) {
-    console.error("🔥 [SendMedia] Falha de Conexão:", err.message)
+    console.error("🔥 [SendMedia] Falha de conexão:", err.message)
     return { success: false, error: "Erro de conexão com API" }
   }
 }

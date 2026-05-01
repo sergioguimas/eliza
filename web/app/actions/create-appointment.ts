@@ -5,12 +5,34 @@ import { revalidatePath } from "next/cache"
 import { sendWhatsAppMessage } from "./send-whatsapp"
 import { checkProfessionalAvailability } from "@/lib/appointment-config"
 import { Database } from "@/utils/database.types"
-import { sendAppointmentConfirmation } from "./whatsapp-messages"
 
 type AppointmentInsert = Database["public"]["Tables"]["appointments"]["Insert"]
 
 function onlyNumbers(value?: string | null) {
   return value?.replace(/\D/g, "") || null
+}
+
+function formatDateTime(date: Date) {
+  return date.toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+}
+
+function renderMessageTemplate(
+  template: string | null | undefined,
+  variables: Record<string, string | number | null | undefined>
+) {
+  if (!template) return null
+
+  return template.replace(/\{\{?\s*(\w+)\s*\}?\}/g, (_, key) => {
+    const value = variables[key]
+    return value === null || value === undefined ? "" : String(value)
+  })
 }
 
 export async function createAppointment(formData: FormData) {
@@ -55,7 +77,7 @@ export async function createAppointment(formData: FormData) {
 
     const { data: existingCustomer, error: findCustomerError } = await supabase
       .from("customers")
-      .select("id, name")
+      .select("id, name, phone")
       .eq("organization_id", organization_id)
       .or(orFilters)
       .maybeSingle()
@@ -93,6 +115,25 @@ export async function createAppointment(formData: FormData) {
     }
   }
 
+  if (!customer_id) {
+    return { error: "Paciente não identificado para o agendamento." }
+  }
+
+  const { data: finalCustomer, error: finalCustomerError } = await supabase
+    .from("customers")
+    .select("id, name, phone")
+    .eq("id", customer_id)
+    .eq("organization_id", organization_id)
+    .single()
+
+  if (finalCustomerError || !finalCustomer) {
+    console.error("Erro ao buscar paciente final:", finalCustomerError)
+    return { error: "Erro ao buscar dados do paciente para notificação." }
+  }
+
+  const finalCustomerName = finalCustomer.name
+  const finalCustomerPhone = onlyNumbers(finalCustomer.phone)
+
   const { data: service, error: serviceError } = await supabase
     .from("services")
     .select("duration_minutes, price, title")
@@ -103,6 +144,26 @@ export async function createAppointment(formData: FormData) {
     console.error("Erro ao buscar serviço:", serviceError)
     return { error: "Serviço não encontrado." }
   }
+
+  const { data: professional, error: professionalError } = await supabase
+    .from("professionals")
+    .select("name, phone")
+    .eq("id", professional_id)
+    .single()
+
+  if (professionalError || !professional) {
+    console.error("Erro ao buscar profissional:", professionalError)
+    return { error: "Profissional não encontrado." }
+  }
+
+  const { data: settings } = await supabase
+    .from("organization_settings")
+    .select(`
+      msg_appointment_pending,
+      msg_appointment_created
+    `)
+    .eq("organization_id", organization_id)
+    .maybeSingle()
 
   const duration_minutes = service.duration_minutes || 30
   const price = service.price || 0
@@ -159,33 +220,87 @@ export async function createAppointment(formData: FormData) {
     return { error: "Erro ao salvar agendamento." }
   }
 
-  const { data: prof } = await supabase
-    .from("professionals")
-    .select("name, phone")
-    .eq("id", professional_id)
-    .single()
+  const appointmentDateTime = formatDateTime(startTime)
 
-  const notifications = []
+  const appointmentDate = startTime.toLocaleDateString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+  })
 
-  if (prof?.phone) {
-    const formattedDate = startTime.toLocaleString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
+  const appointmentTime = startTime.toLocaleTimeString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
 
-    notifications.push(
-      sendWhatsAppMessage({
-        phone: prof.phone,
-        message: `🔔 *Novo Pré-agendamento*\n\nProfissional: ${prof.name}\nCliente: ${customer_name}\nServiço: ${service.title}\nHorário: ${formattedDate}`,
-        organizationId: organization_id,
-      })
-    )
+  const templateVariables = {
+    appointment_id: newAppointment.id,
+
+    customer_name: finalCustomerName,
+    customer_phone: finalCustomerPhone,
+
+    professional_name: professional.name,
+    professional_phone: professional.phone,
+
+    service_title: service.title,
+    service_name: service.title,
+
+    appointment_datetime: appointmentDateTime,
+    start_time: appointmentDateTime,
+
+    duration_minutes,
+    price,
+    notes,
+
+    // aliases antigos
+    name: finalCustomerName,
+    service: service.title,
+    date: appointmentDate,
+    time: appointmentTime,
   }
 
-  notifications.push(sendAppointmentConfirmation(newAppointment.id))
+  const notifications: Promise<any>[] = []
+
+  /**
+   * Público:
+   * envia pré-agendamento para o profissional.
+   */
+  if (is_public_booking && professional.phone) {
+    const pendingMessage = renderMessageTemplate(
+      settings?.msg_appointment_pending,
+      templateVariables
+    )
+
+    if (pendingMessage) {
+      notifications.push(
+        sendWhatsAppMessage({
+          phone: professional.phone,
+          message: pendingMessage,
+          organizationId: organization_id,
+        })
+      )
+    }
+  }
+
+  /**
+   * Interno:
+   * envia mensagem de agendamento criado para o cliente.
+   */
+  if (!is_public_booking && finalCustomerPhone) {
+    const createdMessage = renderMessageTemplate(
+      settings?.msg_appointment_created,
+      templateVariables
+    )
+
+    if (createdMessage) {
+      notifications.push(
+        sendWhatsAppMessage({
+          phone: finalCustomerPhone,
+          message: createdMessage,
+          organizationId: organization_id,
+        })
+      )
+    }
+  }
 
   await Promise.allSettled(notifications)
 
