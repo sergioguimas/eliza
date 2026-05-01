@@ -122,7 +122,7 @@ export function LoginForm() {
         </CardContent>
 
         <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="mt-5 px-8 border" disabled={loading}>
             {loading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : isLogin ? (
@@ -133,7 +133,7 @@ export function LoginForm() {
           </Button>
 
           {isInvite && (
-            <div className="text-center text-sm">
+            <div className="text-center text-sm mt-5">
               {isLogin ? (
                 <p className="text-muted-foreground">
                   É seu primeiro acesso?{' '}

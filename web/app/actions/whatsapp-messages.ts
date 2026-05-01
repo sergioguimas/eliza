@@ -1,13 +1,21 @@
 'use server'
 
-import { createClient } from "@/utils/supabase/server"
+import { createAdminClient } from "@/utils/supabase/admin"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Database } from "@/utils/database.types"
 
-// Função auxiliar para trocar as variáveis {name}, {date}, etc.
-function replaceVariables(template: string, data: any) {
-  if (!template) return ""
+type AppointmentMessageType = "pending" | "created" | "canceled"
+
+type TemplateData = {
+  name?: string
+  date?: string
+  time?: string
+  service?: string
+  professional?: string
+}
+
+function replaceVariables(template: string, data: TemplateData) {
   return template
     .replace(/{name}/g, data.name || "")
     .replace(/{date}/g, data.date || "")
@@ -16,169 +24,198 @@ function replaceVariables(template: string, data: any) {
     .replace(/{professional}/g, data.professional || "")
 }
 
-export async function sendAppointmentConfirmation(appointmentId: string) {
-   const supabase = await createClient()
+function normalizeEvolutionUrl(url?: string | null) {
+  return url?.replace(/\/$/, "") || ""
+}
 
-  // 1. Busca os dados COMPLETOS + Configurações de Mensagem
-  // (Corrigido para 'professionals' e extraindo o 'error' para não falhar silenciosamente)
+function normalizePhoneBR(phone?: string | null) {
+  const raw = phone?.replace(/\D/g, "") || ""
+
+  if (!raw) return null
+
+  return raw.startsWith("55") ? raw : `55${raw}`
+}
+
+function getFirstName(name?: string | null) {
+  return name?.trim().split(" ")[0] || ""
+}
+
+function getMessageTemplate(params: {
+  type: AppointmentMessageType
+  settings: any
+}) {
+  const { type, settings } = params
+
+  if (type === "pending") {
+    return (
+      settings?.msg_appointment_pending ||
+      "Olá {name}, recebemos sua solicitação de agendamento para {service} em {date} às {time}. Em breve nossa equipe confirmará o horário."
+    )
+  }
+
+  if (type === "canceled") {
+    return (
+      settings?.msg_appointment_canceled ||
+      "Olá {name}, seu agendamento para {service} em {date} às {time} foi cancelado."
+    )
+  }
+
+  return (
+    settings?.msg_appointment_created ||
+    "Olá {name}, seu agendamento para {service} em {date} às {time} foi confirmado com {professional}."
+  )
+}
+
+async function sendAppointmentMessage(
+  appointmentId: string,
+  type: AppointmentMessageType
+) {
+  const supabase = createAdminClient<Database>()
+
   const { data: appointment, error } = await supabase
-    .from('appointments')
+    .from("appointments")
     .select(`
-      *,
-      customers ( name, phone ),
-      services ( title, duration_minutes ),
-      professionals ( name ),
+      id,
+      status,
+      start_time,
+      customers (
+        name,
+        phone
+      ),
+      services (
+        title
+      ),
+      professionals (
+        name
+      ),
       organizations (
         slug,
         evolution_api_url,
         evolution_api_key,
-        organization_settings ( msg_appointment_created )
+        organization_settings (
+          msg_appointment_pending,
+          msg_appointment_created,
+          msg_appointment_canceled
+        )
       )
     `)
-    .eq('id', appointmentId)
+    .eq("id", appointmentId)
     .single() as any
 
-  // 🚨 DEFESA: Se o banco reclamar de algo, GRITE no log!
-  if (error) {
-    console.error("❌ [ERR_DB_QUERY] Erro ao buscar dados para WhatsApp:", error.message || error);
-    return { error: "Agendamento não encontrado" }
+  if (error || !appointment) {
+    console.error("❌ [WhatsApp] Agendamento não encontrado:", error)
+    return { error: "Agendamento não encontrado." }
   }
 
-  // 🚨 DEFESA: Se não achou o agendamento, avise em vez de sumir.
-  if (!appointment) {
-    console.error(`❌ [ERR_NOT_FOUND] Agendamento ID ${appointmentId} veio vazio do banco.`);
-    return { error: "Agendamento não encontrado." };
+  const organization = appointment.organizations
+  const customer = appointment.customers
+  const service = appointment.services
+  const professional = appointment.professionals
+  const settings =
+    organization?.organization_settings?.[0] ||
+    organization?.organization_settings
+
+  const phone = normalizePhoneBR(customer?.phone)
+
+  if (!phone) {
+    console.error(`❌ [WhatsApp] Agendamento ${appointmentId}: cliente sem telefone.`)
+    return { error: "Cliente sem telefone." }
   }
 
-  // 2. Validações
-  if (!appointment.customers?.phone) {
-    console.error(`❌ [ERR_VALIDATION] Agendamento ${appointmentId} abortado: Cliente sem telefone.`);
-    return { error: "Cliente sem telefone" }
-  }
-  if (!appointment.organizations?.slug) {
-    console.error(`❌ [ERR_VALIDATION] Agendamento ${appointmentId} abortado: Organização sem slug.`);
-    return { error: "Organização sem instância WhatsApp" }
+  if (!organization?.slug) {
+    console.error(`❌ [WhatsApp] Agendamento ${appointmentId}: organização sem slug.`)
+    return { error: "Organização sem instância WhatsApp." }
   }
 
-  // 3. Configuração
-  const instanceName = appointment.organizations.slug
-  let EVOLUTION_URL = process.env.EVOLUTION_API_URL || appointment.organizations.evolution_api_url || "";
-  EVOLUTION_URL = EVOLUTION_URL.replace(/\/$/, ""); // Remove barra extra no final, se houver
-  const API_KEY = process.env.EVOLUTION_API_KEY || appointment.organizations.evolution_api_key || "";
+  const evolutionUrl = normalizeEvolutionUrl(
+    process.env.EVOLUTION_API_URL || organization.evolution_api_url
+  )
 
-  if (!EVOLUTION_URL || !API_KEY) {
-    console.error("❌ [ERR_CFG_MISSING] [SendWhatsApp] Falha de Configuração: URL ou API_KEY ausentes.")
+  const apiKey =
+    process.env.EVOLUTION_API_KEY ||
+    organization.evolution_api_key ||
+    ""
+
+  if (!evolutionUrl || !apiKey) {
+    console.error("❌ [WhatsApp] Configuração da Evolution ausente.")
     return { error: "Configuração do WhatsApp ausente." }
-  }   
+  }
 
-  // 4. Formata Telefone e Dados
-  const rawPhone = appointment.customers.phone.replace(/\D/g, "")
-  const phone = rawPhone.startsWith("55") ? rawPhone : `55${rawPhone}`
   const dateObj = new Date(appointment.start_time)
-  const dateStr = format(dateObj, "dd/MM/yyyy", { locale: ptBR })
-  const timeStr = format(dateObj, "HH:mm", { locale: ptBR })
-  
-  // 5. Pega o template do banco (ou usa um padrão se falhar)
-  const settings = appointment.organizations.organization_settings?.[0] || appointment.organizations.organization_settings
-  const template = settings?.msg_appointment_created || "Olá {name}, seu agendamento para {service} em {date} às {time} foi confirmado."
+  const date = format(dateObj, "dd/MM/yyyy", { locale: ptBR })
+  const time = format(dateObj, "HH:mm", { locale: ptBR })
 
-  // 6. Monta a mensagem final substituindo as variáveis
-  const messageText = replaceVariables(template, {
-    name: appointment.customers.name.split(' ')[0],
-    date: dateStr,
-    time: timeStr,
-    service: appointment.services?.title || 'Consulta',
-    professional: appointment.professional?.name || 'Profissional'
+  const template = getMessageTemplate({
+    type,
+    settings,
   })
 
-  console.log(`🔥 [SYS_INFO] [Rastreador] URL: ${EVOLUTION_URL}/message/sendText/${instanceName}`)
-  console.log(`📤 [SYS_ACTION] [SendWhatsApp] Enviando confirmação personalizada para ${phone}...`)
+  const text = replaceVariables(template, {
+    name: getFirstName(customer?.name),
+    date,
+    time,
+    service: service?.title || "Consulta",
+    professional: professional?.name || "Profissional",
+  })
 
   try {
-   const response =  await fetch(`${EVOLUTION_URL}/message/sendText/${instanceName}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': API_KEY },
-      body: JSON.stringify({
-        number: phone,
-        text: messageText
-      })
-    })
-    
-    if (!response.ok) {
-      const errorData = await response.text(); // Pega a resposta de erro da Evolution
-      console.error(`❌ [Evolution API Recusou] Status: ${response.status} - Detalhe:`, errorData);
-      return { error: "A API do WhatsApp recusou o envio." };
-    }    
+    console.log(`📤 [WhatsApp] Enviando mensagem "${type}" para ${phone}`)
 
-    console.log("✅ Mensagem enviada com sucesso!");
-    return { success: true  }
-  }   catch (err: any) {
-    console.error("🔥 [SendWhatsApp] CAUSA REAL DA FALHA:", err.cause || err)
-    console.error("❌ Erro de Conexão:", err)
-    return { error: "Erro crítico de conexão com api" }
+    const response = await fetch(
+      `${evolutionUrl}/message/sendText/${organization.slug}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: apiKey,
+        },
+        body: JSON.stringify({
+          number: phone,
+          text,
+        }),
+      }
+    )
+
+    if (!response.ok) {
+      const responseText = await response.text()
+
+      console.error(
+        `❌ [WhatsApp] Evolution recusou envio (${response.status}):`,
+        responseText
+      )
+
+      return { error: "A API do WhatsApp recusou o envio." }
+    }
+
+    console.log(`✅ [WhatsApp] Mensagem "${type}" enviada com sucesso.`)
+
+    return { success: true }
+  } catch (err: any) {
+    console.error("🔥 [WhatsApp] Falha de conexão:", err?.cause || err)
+    return { error: "Erro crítico de conexão com a Evolution API." }
   }
 }
 
-export async function sendAppointmentCancellation(appointmentId: string) {
-  const supabase = await createClient()
+export async function sendAppointmentConfirmation(appointmentId: string) {
+  const supabase = createAdminClient<Database>()
 
-  // 1. Busca dados + Template de Cancelamento
-  const { data: appointment } = await supabase
-    .from('appointments')
-    .select(`
-      *,
-      customers ( name, phone ),
-      services ( title ),
-      profiles ( full_name ),
-      organizations ( 
-        slug, 
-        evolution_api_url, 
-        evolution_api_key,
-        organization_settings ( msg_appointment_canceled )
-      )
-    `)
-    .eq('id', appointmentId)
-    .single() as any
+  const { data: appointment, error } = await supabase
+    .from("appointments")
+    .select("status")
+    .eq("id", appointmentId)
+    .single()
 
-  if (!appointment?.customers?.phone || !appointment?.organizations?.slug) return
-
-  // 2. Configura API
-  const instanceName = appointment.organizations.slug
-  const EVOLUTION_URL = process.env.NEXT_PUBLIC_EVOLUTION_API_URL || appointment.organizations.evolution_api_url
-  const API_KEY = process.env.EVOLUTION_API_KEY || appointment.organizations.evolution_api_key
-  
-  const rawPhone = appointment.customers.phone.replace(/\D/g, "")
-  const phone = rawPhone.startsWith("55") ? rawPhone : `55${rawPhone}`
-
-  // 3. Dados para substituição
-  const dateObj = new Date(appointment.start_time)
-  const dateStr = format(dateObj, "dd/MM/yyyy", { locale: ptBR })
-  const timeStr = format(dateObj, "HH:mm", { locale: ptBR })
-
-  // 4. Pega Template e Substitui
-  const settings = appointment.organizations.organization_settings?.[0] || appointment.organizations.organization_settings
-  const template = settings?.msg_appointment_canceled || "Olá {name}, seu agendamento em {date} foi cancelado."
-
-  const message = replaceVariables(template, {
-    name: appointment.customers.name.split(' ')[0],
-    date: dateStr,
-    time: timeStr,
-    service: appointment.services?.title || 'Consulta',
-    professional: appointment.professional?.name || ''
-  }) 
-
-  console.log(`🔥 [Rastreador] URL de Cancelamento: ${EVOLUTION_URL}/message/sendText/${instanceName}`)
-
-  // 5. Envia
-  try {
-    await fetch(`${EVOLUTION_URL}/message/sendText/${instanceName}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': API_KEY },
-      body: JSON.stringify({ number: phone, text: message })
-    })
-  } catch (err: any) {
-    console.error("🔥 [SendWhatsApp] CAUSA REAL DA FALHA:", err.cause || err);
-    console.log("EVOLUTION_URL:", EVOLUTION_URL)
-    console.error("Erro ao enviar cancelamento:", err)
+  if (error || !appointment) {
+    console.error("❌ [WhatsApp] Não foi possível identificar status:", error)
+    return { error: "Agendamento não encontrado." }
   }
+
+  const messageType: AppointmentMessageType =
+    appointment.status === "pending" ? "pending" : "created"
+
+  return sendAppointmentMessage(appointmentId, messageType)
+}
+
+export async function sendAppointmentCancellation(appointmentId: string) {
+  return sendAppointmentMessage(appointmentId, "canceled")
 }
