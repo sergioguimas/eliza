@@ -1,160 +1,122 @@
-'use server'
-
 import { createClient } from "@supabase/supabase-js"
-import { Database } from "@/utils/database.types"
 import { sendWhatsAppMessage } from "@/app/actions/send-whatsapp"
+import { Database } from "@/utils/database.types"
 
-// 🌎 Timezone fixo (Brasil)
+const supabase = createClient<Database>(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
+
 const TZ = "America/Sao_Paulo"
 
-// 🔌 Supabase (service role para bypass RLS)
-function getSupabase() {
-  return createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+function nowSP() {
+  return new Date(
+    new Date().toLocaleString("en-US", { timeZone: TZ })
   )
 }
 
-// 🕒 Helpers de data
-function nowInBrazil() {
-  return new Date(new Date().toLocaleString("en-US", { timeZone: TZ }))
+function formatTime(date: Date) {
+  return date.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: TZ,
+  })
 }
 
-function getTodayRange() {
-  const now = nowInBrazil()
-  const start = new Date(now)
-  start.setHours(0, 0, 0, 0)
-
-  const end = new Date(now)
-  end.setHours(23, 59, 59, 999)
-
-  return {
-    start: start.toISOString(),
-    end: end.toISOString(),
-    date: start.toISOString().slice(0, 10), // YYYY-MM-DD
-  }
+function formatDate(date: Date) {
+  return date.toLocaleDateString("pt-BR", {
+    timeZone: TZ,
+  })
 }
 
-function getMinutesNow() {
-  const now = nowInBrazil()
-  return now.getHours() * 60 + now.getMinutes()
-}
+function render(
+  template: string | null | undefined,
+  vars: Record<string, any>
+) {
+  if (!template) return null
 
-// --------------------------------------------------
-// 🩺 1) RESUMO DO MÉDICO
-// --------------------------------------------------
+  return template.replace(/\{\{?\s*(\w+)\s*\}?\}/g, (_, key) => {
+    return vars[key] ?? ""
+  })
+}
 
 export async function processDoctorDailySummaries() {
-  const supabase = getSupabase()
-  const { start, end, date } = getTodayRange()
-  const nowMinutes = getMinutesNow()
-  const todayWeekday = nowInBrazil().getDay()
+  const now = nowSP()
 
-  console.log("🩺 [CRON] Processando resumo dos médicos...")
+  if (now.getHours() !== 8) {
+    return { skipped: true }
+  }
 
-  // 1. Buscar disponibilidades ativas hoje
-  const { data: availabilities } = await supabase
-    .from("professional_availability")
+  const startDay = new Date(now)
+  startDay.setHours(0, 0, 0, 0)
+
+  const endDay = new Date(now)
+  endDay.setHours(23, 59, 59, 999)
+
+  const { data: appointments } = await supabase
+    .from("appointments")
     .select(`
-      professional_id,
+      id,
+      organization_id,
       start_time,
-      is_active,
-      professionals (
-        id,
-        name,
-        phone,
-        organization_id
-      )
+      reminder_morning_sent_at,
+      professional:professionals(name, phone),
+      customer:customers(name),
+      settings:organization_settings(msg_doctor_daily_summary)
     `)
-    .eq("day_of_week", todayWeekday)
-    .eq("is_active", true)
+    .gte("start_time", startDay.toISOString())
+    .lte("start_time", endDay.toISOString())
+    .in("status", ["scheduled", "confirmed"])
 
-  if (!availabilities || availabilities.length === 0) {
-    return { sent: 0 }
+  if (!appointments?.length) return { sent: 0 }
+
+  const grouped: Record<string, any[]> = {}
+
+  for (const appt of appointments) {
+    if (appt.reminder_morning_sent_at) continue
+    if (!appt.professional?.phone) continue    
+
+    const key = `${appt.organization_id}-${appt.professional.phone}`
+
+    if (!grouped[key]) grouped[key] = []
+    grouped[key].push(appt)
   }
 
   let sent = 0
 
-  for (const av of availabilities) {
-    const professional = av.professionals
+  for (const key in grouped) {
+    const list = grouped[key]
+    const orgId = list[0].organization_id
+    const phone = list[0].professional.phone
 
-    if (!professional?.phone) continue
+    if (!phone) continue
 
-    // ⏱️ converte HH:mm → minutos
-    const [h, m] = av.start_time.split(":").map(Number)
-    const startMinutes = h * 60 + m
+    const lines = list.map((a) => {
+      return `${formatTime(new Date(a.start_time))} - ${a.customer.name}`
+    })
 
-    // ⏱️ janela de 5 minutos
-    if (nowMinutes < startMinutes || nowMinutes > startMinutes + 4) {
-      continue
-    }
+    const template = list[0].settings?.msg_doctor_daily_summary
 
-    // 🚫 evitar duplicado
-    const { data: alreadySent } = await supabase
-      .from("notification_dispatches")
-      .select("id")
-      .eq("kind", "doctor_daily_summary")
-      .eq("professional_id", professional.id)
-      .eq("dispatch_date", date)
-      .maybeSingle()
+    const message =
+      render(template, {
+        date: formatDate(now),
+        agenda: lines.join("\n"),
+      }) ||
+      `📅 Agenda do dia:\n\n${lines.join("\n")}`
 
-    if (alreadySent) continue
-
-    // 📅 buscar agenda do dia
-    const { data: appointments } = await supabase
-      .from("appointments")
-      .select(`
-        id,
-        start_time,
-        customer:customers ( name ),
-        service:services ( title )
-      `)
-      .eq("professional_id", professional.id)
-      .gte("start_time", start)
-      .lte("start_time", end)
-      .in("status", ["pending", "scheduled", "confirmed"])
-      .order("start_time", { ascending: true })
-
-    // 🧠 montar mensagem
-    let list = ""
-
-    if (!appointments || appointments.length === 0) {
-      list = "Nenhum agendamento hoje."
-    } else {
-      list = appointments
-        .map((a, i) => {
-          const time = new Date(a.start_time)
-            .toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-
-          return `${i + 1}. ${time} - ${a.customer?.name || "Paciente"}`
-        })
-        .join("\n")
-    }
-
-    const firstName = professional.name.split(" ")[0]
-
-    const message = `Bom dia, ${firstName}! ☀️
-
-Sua agenda de hoje:
-
-${list}
-
-Total: ${appointments?.length || 0} paciente(s).`
-
-    // 📤 envio
     await sendWhatsAppMessage({
-      phone: professional.phone,
+      phone,
       message,
-      organizationId: professional.organization_id,
+      organizationId: orgId,
     })
 
-    // 📝 log
-    await supabase.from("notification_dispatches").insert({
-      kind: "doctor_daily_summary",
-      professional_id: professional.id,
-      organization_id: professional.organization_id,
-      dispatch_date: date,
-    })
+    // marca todos como enviados
+    const ids = list.map((a) => a.id)
+
+    await supabase
+      .from("appointments")
+      .update({ reminder_morning_sent_at: now.toISOString() })
+      .in("id", ids)
 
     sent++
   }
@@ -162,89 +124,89 @@ Total: ${appointments?.length || 0} paciente(s).`
   return { sent }
 }
 
-// --------------------------------------------------
-// 👤 2) LEMBRETE PARA PACIENTES (07:00)
-// --------------------------------------------------
-
 export async function processPatientMorningReminders() {
-  const supabase = getSupabase()
-  const { start, end, date } = getTodayRange()
-  const now = nowInBrazil()
+  const now = nowSP()
+  const nextHour = new Date(now.getTime() + 60 * 60000)
 
-  console.log("👤 [CRON] Processando lembretes de pacientes...")
-
-  // ⏱️ só roda entre 07:00 e 07:04
-  if (now.getHours() !== 7 || now.getMinutes() > 4) {
-    return { skipped: true }
-  }
-
-  // 📅 buscar consultas do dia
   const { data: appointments } = await supabase
     .from("appointments")
     .select(`
       id,
-      start_time,
       organization_id,
-      customer:customers ( id, name, phone ),
-      professional:professionals ( name )
+      start_time,
+      reminder_sent_at,
+      customer:customers(name, phone),
+      professional:professionals(name),
+      service:services(title)
     `)
-    .gte("start_time", start)
-    .lte("start_time", end)
-    .in("status", ["pending", "scheduled", "confirmed"])
+    .gte("start_time", now.toISOString())
+    .lte("start_time", nextHour.toISOString())
+    .in("status", ["scheduled", "confirmed"])
+    .is("reminder_sent_at", null)
 
-  if (!appointments || appointments.length === 0) {
-    return { sent: 0 }
-  }
+  if (!appointments?.length) return { sent: 0 }
 
   let sent = 0
 
+  const orgIds = [...new Set(appointments.map((a) => a.organization_id))]
+
+  const { data: settingsRows } = await supabase
+    .from("organization_settings")
+    .select("organization_id, msg_appointment_reminder, msg_doctor_daily_summary")
+    .in("organization_id", orgIds)
+
+  const settingsByOrg = new Map(
+    (settingsRows || []).map((s) => [s.organization_id, s])
+  )
+
   for (const appt of appointments) {
-    const customer = appt.customer
+    const phone = appt.customer.phone
+    if (!phone) continue
 
-    if (!customer?.phone) continue
+    const professional = Array.isArray(appt.professional)
+      ? appt.professional[0]
+      : appt.professional
 
-    // 🚫 evitar duplicado
-    const { data: alreadySent } = await supabase
-      .from("notification_dispatches")
-      .select("id")
-      .eq("kind", "patient_day_reminder")
-      .eq("appointment_id", appt.id)
-      .eq("dispatch_date", date)
-      .maybeSingle()
+    const customer = Array.isArray(appt.customer)
+      ? appt.customer[0]
+      : appt.customer
 
-    if (alreadySent) continue
+    const service = Array.isArray(appt.service)
+      ? appt.service[0]
+      : appt.service
 
-    const time = new Date(appt.start_time)
-      .toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+    if (!professional || !customer || !service) continue
 
-    const firstName = customer.name.split(" ")[0]
+    const settings = settingsByOrg.get(appt.organization_id)
+    const template = settings?.msg_appointment_reminder
 
-    const message = `Olá, ${firstName}! 👋
+    const date = formatDate(new Date(appt.start_time))
+    const time = formatTime(new Date(appt.start_time))
 
-Lembrete da sua consulta hoje às ${time} com ${appt.professional?.name || "o profissional"}.
+    const message =
+      render(template, {
+        name: customer.name,
+        service: service.title,
+        date,
+        time,
+        professional: professional.name,
+      }) ||
+      `⏰ Lembrete: ${service.title} às ${time}`
 
-Responda:
-- *SIM* para confirmar
-- *REMARCAR* para alterar
-- *CANCELAR* para cancelar`
-
-    // 📤 envio
-    await sendWhatsAppMessage({
-      phone: customer.phone,
+    const result = await sendWhatsAppMessage({
+      phone,
       message,
       organizationId: appt.organization_id,
     })
 
-    // 📝 log
-    await supabase.from("notification_dispatches").insert({
-      kind: "patient_day_reminder",
-      appointment_id: appt.id,
-      customer_id: customer.id,
-      organization_id: appt.organization_id,
-      dispatch_date: date,
-    })
+    if (result.success) {
+      await supabase
+        .from("appointments")
+        .update({ reminder_sent_at: now.toISOString() })
+        .eq("id", appt.id)
 
-    sent++
+      sent++
+    }
   }
 
   return { sent }
