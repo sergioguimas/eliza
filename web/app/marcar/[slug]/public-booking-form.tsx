@@ -66,7 +66,7 @@ const formSchema = z.object({
   time: z.string().min(1, "Selecione um horário"),
 
   customer_name: z.string().min(3, "O nome deve ter pelo menos 3 caracteres"),
-  customer_phone: z.string().min(10, "Informe um telefone válido com DDD"),
+  customer_phone: z.string().regex(/^55\d{10,11}$/, "Informe um telefone válido."),
 
   customer_document: z.string().min(11, "Informe o documento principal"),
   customer_birth_date: z.string().optional(),
@@ -126,19 +126,45 @@ export function PublicBookingForm({
     setMounted(true)
   }, [])
 
-  const phoneMask = (value: string) => {
-    if (!value) return ""
-    value = value.replace(/\D/g, "")
-    value = value.replace(/^(\d{2})(\d)/g, "($1) $2")
-    value = value.replace(/(\d{5})(\d)/, "$1-$2")
-    return value.substring(0, 15)
+  function formatPhoneBR(value: string) {
+    const numbers = value.replace(/\D/g, "");
+
+    // Remove 55 visualmente, caso já esteja salvo no form
+    const withoutCountryCode = numbers.startsWith("55")
+      ? numbers.slice(2)
+      : numbers;
+
+    const limited = withoutCountryCode.slice(0, 11);
+
+    if (limited.length <= 10) {
+      return limited
+        .replace(/(\d{2})(\d)/, "($1) $2")
+        .replace(/(\d{4})(\d)/, "$1-$2");
+    }
+
+    return limited
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{5})(\d)/, "$1-$2");
+  }
+
+  function normalizePhoneBR(value: string) {
+    const numbers = value.replace(/\D/g, "");
+
+    const withoutCountryCode = numbers.startsWith("55")
+      ? numbers.slice(2)
+      : numbers;
+
+    const limited = withoutCountryCode.slice(0, 11);
+
+    if (!limited) return "";
+
+    return `55${limited}`;
   }
 
   const selectedDate = form.watch("date")
   const selectedProf = form.watch("professional_id")
   const selectedServiceId = form.watch("service_id")
   const selectedTime = form.watch("time")
-  const customerName = form.watch("customer_name")
 
   const [documentValues, setDocumentValues] = useState<
     Record<string, { text?: string; file?: File }>
@@ -153,16 +179,6 @@ export function PublicBookingForm({
   const selectedProfessional = useMemo(
     () => professionals.find((p) => p.id === selectedProf),
     [professionals, selectedProf]
-  )
-
-  const uploadedCount = useMemo(
-    () => Object.values(selectedDocuments).filter(Boolean).length,
-    [selectedDocuments]
-  )
-
-  const describedDocumentsCount = useMemo(
-    () => Object.values(documentNotes).filter((value) => value?.trim()).length,
-    [documentNotes]
   )
 
   useEffect(() => {
@@ -185,20 +201,6 @@ export function PublicBookingForm({
 
     updateSlots()
   }, [selectedDate, selectedProf, organizationId, form])
-
-  function handleDocumentChange(documentId: string, file: File | null) {
-    setSelectedDocuments((prev) => ({
-      ...prev,
-      [documentId]: file,
-    }))
-  }
-
-  function handleDocumentNoteChange(documentId: string, value: string) {
-    setDocumentNotes((prev) => ({
-      ...prev,
-      [documentId]: value,
-    }))
-  }
 
   function setDocumentFile(documentId: string, file: File | null) {
     if (!file) return
@@ -492,7 +494,7 @@ export function PublicBookingForm({
           </div>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleFinalSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(handleFinalSubmit, (errors) => console.log("Erros do form: ", errors))} className="space-y-6">
               {currentStep === 1 && (
                 <>
                   <div className="space-y-2">
@@ -762,7 +764,30 @@ export function PublicBookingForm({
                             <FormItem>
                               <FormLabel>Telefone para contato</FormLabel>
                               <FormControl>
-                                <Input placeholder="(33) 99999-9999" {...field} />
+                                <Input
+                                  placeholder="(33) 99999-9999"
+                                  value={formatPhoneBR(field.value ?? "")}
+                                  onChange={(e) => {
+                                    field.onChange(normalizePhoneBR(e.target.value));
+                                  }}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="customer_document"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>CPF/CNPJ</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="Digite seu CPF ou CNPJ"
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -1002,7 +1027,14 @@ export function PublicBookingForm({
                         disabled={form.formState.isSubmitting || isPending}
                         className="w-full sm:w-auto"
                       >
-                        {form.formState.isSubmitting ? "Enviando..." : "Agendar agora"}
+                        {form.formState.isSubmitting || isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Enviando...
+                          </>
+                        ) : (
+                          "Agendar agora"
+                        )}
                       </Button>
                     </div>
                   </CardContent>

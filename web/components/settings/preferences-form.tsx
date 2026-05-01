@@ -14,17 +14,12 @@ import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { useKeckleon } from "@/providers/keckleon-provider"
 
-const { dict } = useKeckleon()
-
-const actions = dict.actions || {}
-const messages = dict.messages || {}
-const fields = dict.fields || {}
-const sections = dict.sections || {}
 
 export function PreferencesForm({ settings, organizationId, organizationData }: { settings: any, organizationId: string, organizationData?: any }) {
   const [isPending, startTransition] = useTransition()
 
   // Refs para variáveis
+  const pendingMsgRef = useRef<HTMLTextAreaElement>(null)
   const createdMsgRef = useRef<HTMLTextAreaElement>(null)
   const reminderMsgRef = useRef<HTMLTextAreaElement>(null)
   const canceledMsgRef = useRef<HTMLTextAreaElement>(null)
@@ -39,6 +34,13 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
     { id: 6, label: 'Sábado' },
     { id: 0, label: 'Domingo' },
   ]
+  
+  const { dict } = useKeckleon()
+
+  const actions = dict.actions || {}
+  const messages = dict.messages || {}
+  const fields = dict.fields || {}
+  const sections = dict.sections || {}
 
   async function handleSubmit(formData: FormData) {
       startTransition(async () => {
@@ -205,22 +207,52 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
 
                 <CardContent className="space-y-8">
                   <div className="space-y-2">
-                    <Label className="text-base font-semibold text-green-600 flex justify-between">
-                        {messages.msg_confirm || "Ao confirmar agendamento"}
-                        <VariableBadges
-                          targetRef={createdMsgRef}
-                          variables={['{name}', '{date}', '{time}', '{service}']}
-                        />
-                    </Label>
-                    <Textarea 
-                      ref={createdMsgRef}
-                      name="msg_appointment_created" 
-                      defaultValue={settings?.msg_appointment_created}
-                      placeholder={messages.msg_confirm_placeholder || "Olá {name}, seu agendamento para {date} às {time} foi confirmado!"}
-                      rows={3} 
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <Label className="text-base font-semibold text-amber-600">
+                        {messages.msg_pending || "Ao receber pré-agendamento"}
+                      </Label>
+
+                      <VariableBadges
+                        targetRef={pendingMsgRef}
+                        variables={["{name}", "{date}", "{time}", "{service}", "{professional}"]}
+                      />
+                    </div>
+
+                    <Textarea
+                      ref={pendingMsgRef}
+                      name="msg_appointment_pending"
+                      defaultValue={settings?.msg_appointment_pending}
+                      placeholder={
+                        messages.msg_pending_placeholder ||
+                        "Olá {name}, recebemos sua solicitação de agendamento para {service} em {date} às {time}. Em breve nossa equipe confirmará o horário."
+                      }
+                      rows={3}
                     />
                   </div>
 
+                  <div className="space-y-2">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <Label className="text-base font-semibold text-green-600">
+                        {messages.msg_confirm || "Ao confirmar agendamento"}
+                      </Label>
+
+                      <VariableBadges
+                        targetRef={createdMsgRef}
+                        variables={["{name}", "{date}", "{time}", "{service}", "{professional}"]}
+                      />
+                    </div>
+
+                    <Textarea
+                      ref={createdMsgRef}
+                      name="msg_appointment_created"
+                      defaultValue={settings?.msg_appointment_created}
+                      placeholder={
+                        messages.msg_confirm_placeholder ||
+                        "Olá {name}, seu agendamento para {service} em {date} às {time} foi confirmado com {professional}."
+                      }
+                      rows={3}
+                    />
+                  </div>
                   <div className="space-y-2">
                     <Label className="text-base font-semibold text-blue-600 flex justify-between">
                         {messages.msg_reminder || "Lembrete de Consulta"}
