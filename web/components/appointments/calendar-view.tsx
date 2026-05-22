@@ -193,8 +193,8 @@ function CalendarContent({
 
   if (!isMounted) {
     return (
-      <div className="flex h-[600px] items-center justify-center border rounded-md bg-zinc-900">
-        <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
+      <div className="flex h-[600px] items-center justify-center border rounded-md bg-card">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -415,12 +415,12 @@ function CalendarContent({
     }
 
     return (
-      <div className="rounded-md border border-zinc-800 bg-zinc-900 overflow-hidden">
-        <div className="grid grid-cols-7 border-b border-zinc-800 bg-zinc-950/50">
+      <div className="rounded-md border border-border bg-card overflow-hidden">
+        <div className="grid grid-cols-7 border-b border-border bg-muted/40">
           {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d) => (
             <div
               key={d}
-              className="py-2 text-center text-xs font-semibold text-zinc-500 uppercase tracking-wider"
+              className="py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider"
             >
               {d}
             </div>
@@ -445,9 +445,9 @@ function CalendarContent({
                     <ContextMenuTrigger className="h-full w-full">
                       <div
                         className={cn(
-                          "h-full w-full border-r border-b border-zinc-800/50 p-1 md:p-2 min-h-[80px] relative hover:bg-zinc-800/30 transition-colors group flex flex-col gap-1",
-                          !isSameMonth(day, monthStart) && "bg-zinc-950/30 opacity-40",
-                          isToday(day) && "bg-zinc-900"
+                          "h-full w-full border-r border-b border-border p-1 md:p-2 min-h-[80px] relative hover:bg-accent/50 transition-colors group flex flex-col gap-1",
+                          !isSameMonth(day, monthStart) && "bg-muted/30 opacity-40",
+                          isToday(day) && "bg-card"
                         )}
                       >
                         <span
@@ -455,7 +455,7 @@ function CalendarContent({
                             "text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full mb-1",
                             isToday(day)
                               ? "bg-primary text-primary-foreground"
-                              : "text-zinc-400 group-hover:text-zinc-200"
+                              : "text-muted-foreground group-hover:text-foreground"
                           )}
                         >
                           {format(day, "d")}
@@ -491,7 +491,7 @@ function CalendarContent({
     const hours = Array.from({ length: 17 }, (_, i) => i + 6)
 
     return (
-      <div className="rounded-md border border-zinc-800 bg-zinc-900 overflow-hidden flex flex-col h-[700px]">
+      <div className="rounded-md border border-border bg-card overflow-hidden flex flex-col h-[700px]">
         <div className="flex-1 overflow-y-auto">
           {hours.map((hour) => {
             const hourAppointments = filteredAppointments.filter((apt) => {
@@ -509,9 +509,9 @@ function CalendarContent({
             return (
               <ContextMenu key={hour}>
                 <ContextMenuTrigger>
-                  <div className="grid grid-cols-[60px_1fr] min-h-[100px] border-b border-zinc-800/50 group hover:bg-zinc-800/20 cursor-context-menu">
-                    <div className="border-r border-zinc-800/50 p-2 text-right">
-                      <span className="text-xs text-zinc-500 font-medium">
+                  <div className="grid grid-cols-[60px_1fr] min-h-[100px] border-b border-border group hover:bg-accent/40 cursor-context-menu">
+                    <div className="border-r border-border p-2 text-right">
+                      <span className="text-xs text-muted-foreground font-medium">
                         {hour.toString().padStart(2, "0")}:00
                       </span>
                     </div>
@@ -547,12 +547,12 @@ function CalendarContent({
     <div className="space-y-4">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center rounded-md border border-zinc-800 bg-zinc-900 p-1">
+          <div className="flex items-center rounded-md border border-border bg-card p-1">
             <Button
               variant="ghost"
               size="icon"
               onClick={previous}
-              className="h-8 w-8 text-zinc-400"
+              className="h-8 w-8 text-muted-foreground"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -561,7 +561,7 @@ function CalendarContent({
               variant="ghost"
               size="icon"
               onClick={today}
-              className="h-8 w-8 text-zinc-400"
+              className="h-8 w-8 text-muted-foreground"
             >
               <CalendarIcon className="h-4 w-4" />
             </Button>
@@ -570,24 +570,24 @@ function CalendarContent({
               variant="ghost"
               size="icon"
               onClick={next}
-              className="h-8 w-8 text-zinc-400"
+              className="h-8 w-8 text-muted-foreground"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
 
-          <h2 className="text-xl font-bold text-zinc-100 capitalize min-w-[150px]">
+          <h2 className="text-xl font-bold text-foreground capitalize min-w-[150px]">
             {view === "day"
               ? format(date, "d 'de' MMMM", { locale: ptBR })
               : format(date, "MMMM yyyy", { locale: ptBR })}
           </h2>
 
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-md">
-              <Filter className="w-3.5 h-3.5 text-zinc-400" />
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-md">
+              <Filter className="w-3.5 h-3.5 text-muted-foreground" />
 
               <Select value={filterId} onValueChange={setFilterId}>
-                <SelectTrigger className="w-[220px] h-7 border-0 bg-transparent focus:ring-0 p-0 text-xs text-zinc-200">
+                <SelectTrigger className="w-[220px] h-7 border-0 bg-transparent focus:ring-0 p-0 text-xs text-foreground">
                   <SelectValue
                     placeholder={`Todos os ${profissionalPlural.toLowerCase()}`}
                   />
@@ -621,7 +621,7 @@ function CalendarContent({
 
         <div className="flex items-center gap-2">
           <Tabs value={view} onValueChange={(v) => setView(v as any)} className="w-[180px]">
-            <TabsList className="grid w-full grid-cols-3 bg-zinc-950">
+            <TabsList className="grid w-full grid-cols-3 bg-muted">
               <TabsTrigger value="month">Mês</TabsTrigger>
               <TabsTrigger value="week" disabled className="opacity-50">
                 Sem
@@ -637,8 +637,8 @@ function CalendarContent({
       {view === "month" && renderMonthView()}
       {view === "day" && renderDayView()}
 
-      <div className="flex flex-wrap items-center gap-6 p-4 rounded-md border border-zinc-800 bg-zinc-900/50 text-xs">
-        <span className="font-semibold text-zinc-400 uppercase tracking-wider text-[10px]">
+      <div className="flex flex-wrap items-center gap-6 p-4 rounded-md border border-border bg-card/50 text-xs">
+        <span className="font-semibold text-muted-foreground uppercase tracking-wider text-[10px]">
           Legenda:
         </span>
 
@@ -661,7 +661,7 @@ function CalendarContent({
                   border: `1px solid ${config.border}`,
                 }}
               />
-              <span className="text-zinc-300">{getStatusLabel(status)}</span>
+              <span className="text-foreground">{getStatusLabel(status)}</span>
             </div>
           )
         })}

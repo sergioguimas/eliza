@@ -29,6 +29,9 @@ export async function GET(req: Request) {
     return NextResponse.json({
       ok: true,
       timestamp: new Date().toISOString(),
+      timestamp_sp: new Date().toLocaleString("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+      }),
       doctor: doctorResult,
       patient: patientResult,
     })

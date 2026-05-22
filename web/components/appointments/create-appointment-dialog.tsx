@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
@@ -60,7 +60,13 @@ export function CreateAppointmentDialog({
   const [isLoading, setIsLoading] = useState(false)
   const [showOutsideHoursAlert, setShowOutsideHoursAlert] = useState(false) 
   
-  const team = professionals.length > 0 ? professionals : staff
+  const team = useMemo(() => {
+    return professionals.length > 0 ? professionals : staff
+  }, [professionals, staff])
+
+  const firstTeamMemberId = useMemo(() => {
+    return team[0]?.id ?? ""
+  }, [team])
 
   const { dict } = useKeckleon()
 
@@ -85,57 +91,73 @@ export function CreateAppointmentDialog({
 
   // Preencher formulário ao abrir ou quando as props de pré-seleção mudarem
   useEffect(() => {
-    if (open) {
-      // 1. Resetar campos que não foram pré-selecionados
-      setCustomerName("")
-      setCustomerPhone("")
-      setNotes("")
-      setIsLoading(false)
-      setShowOutsideHoursAlert(false)
+    if (!open) return
 
-      // 2. Preencher Data e Hora
-      if (preselectedDate) {
-        const year = preselectedDate.getFullYear()
-        const month = String(preselectedDate.getMonth() + 1).padStart(2, '0')
-        const day = String(preselectedDate.getDate()).padStart(2, '0')
-        setDate(`${year}-${month}-${day}`)
+    setCustomerName("")
+    setCustomerPhone("")
+    setNotes("")
+    setIsLoading(false)
+    setShowOutsideHoursAlert(false)
 
-        const hours = preselectedDate.getHours()
-        const minutes = preselectedDate.getMinutes()
-        if (hours !== 0 || minutes !== 0) {
-             setTime(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`)
-        } else {
-             setTime("")
-        }
+    if (preselectedDate) {
+      const year = preselectedDate.getFullYear()
+      const month = String(preselectedDate.getMonth() + 1).padStart(2, "0")
+      const day = String(preselectedDate.getDate()).padStart(2, "0")
+
+      setDate(`${year}-${month}-${day}`)
+
+      const hours = preselectedDate.getHours()
+      const minutes = preselectedDate.getMinutes()
+
+      if (hours !== 0 || minutes !== 0) {
+        setTime(`${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`)
       } else {
-        setDate(new Date().toISOString().split('T')[0])
         setTime("")
       }
-      
-      // 3. Preencher Profissional
-      if (preselectedProfessionalId && preselectedProfessionalId !== 'all') {
-         setSelectedProfessionalId(preselectedProfessionalId)
-      } else if (currentUser?.role === 'professional' || currentUser?.role === 'owner') {
-        setSelectedProfessionalId(currentUser.id)
-      } else if (team.length > 0) {
-        setSelectedProfessionalId(team[0].id)
-      }
+    } else {
+      const today = new Date()
+      const year = today.getFullYear()
+      const month = String(today.getMonth() + 1).padStart(2, "0")
+      const day = String(today.getDate()).padStart(2, "0")
 
-      // 4. Preencher Cliente
-      if (preselectedCustomerId) {
-        setCustomerId(preselectedCustomerId)
-      } else {
-        setCustomerId("new")
-      }
-
-      // 5. Preencher Serviço
-      if (preselectedServiceId) {
-        setServiceId(preselectedServiceId)
-      } else {
-        setServiceId("")
-      }
+      setDate(`${year}-${month}-${day}`)
+      setTime("")
     }
-  }, [open, preselectedDate, preselectedProfessionalId, preselectedCustomerId, preselectedServiceId, currentUser, team])
+
+    if (preselectedProfessionalId && preselectedProfessionalId !== "all") {
+      setSelectedProfessionalId(preselectedProfessionalId)
+    } else if (currentUser?.role === "professional") {
+      const professionalFromUser = team.find(prof => prof.user_id === currentUser.id)
+
+      setSelectedProfessionalId(professionalFromUser?.id ?? firstTeamMemberId)
+    } else if (firstTeamMemberId) {
+      setSelectedProfessionalId(firstTeamMemberId)
+    } else {
+      setSelectedProfessionalId("")
+    }
+
+    if (preselectedCustomerId) {
+      setCustomerId(preselectedCustomerId)
+    } else {
+      setCustomerId("new")
+    }
+
+    if (preselectedServiceId) {
+      setServiceId(preselectedServiceId)
+    } else {
+      setServiceId("")
+    }
+  }, [
+    open,
+    preselectedDate,
+    preselectedProfessionalId,
+    preselectedCustomerId,
+    preselectedServiceId,
+    currentUser?.id,
+    currentUser?.role,
+    firstTeamMemberId,
+    team
+  ])
 
   const isWithinBusinessHours = (dateStr: string, timeStr: string) => {
     if (!settings) return true;
@@ -163,7 +185,10 @@ export function CreateAppointmentDialog({
     return true;
   };
 
-  const handlePreSubmit = () => {
+  const handlePreSubmit = (
+    event?: React.FormEvent<HTMLFormElement> | React.MouseEvent<HTMLButtonElement>
+  ) => {
+    event?.preventDefault()
     // 1. Validações Básicas
     if (!customerId && !customerName) {
       toast.error("Selecione um cliente existente ou digite o nome de um novo.")

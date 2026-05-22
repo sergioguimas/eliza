@@ -9,10 +9,98 @@ const supabase = createClient<Database>(
 
 const TZ = "America/Sao_Paulo"
 
-function nowSP() {
-  return new Date(
-    new Date().toLocaleString("en-US", { timeZone: TZ })
+// Altere aqui caso queira o resumo em outro horário.
+const DOCTOR_DAILY_SUMMARY_HOUR = 7
+
+function getDatePartsInTimeZone(date: Date, timeZone = TZ) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  })
+
+  const parts = formatter.formatToParts(date)
+
+  const get = (type: string) => {
+    const value = parts.find((part) => part.type === type)?.value
+    return Number(value)
+  }
+
+  return {
+    year: get("year"),
+    month: get("month"),
+    day: get("day"),
+    hour: get("hour"),
+    minute: get("minute"),
+    second: get("second"),
+  }
+}
+
+function getTimeZoneOffsetMs(date: Date, timeZone = TZ) {
+  const parts = getDatePartsInTimeZone(date, timeZone)
+
+  const utcFromTimeZoneParts = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second
   )
+
+  return utcFromTimeZoneParts - date.getTime()
+}
+
+function zonedTimeToUtc(
+  year: number,
+  month: number,
+  day: number,
+  hour = 0,
+  minute = 0,
+  second = 0,
+  millisecond = 0,
+  timeZone = TZ
+) {
+  const utcGuess = new Date(
+    Date.UTC(year, month - 1, day, hour, minute, second, millisecond)
+  )
+
+  const offset = getTimeZoneOffsetMs(utcGuess, timeZone)
+
+  return new Date(utcGuess.getTime() - offset)
+}
+
+function getTodayRangeInTimeZone(date: Date, timeZone = TZ) {
+  const parts = getDatePartsInTimeZone(date, timeZone)
+
+  const start = zonedTimeToUtc(
+    parts.year,
+    parts.month,
+    parts.day,
+    0,
+    0,
+    0,
+    0,
+    timeZone
+  )
+
+  const end = zonedTimeToUtc(
+    parts.year,
+    parts.month,
+    parts.day,
+    23,
+    59,
+    59,
+    999,
+    timeZone
+  )
+
+  return { start, end }
 }
 
 function formatTime(date: Date) {
@@ -40,20 +128,27 @@ function render(
   })
 }
 
-export async function processDoctorDailySummaries() {
-  const now = nowSP()
+function normalizeRelation<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null
+  return Array.isArray(value) ? value[0] ?? null : value
+}
 
-  if (now.getHours() !== 8) {
-    return { skipped: true }
+export async function processDoctorDailySummaries() {
+  const now = new Date()
+  const nowPartsSP = getDatePartsInTimeZone(now)
+
+  if (nowPartsSP.hour !== DOCTOR_DAILY_SUMMARY_HOUR) {
+    return {
+      skipped: true,
+      reason: "outside_summary_hour",
+      currentHourSP: nowPartsSP.hour,
+      expectedHourSP: DOCTOR_DAILY_SUMMARY_HOUR,
+    }
   }
 
-  const startDay = new Date(now)
-  startDay.setHours(0, 0, 0, 0)
+  const { start: startDay, end: endDay } = getTodayRangeInTimeZone(now)
 
-  const endDay = new Date(now)
-  endDay.setHours(23, 59, 59, 999)
-
-  const { data: appointments } = await supabase
+  const { data: appointments, error } = await supabase
     .from("appointments")
     .select(`
       id,
@@ -68,15 +163,28 @@ export async function processDoctorDailySummaries() {
     .lte("start_time", endDay.toISOString())
     .in("status", ["scheduled", "confirmed"])
 
-  if (!appointments?.length) return { sent: 0 }
+  if (error) {
+    console.error("🔥 [CRON] Erro ao buscar agenda dos profissionais:", error)
+    throw error
+  }
+
+  if (!appointments?.length) {
+    return {
+      sent: 0,
+      startDay: startDay.toISOString(),
+      endDay: endDay.toISOString(),
+    }
+  }
 
   const grouped: Record<string, any[]> = {}
 
   for (const appt of appointments) {
     if (appt.reminder_morning_sent_at) continue
-    if (!appt.professional?.phone) continue    
 
-    const key = `${appt.organization_id}-${appt.professional.phone}`
+    const professional = normalizeRelation(appt.professional)
+    if (!professional?.phone) continue
+
+    const key = `${appt.organization_id}-${professional.phone}`
 
     if (!grouped[key]) grouped[key] = []
     grouped[key].push(appt)
@@ -86,16 +194,25 @@ export async function processDoctorDailySummaries() {
 
   for (const key in grouped) {
     const list = grouped[key]
-    const orgId = list[0].organization_id
-    const phone = list[0].professional.phone
+
+    const firstAppointment = list[0]
+    const orgId = firstAppointment.organization_id
+
+    const professional = normalizeRelation(firstAppointment.professional)
+    const phone = professional?.phone
 
     if (!phone) continue
 
-    const lines = list.map((a) => {
-      return `${formatTime(new Date(a.start_time))} - ${a.customer.name}`
+    const lines = list.map((appointment) => {
+      const customer = normalizeRelation(appointment.customer)
+
+      return `${formatTime(new Date(appointment.start_time))} - ${
+        customer?.name ?? "Cliente não informado"
+      }`
     })
 
-    const template = list[0].settings?.msg_doctor_daily_summary
+    const settings = normalizeRelation(firstAppointment.settings)
+    const template = settings?.msg_doctor_daily_summary
 
     const message =
       render(template, {
@@ -104,31 +221,49 @@ export async function processDoctorDailySummaries() {
       }) ||
       `📅 Agenda do dia:\n\n${lines.join("\n")}`
 
-    await sendWhatsAppMessage({
+    const result = await sendWhatsAppMessage({
       phone,
       message,
       organizationId: orgId,
     })
 
-    // marca todos como enviados
-    const ids = list.map((a) => a.id)
+    if (!result.success) {
+      console.error("🔥 [CRON] Falha ao enviar resumo diário:", {
+        organizationId: orgId,
+        phone,
+        result,
+      })
 
-    await supabase
+      continue
+    }
+
+    const ids = list.map((appointment) => appointment.id)
+
+    const { error: updateError } = await supabase
       .from("appointments")
       .update({ reminder_morning_sent_at: now.toISOString() })
       .in("id", ids)
 
+    if (updateError) {
+      console.error("🔥 [CRON] Erro ao marcar resumo como enviado:", updateError)
+      throw updateError
+    }
+
     sent++
   }
 
-  return { sent }
+  return {
+    sent,
+    startDay: startDay.toISOString(),
+    endDay: endDay.toISOString(),
+  }
 }
 
 export async function processPatientMorningReminders() {
-  const now = nowSP()
-  const nextHour = new Date(now.getTime() + 60 * 60000)
+  const now = new Date()
+  const nextHour = new Date(now.getTime() + 60 * 60 * 1000)
 
-  const { data: appointments } = await supabase
+  const { data: appointments, error } = await supabase
     .from("appointments")
     .select(`
       id,
@@ -144,44 +279,52 @@ export async function processPatientMorningReminders() {
     .in("status", ["scheduled", "confirmed"])
     .is("reminder_sent_at", null)
 
-  if (!appointments?.length) return { sent: 0 }
+  if (error) {
+    console.error("🔥 [CRON] Erro ao buscar lembretes dos pacientes:", error)
+    throw error
+  }
+
+  if (!appointments?.length) {
+    return {
+      sent: 0,
+      start: now.toISOString(),
+      end: nextHour.toISOString(),
+    }
+  }
 
   let sent = 0
 
   const orgIds = [...new Set(appointments.map((a) => a.organization_id))]
 
-  const { data: settingsRows } = await supabase
+  const { data: settingsRows, error: settingsError } = await supabase
     .from("organization_settings")
-    .select("organization_id, msg_appointment_reminder, msg_doctor_daily_summary")
+    .select("organization_id, msg_appointment_reminder")
     .in("organization_id", orgIds)
+
+  if (settingsError) {
+    console.error("🔥 [CRON] Erro ao buscar configurações:", settingsError)
+    throw settingsError
+  }
 
   const settingsByOrg = new Map(
     (settingsRows || []).map((s) => [s.organization_id, s])
   )
 
   for (const appt of appointments) {
-    const phone = appt.customer.phone
-    if (!phone) continue
+    const customer = normalizeRelation(appt.customer)
+    const professional = normalizeRelation(appt.professional)
+    const service = normalizeRelation(appt.service)
 
-    const professional = Array.isArray(appt.professional)
-      ? appt.professional[0]
-      : appt.professional
-
-    const customer = Array.isArray(appt.customer)
-      ? appt.customer[0]
-      : appt.customer
-
-    const service = Array.isArray(appt.service)
-      ? appt.service[0]
-      : appt.service
-
+    if (!customer?.phone) continue
     if (!professional || !customer || !service) continue
 
     const settings = settingsByOrg.get(appt.organization_id)
     const template = settings?.msg_appointment_reminder
 
-    const date = formatDate(new Date(appt.start_time))
-    const time = formatTime(new Date(appt.start_time))
+    const appointmentDate = new Date(appt.start_time)
+
+    const date = formatDate(appointmentDate)
+    const time = formatTime(appointmentDate)
 
     const message =
       render(template, {
@@ -194,20 +337,35 @@ export async function processPatientMorningReminders() {
       `⏰ Lembrete: ${service.title} às ${time}`
 
     const result = await sendWhatsAppMessage({
-      phone,
+      phone: customer.phone,
       message,
       organizationId: appt.organization_id,
     })
 
     if (result.success) {
-      await supabase
+      const { error: updateError } = await supabase
         .from("appointments")
         .update({ reminder_sent_at: now.toISOString() })
         .eq("id", appt.id)
 
+      if (updateError) {
+        console.error("🔥 [CRON] Erro ao marcar lembrete como enviado:", updateError)
+        throw updateError
+      }
+
       sent++
+    } else {
+      console.error("🔥 [CRON] Falha ao enviar lembrete para paciente:", {
+        appointmentId: appt.id,
+        organizationId: appt.organization_id,
+        result,
+      })
     }
   }
 
-  return { sent }
+  return {
+    sent,
+    start: now.toISOString(),
+    end: nextHour.toISOString(),
+  }
 }
