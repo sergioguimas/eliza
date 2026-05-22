@@ -37,6 +37,7 @@ interface AppSidebarProps {
 type NavItem = {
   href: string
   label: string
+  mobileLabel?: string
   icon: React.ComponentType<{ className?: string }>
   nicheIconName?: "logo" | "clientes" | "servicos" | "agenda" | "dashboard" | "documentos"
   ownerOnly?: boolean
@@ -97,18 +98,21 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
       {
         href: "/agendamentos",
         label: nav.agendamentos || entities.agendamento_plural || "Agendamentos",
+        mobileLabel: nav.agendamentos_mobile || "Agendamentos",
         icon: Calendar,
         nicheIconName: "agenda",
       },
       {
         href: "/clientes",
         label: nav.clientes || entities.cliente_plural || "Clientes",
+        mobileLabel: nav.clientes_mobile || "Clientes",
         icon: Users,
         nicheIconName: "clientes",
       },
       {
         href: "/servicos",
         label: nav.servicos || entities.servico_plural || "Serviços",
+        mobileLabel: nav.servicos_mobile || "Serviços",
         icon: Clock,
         nicheIconName: "servicos",
       },
@@ -121,18 +125,21 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
       {
         href: "/configuracoes",
         label: nav.configuracoes || "Configurações",
+        mobileLabel: nav.configuracoes_mobile || "Configurações",
         icon: Settings,
         ownerOnly: true,
       },
       {
         href: "/configuracoes/equipe",
         label: nav.equipe || "Equipe",
+        mobileLabel: nav.equipe_mobile || "Equipe",
         icon: Users,
         ownerOnly: true,
       },
       {
         href: "/configuracoes/horarios",
         label: nav.horarios || "Horários",
+        mobileLabel: nav.horarios_mobile || "Horários",
         icon: Clock,
         ownerOnly: true,
       },
@@ -144,7 +151,17 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
     (item) => !item.ownerOnly || isOwner
   )
 
-  const mobileItems = operationalItems.slice(0, 4)
+  const mobileItems = useMemo(() => {
+    const settingsItem = visibleManagementItems.find(
+      (item) => item.href === "/configuracoes"
+    )
+
+    return settingsItem
+      ? [...operationalItems, settingsItem]
+      : operationalItems
+  }, [operationalItems, visibleManagementItems])
+
+  const mobileGridCols = mobileItems.length >= 5 ? "grid-cols-5" : "grid-cols-4"
 
   const roleLabel =
     role === "owner"
@@ -288,7 +305,7 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
       </aside>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 backdrop-blur md:hidden">
-        <div className="mx-auto grid max-w-lg grid-cols-4 gap-1">
+        <div className={cn("mx-auto grid max-w-lg gap-1", mobileGridCols)}>
           {mobileItems.map((item) => {
             const active =
               pathname === item.href ||
@@ -308,7 +325,9 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
                 ) : (
                   <item.icon className="mb-1 h-5 w-5" />
                 )}
-                <span className="truncate">{item.label}</span>
+                <span className="max-w-full truncate">
+                  {item.mobileLabel || item.label}
+                </span>
               </Link>
             )
           })}

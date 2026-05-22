@@ -81,16 +81,16 @@ export function CreateServiceDialog({
             <Pencil className="h-4 w-4" />
           </Button>
         ) : (
-          <Button className="bg-blue-600 hover:bg-blue-700">
+          <Button>
             <Plus className="mr-2 h-4 w-4" />
             {triggerLabel || actions.create_servico || `Novo ${servico}`}
           </Button>
         )}
       </DialogTrigger>
 
-      <DialogContent className="bg-background border-border">
+      <DialogContent className="border-border bg-background text-foreground shadow-xl sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-foreground">
             {serviceToEdit
               ? `${actions.edit || "Editar"} ${servico}`
               : actions.create_servico || `Novo ${servico}`}
@@ -105,19 +105,21 @@ export function CreateServiceDialog({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="service-name">{fields.name || "Nome"}</Label>
+            <Label htmlFor="service-name" className="text-foreground">
+              {fields.name || "Nome"}
+            </Label>
             <Input
               id="service-name"
               name="name"
               defaultValue={serviceToEdit?.title || serviceToEdit?.name}
               required
-              className="bg-zinc-950 border-border"
+              className="border-input bg-background text-foreground placeholder:text-muted-foreground"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="service-duration">
+              <Label htmlFor="service-duration" className="text-foreground">
                 {messages.duration_minutes || "Duração (min)"}
               </Label>
               <Input
@@ -125,12 +127,12 @@ export function CreateServiceDialog({
                 name="duration"
                 type="number"
                 defaultValue={serviceToEdit?.duration_minutes}
-                className="bg-zinc-950 border-border"
+                className="border-input bg-background text-foreground placeholder:text-muted-foreground"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="service-price">
+              <Label htmlFor="service-price" className="text-foreground">
                 {fields.amount || "Preço"} (R$)
               </Label>
               <Input
@@ -139,28 +141,29 @@ export function CreateServiceDialog({
                 type="number"
                 step="0.01"
                 defaultValue={serviceToEdit?.price}
-                className="bg-zinc-950 border-border"
+                className="border-input bg-background text-foreground placeholder:text-muted-foreground"
               />
             </div>
           </div>
 
-          <div>
-            <Label className="flex items-center gap-2 mb-2">
-              <Palette className="h-4 w-4" />
+          <div className="rounded-2xl border border-border bg-muted/30 p-3">
+            <Label className="mb-3 flex items-center gap-2 text-foreground">
+              <Palette className="h-4 w-4 text-muted-foreground" />
               {messages.service_color_label || "Cor na agenda"}
             </Label>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {COLORS.map((c) => (
                 <button
                   key={c.value}
                   type="button"
                   onClick={() => setSelectedColor(c.value)}
                   title={c.name}
-                  className={`h-8 w-8 rounded-full border-2 transition-all ${
+                  aria-label={`Selecionar cor ${c.name}`}
+                  className={`h-8 w-8 rounded-full border-2 ring-offset-background transition-all ${
                     selectedColor === c.value
-                      ? "border-white scale-110"
-                      : "border-transparent"
+                      ? "scale-110 border-foreground ring-2 ring-ring ring-offset-2"
+                      : "border-border hover:scale-105"
                   }`}
                   style={{ backgroundColor: c.value }}
                 />
@@ -168,7 +171,7 @@ export function CreateServiceDialog({
             </div>
           </div>
 
-          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
+          <Button type="submit" className="w-full">
             {actions.save || "Salvar"}
           </Button>
         </form>
