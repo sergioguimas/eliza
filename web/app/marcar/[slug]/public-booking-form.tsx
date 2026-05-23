@@ -312,7 +312,7 @@ export function PublicBookingForm({
       if (result?.success) {
         setIsSuccess(true)
 
-        if (result.foundName) {
+        if ("foundName" in result && result.foundName) {
           toast.success(`Cadastro localizado: ${result.foundName}`)
         }
 
