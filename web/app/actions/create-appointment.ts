@@ -303,7 +303,7 @@ export async function createAppointment(formData: FormData) {
     return { error: "Erro ao salvar agendamento." }
   }
 
-  const appointmentDateTime = formatDateTime(startTime)
+ const appointmentDateTime = formatDateTime(startTime)
 
   const appointmentDate = startTime.toLocaleDateString("pt-BR", {
     timeZone: "America/Sao_Paulo",
@@ -334,67 +334,57 @@ export async function createAppointment(formData: FormData) {
     price,
     notes,
 
-    // aliases antigos
+    // aliases antigos dos templates
     name: finalCustomerName,
     service: service.title,
     date: appointmentDate,
     time: appointmentTime,
   }
 
-  const notifications: Promise<any>[] = []
+  const template = is_public_booking
+    ? settings?.msg_appointment_pending
+    : settings?.msg_appointment_created
 
-  /**
-   * Público:
-   * envia pré-agendamento para o profissional.
-   */
-  if (is_public_booking && professional.phone) {
-    const pendingMessage = renderMessageTemplate(
-      settings?.msg_appointment_pending,
-      templateVariables
-    )
+  const fallbackMessage = is_public_booking
+    ? `Olá ${finalCustomerName}, sua solicitação de ${service.title} foi recebida para ${appointmentDate} às ${appointmentTime}. Em breve confirmaremos seu atendimento.`
+    : `Olá ${finalCustomerName}, seu ${service.title} foi marcado com sucesso para ${appointmentDate} às ${appointmentTime}. Aguardamos por você!`
 
-    if (pendingMessage) {
-      notifications.push(
-        sendWhatsAppMessage({
-          phone: professional.phone,
-          message: pendingMessage,
-          organizationId: organization_id,
-        })
-      )
+  const message =
+    renderMessageTemplate(template, templateVariables) || fallbackMessage
+
+  if (finalCustomerPhone) {
+    console.log("Enviando mensagem de confirmação do agendamento para WhatsApp:", {
+      appointmentId: newAppointment.id,
+      organizationId: organization_id,
+      customerPhone: finalCustomerPhone,
+      message,
+    })
+    const whatsappResult = await sendWhatsAppMessage({
+      phone: finalCustomerPhone,
+      message,
+      organizationId: organization_id,
+    })
+
+    if (!whatsappResult.success) {
+      console.error("Erro ao enviar mensagem de confirmação do agendamento:", {
+        appointmentId: newAppointment.id,
+        organizationId: organization_id,
+        customerPhone: finalCustomerPhone,
+        whatsappResult,
+      })
     }
+  } else {
+    console.warn("Paciente sem telefone. Mensagem de confirmação não enviada.", {
+      appointmentId: newAppointment.id,
+      customerId: finalCustomer.id,
+    })
   }
-
-  /**
-   * Interno:
-   * envia mensagem de agendamento criado para o cliente.
-   */
-  if (!is_public_booking && finalCustomerPhone) {
-    const createdMessage = renderMessageTemplate(
-      settings?.msg_appointment_created,
-      templateVariables
-    )
-
-    if (createdMessage) {
-      notifications.push(
-        sendWhatsAppMessage({
-          phone: finalCustomerPhone,
-          message: createdMessage,
-          organizationId: organization_id,
-        })
-      )
-    }
-  }
-
-  await Promise.allSettled(notifications)
 
   revalidatePath("/agendamentos")
+  revalidatePath("/dashboard")
 
   return {
     success: true,
-    id: newAppointment.id,
-    foundName:
-      customer_found_name && customer_found_name !== customer_name
-        ? customer_found_name
-        : null,
+    appointmentId: newAppointment.id,
   }
 }
