@@ -353,6 +353,12 @@ export async function createAppointment(formData: FormData) {
     renderMessageTemplate(template, templateVariables) || fallbackMessage
 
   if (finalCustomerPhone) {
+    console.log("Enviando mensagem de confirmação do agendamento para WhatsApp:", {
+      appointmentId: newAppointment.id,
+      organizationId: organization_id,
+      customerPhone: finalCustomerPhone,
+      message,
+    })
     const whatsappResult = await sendWhatsAppMessage({
       phone: finalCustomerPhone,
       message,
