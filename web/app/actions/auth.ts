@@ -18,7 +18,7 @@ export async function signIn(formData: FormData) {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
   const redirectTo = getRedirectUrl(formData, '/dashboard')
-  
+
   const supabase = await createClient()
 
   const { error } = await supabase.auth.signInWithPassword({
@@ -30,7 +30,10 @@ export async function signIn(formData: FormData) {
     return { error: 'Credenciais inválidas.' }
   }
 
-  redirect(redirectTo)
+  return {
+    success: true,
+    redirectTo,
+  }
 }
 
 export async function signUp(formData: FormData) {
@@ -57,11 +60,17 @@ export async function signUp(formData: FormData) {
   }
 
   const { data: { session } } = await supabase.auth.getSession()
+
   if (session) {
-    redirect(redirectTo)
+    return {
+      success: true,
+      redirectTo,
+    }
   }
 
-  return { success: 'Verifique seu email para confirmar o cadastro.' }
+  return {
+    success: 'Verifique seu email para confirmar o cadastro.',
+  }
 }
 
 export async function createCompany(formData: FormData) {

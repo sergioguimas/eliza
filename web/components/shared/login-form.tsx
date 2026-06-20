@@ -34,17 +34,25 @@ export function LoginForm() {
     const action = isLogin ? signIn : signUp
 
     try {
-      const result = await action(formData) as any
+      const result = await action(formData)
 
       if (result?.error) {
         toast.error(result.error)
-      } else if (result?.success) {
-        if (isLogin) {
-          router.push(next || '/dashboard')
-          router.refresh()
-        } else {
-          toast.success(result.success as string)
-        }
+        return
+      }
+
+      if (isLogin && result?.success) {
+        router.push(result.redirectTo || next || '/dashboard')
+        router.refresh()
+        return
+      }
+
+      if (!isLogin && result?.success) {
+        toast.success(
+          typeof result.success === 'string'
+            ? result.success
+            : 'Cadastro realizado com sucesso.'
+        )
       }
     } catch (e) {
       console.error(e)
