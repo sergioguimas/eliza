@@ -242,7 +242,7 @@ export const baseDictionary = {
       "Personalize as mensagens automáticas enviadas pelo sistema.",
     work_hours: "Expediente",
     break_label: "Intervalo / almoço",
-    appointment_duration: "Duração da consulta (minutos)",
+    appointment_duration: "Duração do Atendimento (minutos)",
     attendance_days_label: "Dias de atendimento",
     work_shift_label: "Turno de trabalho",
     until_label: "até",

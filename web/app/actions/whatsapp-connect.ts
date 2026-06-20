@@ -18,6 +18,27 @@ const GLOBAL_API_KEY = process.env.EVOLUTION_API_KEY
 // Helper para esperar (usado no fallback)
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
+function normalizeEvolutionState(data: any) {
+  return (
+    data?.instance?.state ||
+    data?.instance?.connectionStatus ||
+    data?.state ||
+    data?.connectionStatus ||
+    data?.status ||
+    ""
+  ).toString().toLowerCase()
+}
+
+function isEvolutionConnected(data: any) {
+  const state = normalizeEvolutionState(data)
+
+  return [
+    "open",
+    "connected",
+    "online",
+  ].includes(state)
+}
+
 export async function createWhatsappInstance(): Promise<WhatsappResponse> {
   console.log("--- [DEBUG] INICIANDO PROCESSO DE CONEXÃO WHATSAPP ---")
   
@@ -162,9 +183,13 @@ async function connectWhatsappInstance(instanceName: string, url: string, key: s
             }
             
             // 2. SUCESSO: Já conectou
-            if (data.instance && data.instance.state === 'open') {
-                 console.log("[DEBUG SUCCESS] Instância já conectada!")
-                 return { success: true, status: 'connected' }
+            if (isEvolutionConnected(data)) {
+                console.log("[DEBUG SUCCESS] Instância já conectada!")
+                return {
+                    success: true,
+                    connected: true,
+                    status: "connected",
+                }
             }
 
             // 3. AINDA NÃO: Resposta vazia ou count:0
@@ -216,44 +241,82 @@ export async function deleteWhatsappInstance() {
 
 // --- CHECAR STATUS ---
 export async function getWhatsappStatus(): Promise<WhatsappResponse> {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { status: 'unknown' }
+  const supabase = await createClient<Database>()
 
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('organizations(slug, evolution_api_url, evolution_api_key)')
-        .eq('id', user.id)
-        .single()
-    
-    const org = profile?.organizations
-    if (!org) return { status: 'unknown' }
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-    const instanceName = org.slug
-    const EVOLUTION_URL = org.evolution_api_url || process.env.NEXT_PUBLIC_EVOLUTION_API_URL
-    const API_KEY = org.evolution_api_key || process.env.EVOLUTION_API_KEY
+  if (!user) {
+    return { status: "unknown" }
+  }
 
-    try {
-        const response = await fetch(`${EVOLUTION_URL}/instance/connectionState/${instanceName}`, {
-            method: 'GET',
-            headers: { 'apikey': API_KEY! },
-            cache: 'no-store'
-        })
-        
-        if(response.status === 404) return { status: 'disconnected' } 
-        
-        const data = await response.json()
-        
-        if (data.instance && data.instance.state === 'open') {
-            return { status: 'connected' }
-        }
-        
-        if (data.instance && data.instance.state === 'connecting') {
-             return { status: 'disconnected' }
-        }
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("organizations(slug, evolution_api_url, evolution_api_key)")
+    .eq("id", user.id)
+    .single()
 
-        return { status: 'disconnected' }
-    } catch (error) {
-        return { status: 'error' }
+  const org = profile?.organizations
+
+  if (!org?.slug) {
+    return { status: "unknown" }
+  }
+
+  const instanceName = org.slug
+  const EVOLUTION_URL =
+    org.evolution_api_url || process.env.NEXT_PUBLIC_EVOLUTION_API_URL
+  const API_KEY = org.evolution_api_key || process.env.EVOLUTION_API_KEY
+
+  if (!EVOLUTION_URL || !API_KEY) {
+    console.error("[getWhatsappStatus] Evolution API não configurada.")
+    return { status: "error" }
+  }
+
+  try {
+    const response = await fetch(
+      `${EVOLUTION_URL}/instance/connectionState/${instanceName}`,
+      {
+        method: "GET",
+        headers: {
+          apikey: API_KEY,
+        },
+        cache: "no-store",
+      }
+    )
+
+    if (response.status === 404) {
+      return { status: "disconnected" }
     }
+
+    if (!response.ok) {
+      console.error(
+        "[getWhatsappStatus] Erro ao consultar status:",
+        response.status,
+        await response.text()
+      )
+
+      return { status: "error" }
+    }
+
+    const data = await response.json()
+
+    if (isEvolutionConnected(data)) {
+      return {
+        success: true,
+        connected: true,
+        status: "connected",
+      }
+    }
+
+    return {
+      success: true,
+      connected: false,
+      status: "disconnected",
+    }
+  } catch (error) {
+    console.error("[getWhatsappStatus] Falha ao consultar Evolution:", error)
+
+    return { status: "error" }
+  }
 }

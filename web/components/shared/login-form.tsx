@@ -16,6 +16,7 @@ import { toast } from 'sonner'
 import { signIn, signUp } from '@/app/actions/auth'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
+import Link from 'next/link'
 
 export function LoginForm() {
   const [isLogin, setIsLogin] = useState(true)
@@ -34,17 +35,25 @@ export function LoginForm() {
     const action = isLogin ? signIn : signUp
 
     try {
-      const result = await action(formData) as any
+      const result = await action(formData)
 
       if (result?.error) {
         toast.error(result.error)
-      } else if (result?.success) {
-        if (isLogin) {
-          router.push(next || '/dashboard')
-          router.refresh()
-        } else {
-          toast.success(result.success as string)
-        }
+        return
+      }
+
+      if (isLogin && result?.success) {
+        router.push(result.redirectTo || next || '/dashboard')
+        router.refresh()
+        return
+      }
+
+      if (!isLogin && result?.success) {
+        toast.success(
+          typeof result.success === 'string'
+            ? result.success
+            : 'Cadastro realizado com sucesso.'
+        )
       }
     } catch (e) {
       console.error(e)
@@ -118,6 +127,14 @@ export function LoginForm() {
               required
               className="bg-background border-input focus:ring-ring"
             />
+            {isLogin && (
+              <Link
+                href="/forgot-password"
+                className="text-sm text-primary hover:underline"
+              >
+                Esqueci minha senha
+              </Link>
+            )}
           </div>
         </CardContent>
 

@@ -105,6 +105,7 @@ export function PublicBookingForm({
   const [selectedDocuments, setSelectedDocuments] = useState<Record<string, File | null>>({})
   const [documentNotes, setDocumentNotes] = useState<Record<string, string>>({})
   const documents = useMemo(() => getNicheDocuments(organizationNiche), [organizationNiche])
+  const [slotMessage, setSlotMessage] = useState<string | null>(null)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -186,8 +187,9 @@ export function PublicBookingForm({
       if (selectedDate && selectedProf) {
         setLoadingSlots(true)
         try {
-          const available = await getAvailableSlots(selectedProf, selectedDate, organizationId)
-          setSlots(available)
+          const result = await getAvailableSlots(selectedProf, selectedDate, organizationId)
+          setSlots(result.slots)
+          setSlotMessage(result.message || null)
           form.setValue("time", "")
         } catch {
           toast.error("Erro ao carregar horários disponíveis.")
@@ -196,6 +198,7 @@ export function PublicBookingForm({
         }
       } else {
         setSlots([])
+        setSlotMessage(null)
       }
     }
 
@@ -262,8 +265,11 @@ export function PublicBookingForm({
     }
 
     if (!values.time) {
-      form.setError("time", { message: "Selecione um horário" })
-      toast.warning("Selecione um horário para continuar.")
+      form.setError("time", {
+        message: slotMessage || "Selecione um horário",
+      })
+
+      toast.warning(slotMessage || "Selecione um horário para continuar.")
       return false
     }
 
@@ -274,9 +280,7 @@ export function PublicBookingForm({
     setIsPending(true)
 
     try {
-      const [hours, minutes] = values.time.split(':')
-      const startDateTime = new Date(values.date)
-      startDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0)
+      const startDateTime = `${format(values.date, "yyyy-MM-dd")}T${values.time}:00`
 
       const rawPhone = values.customer_phone.replace(/\D/g, "")
       const phoneWithDDI = rawPhone.length <= 11 ? `55${rawPhone}` : rawPhone
@@ -286,7 +290,7 @@ export function PublicBookingForm({
       formData.append('organization_id', values.organization_id)
       formData.append('service_id', values.service_id)
       formData.append('professional_id', values.professional_id)
-      formData.append('start_time', startDateTime.toISOString())
+      formData.append('start_time', startDateTime)
       formData.append('customer_name', values.customer_name)
       formData.append('customer_document', values.customer_document)
       formData.append('customer_birth_date', values.customer_birth_date || "")
@@ -696,10 +700,10 @@ export function PublicBookingForm({
                                 </SelectContent>
                               </Select>
 
-                              {slots.length === 0 && selectedDate && !loadingSlots && (
+                              {slots.length === 0 && selectedDate && selectedProf && !loadingSlots && (
                                 <p className="text-[11px] text-amber-500 mt-1 flex items-center gap-1">
                                   <AlertCircle className="h-3.5 w-3.5" />
-                                  Não encontramos horários disponíveis para este dia.
+                                  {slotMessage || "Não encontramos horários disponíveis para este dia."}
                                 </p>
                               )}
                               <FormMessage />

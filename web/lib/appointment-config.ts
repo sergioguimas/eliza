@@ -162,7 +162,7 @@ export async function checkProfessionalAvailability(
     if (overlapsBreak) {
       return {
         available: false,
-        message: "O agendamento entra em conflito com o horário de intervalo do profissional.",
+        message: "Este horário está dentro do intervalo de atendimento.",
       }
     }
   }
@@ -181,4 +181,97 @@ export function generateTimeSlots(start: string, end: string, interval: number) 
   }
 
   return slots
+}
+
+export async function checkOrganizationBusinessHours(
+  supabase: any,
+  organizationId: string,
+  startTime: Date,
+  endTime: Date
+) {
+  const dayOfWeek = getLocalDayOfWeek(startTime)
+
+  const startTimeString = getLocalTimeString(startTime)
+  const endTimeString = getLocalTimeString(endTime)
+
+  const { data: settings, error } = await supabase
+    .from("organization_settings")
+    .select(`
+      days_of_week,
+      open_hours_start,
+      open_hours_end,
+      lunch_start,
+      lunch_end
+    `)
+    .eq("organization_id", organizationId)
+    .maybeSingle()
+
+  if (error) {
+    console.error("[checkOrganizationBusinessHours]", error)
+
+    return {
+      available: false,
+      message: "Erro ao validar expediente da organização.",
+    }
+  }
+
+  if (!settings) {
+    return { available: true }
+  }
+
+  const workingDays = settings.days_of_week || []
+
+  if (
+    Array.isArray(workingDays) &&
+    workingDays.length > 0 &&
+    !workingDays.includes(dayOfWeek)
+  ) {
+    return {
+      available: false,
+      message: "Este dia não está disponível para agendamentos.",
+    }
+  }
+
+  const selectedStartMinutes = timeToMinutes(startTimeString)
+  const selectedEndMinutes = timeToMinutes(endTimeString)
+
+  if (selectedEndMinutes <= selectedStartMinutes) {
+    return {
+      available: false,
+      message: "O horário final precisa ser maior que o horário inicial.",
+    }
+  }
+
+  if (settings.open_hours_start && settings.open_hours_end) {
+    const openStartMinutes = timeToMinutes(settings.open_hours_start)
+    const openEndMinutes = timeToMinutes(settings.open_hours_end)
+
+    if (
+      selectedStartMinutes < openStartMinutes ||
+      selectedEndMinutes > openEndMinutes
+    ) {
+      return {
+        available: false,
+        message: "Este horário está fora do expediente.",
+      }
+    }
+  }
+
+  if (settings.lunch_start && settings.lunch_end) {
+    const lunchStartMinutes = timeToMinutes(settings.lunch_start)
+    const lunchEndMinutes = timeToMinutes(settings.lunch_end)
+
+    const overlapsLunch =
+      selectedStartMinutes < lunchEndMinutes &&
+      selectedEndMinutes > lunchStartMinutes
+
+    if (overlapsLunch) {
+      return {
+        available: false,
+        message: "Este horário está dentro do intervalo de atendimento.",
+      }
+    }
+  }
+
+  return { available: true }
 }

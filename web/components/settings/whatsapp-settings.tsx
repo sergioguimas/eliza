@@ -35,14 +35,17 @@ export function WhatsappSettings({ settings, organizationId }: any) {
   }, [])
 
   async function checkStatus() {
+    setStatus("loading")
+
     const result = await getWhatsappStatus()
 
-    if (result.status === "connected") {
+    if (result.connected || result.status === "connected") {
       setStatus("connected")
       setQrCode(null)
-    } else {
-      setStatus("disconnected")
+      return
     }
+
+    setStatus("disconnected")
   }
 
   async function handleConnect() {
@@ -58,12 +61,23 @@ export function WhatsappSettings({ settings, organizationId }: any) {
       return
     }
 
-    if (result.connected) {
+    if (result.connected || result.status === "connected") {
       setStatus("connected")
+      setQrCode(null)
       toast.success(messages.whatsapp_already_connected || "WhatsApp já conectado!")
-    } else if (result.qrcode) {
+      return
+    }
+
+    if (result.qrcode) {
+      setStatus("disconnected")
       setQrCode(result.qrcode)
       toast.success(messages.qrcode_generated_success || "QR Code gerado com sucesso!")
+      return
+    }
+
+    if (result.status === "qrcode") {
+      setStatus("disconnected")
+      return
     }
   }
 
@@ -74,14 +88,19 @@ export function WhatsappSettings({ settings, organizationId }: any) {
     if (!confirm(confirmMessage)) return
 
     setIsLoading(true)
-    await deleteWhatsappInstance()
 
-    setTimeout(() => {
-      setIsLoading(false)
-      setStatus("disconnected")
-      setQrCode(null)
-      toast.success(messages.whatsapp_disconnected || "Desconectado.")
-    }, 2000)
+    const result = await deleteWhatsappInstance()
+
+    setIsLoading(false)
+
+    if (result?.error) {
+      toast.error(result.error)
+      return
+    }
+
+    setStatus("disconnected")
+    setQrCode(null)
+    toast.success(messages.whatsapp_disconnected || "Desconectado.")
   }
 
   return (

@@ -13,8 +13,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { handleAppointmentRequest } from "@/app/actions/handle-appointment-request"
 import { toast } from "sonner"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
+import { formatSaoPauloDayMonth, formatSaoPauloTime } from "@/lib/utils"
 import { useKeckleon } from "@/providers/keckleon-provider"
 
 interface PendingRequest {
@@ -94,14 +93,12 @@ export function PendingRequestsList({
               <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                 <div className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  {format(new Date(req.start_time), "dd 'de' MMMM", {
-                    locale: ptBR,
-                  })}
+                  {formatSaoPauloDayMonth(req.start_time)}
                 </div>
 
                 <div className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  {format(new Date(req.start_time), "HH:mm")}
+                  {formatSaoPauloTime(req.start_time)}
                 </div>
               </div>
 

@@ -27,8 +27,8 @@ export default async function SetupPage() {
 
   // 3. Renderiza o Formulário
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-gray-950 p-4">
-        <SetupForm />
+    <div className="theme-generico min-h-screen w-full flex items-center justify-center bg-background p-4">
+      <SetupForm />
     </div>
   )
 }

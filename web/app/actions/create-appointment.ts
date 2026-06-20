@@ -3,7 +3,7 @@
 import { createAdminClient } from "@/utils/supabase/admin"
 import { revalidatePath } from "next/cache"
 import { sendWhatsAppMessage } from "./send-whatsapp"
-import { checkProfessionalAvailability } from "@/lib/appointment-config"
+import { checkProfessionalAvailability, checkOrganizationBusinessHours } from "@/lib/appointment-config"
 import { Database } from "@/utils/database.types"
 
 type AppointmentInsert = Database["public"]["Tables"]["appointments"]["Insert"]
@@ -260,6 +260,17 @@ export async function createAppointment(formData: FormData) {
   }
 
   const endTime = new Date(startTime.getTime() + duration_minutes * 60000)
+
+  const organizationAvailability = await checkOrganizationBusinessHours(
+    supabase,
+    organization_id,
+    startTime,
+    endTime
+  )
+
+  if (!organizationAvailability.available) {
+    return { error: organizationAvailability.message }
+  }
 
   const availability = await checkProfessionalAvailability(
     supabase,
