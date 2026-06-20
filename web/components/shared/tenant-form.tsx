@@ -16,7 +16,10 @@ export function TenantForm() {
     if (result?.error) {
       toast.error(result.error)
     } else {
-      toast.success(result?.message || "Organização criada com sucesso!")
+      toast.success(
+        result?.message ||
+          "Organização criada. Um link de definição de senha foi enviado ao responsável."
+      )
       formRef.current?.reset()
     }
   }
@@ -37,7 +40,7 @@ export function TenantForm() {
 
       <div>
         <Label htmlFor="email" className="mb-2 block">
-          E-mail de acesso
+          E-mail do responsável
         </Label>
         <Input
           id="email"
@@ -48,21 +51,8 @@ export function TenantForm() {
         />
       </div>
 
-      <div>
-        <Label htmlFor="password" className="mb-2 block">
-          Senha inicial
-        </Label>
-        <Input
-          id="password"
-          name="password"
-          type="text"
-          placeholder="Defina uma senha forte"
-          required
-        />
-      </div>
-
       <Button type="submit" className="w-full">
-        Criar organização
+        Criar organização e enviar acesso
       </Button>
     </form>
   )

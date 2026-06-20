@@ -16,6 +16,7 @@ import { toast } from 'sonner'
 import { signIn, signUp } from '@/app/actions/auth'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
+import Link from 'next/link'
 
 export function LoginForm() {
   const [isLogin, setIsLogin] = useState(true)
@@ -126,6 +127,14 @@ export function LoginForm() {
               required
               className="bg-background border-input focus:ring-ring"
             />
+            {isLogin && (
+              <Link
+                href="/forgot-password"
+                className="text-sm text-primary hover:underline"
+              >
+                Esqueci minha senha
+              </Link>
+            )}
           </div>
         </CardContent>
 
