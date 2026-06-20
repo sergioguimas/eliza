@@ -157,6 +157,17 @@
   --brand-radius: 0.9rem;
 }
 
+.theme-psicologia {
+  --brand-primary: 262 83% 58%;
+  --brand-primary-foreground: 0 0% 100%;
+  --brand-ring: 262 83% 58%;
+  --brand-soft: 262 100% 97%;
+  --brand-soft-foreground: 262 65% 35%;
+  --brand-border: 262 70% 88%;
+  --brand-glow: 262 83% 58%;
+  --brand-radius: 0.9rem;
+}
+
 .theme-barbearia {
   --brand-primary: 28 95% 54%;
   --brand-primary-foreground: 0 0% 100%;
@@ -199,6 +210,17 @@
   --brand-border: 145 25% 84%;
   --brand-glow: 145 45% 32%;
   --brand-radius: 0.55rem;
+}
+
+.theme-tatuador {
+  --brand-primary: 174 77% 26%;
+  --brand-primary-foreground: 0 0% 100%;
+  --brand-ring: 174 77% 26%;
+  --brand-soft: 174 55% 95%;
+  --brand-soft-foreground: 174 65% 22%;
+  --brand-border: 174 35% 82%;
+  --brand-glow: 174 77% 26%;
+  --brand-radius: 0.7rem;
 }
 
 /* =========================================================

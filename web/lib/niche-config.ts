@@ -1,10 +1,12 @@
 import {
   Stethoscope,
+  Brain,
   Scissors,
   Sparkles,
   Briefcase,
   Scale,
   FileBadge,
+  Paintbrush,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
@@ -23,6 +25,11 @@ const setupStylesByNiche: Record<string, Omit<SetupNicheOption, "id" | "label" |
     color: "text-blue-600",
     soft: "from-blue-50 to-cyan-50",
     selected: "border-blue-500 bg-blue-50/80 ring-blue-200",
+  },
+  psicologia: {
+    color: "text-violet-700",
+    soft: "from-violet-50 to-sky-50",
+    selected: "border-violet-500 bg-violet-50/80 ring-violet-200",
   },
   advocacia: {
     color: "text-rose-700",
@@ -43,6 +50,11 @@ const setupStylesByNiche: Record<string, Omit<SetupNicheOption, "id" | "label" |
     color: "text-emerald-600",
     soft: "from-emerald-50 to-green-50",
     selected: "border-emerald-500 bg-emerald-50/80 ring-emerald-200",
+  },
+  tatuador: {
+    color: "text-teal-700",
+    soft: "from-neutral-50 to-teal-50",
+    selected: "border-teal-600 bg-teal-50/80 ring-teal-200",
   },
   generico: {
     color: "text-slate-600",
@@ -109,6 +121,27 @@ export const nicheConfig: Record<string, NicheMetadata> = {
       sidebarGradientFrom: "rgba(37, 99, 235, 0.16)",
       sidebarGradientTo: "rgba(29, 78, 216, 0.04)",
       cardGlow: "0 10px 30px rgba(37, 99, 235, 0.12)",
+    },
+  },
+
+  psicologia: {
+    id: "psicologia",
+    label: "Psicologia",
+    description: "Para psicólogos, terapeutas e consultórios.",
+    icon: Brain,
+    appTitle: "Eliza",
+    sidebarLabel: "Gestão Psicologia",
+    brand: {
+      primary: "#7c3aed",
+      primarySoft: "rgba(124, 58, 237, 0.10)",
+      primaryBorder: "rgba(124, 58, 237, 0.25)",
+      primaryForeground: "#ffffff",
+      accent: "#2563eb",
+      accentSoft: "rgba(37, 99, 235, 0.08)",
+      ring: "rgba(124, 58, 237, 0.35)",
+      sidebarGradientFrom: "rgba(124, 58, 237, 0.14)",
+      sidebarGradientTo: "rgba(37, 99, 235, 0.04)",
+      cardGlow: "0 10px 30px rgba(124, 58, 237, 0.12)",
     },
   },
 
@@ -193,6 +226,27 @@ export const nicheConfig: Record<string, NicheMetadata> = {
       sidebarGradientFrom: "rgba(21, 128, 61, 0.16)",
       sidebarGradientTo: "rgba(22, 101, 52, 0.04)",
       cardGlow: "0 10px 30px rgba(21, 128, 61, 0.12)",
+    },
+  },
+
+  tatuador: {
+    id: "tatuador",
+    label: "Estúdio de Tatuagem",
+    description: "Para tatuadores e estúdios de tattoo.",
+    icon: Paintbrush,
+    appTitle: "Eliza",
+    sidebarLabel: "Gestão Tattoo",
+    brand: {
+      primary: "#0f766e",
+      primarySoft: "rgba(15, 118, 110, 0.10)",
+      primaryBorder: "rgba(15, 118, 110, 0.25)",
+      primaryForeground: "#ffffff",
+      accent: "#111827",
+      accentSoft: "rgba(17, 24, 39, 0.08)",
+      ring: "rgba(15, 118, 110, 0.35)",
+      sidebarGradientFrom: "rgba(15, 118, 110, 0.16)",
+      sidebarGradientTo: "rgba(17, 24, 39, 0.04)",
+      cardGlow: "0 10px 30px rgba(15, 118, 110, 0.12)",
     },
   },
 

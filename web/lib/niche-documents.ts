@@ -35,6 +35,23 @@ export const nicheDocuments: Record<string, NicheDocumentItem[]> = {
     },
   ],
 
+  psicologia: [
+    {
+      id: "documento_pessoal",
+      label: "Documento pessoal",
+      description: "CPF, RG ou outro documento de identificação",
+      required: false,
+      accept: DEFAULT_DOCUMENT_ACCEPT,
+    },
+    {
+      id: "encaminhamento_relatorio",
+      label: "Encaminhamento ou relatório",
+      description: "Documento opcional enviado por escola, médico, empresa ou outro profissional",
+      required: false,
+      accept: DEFAULT_DOCUMENT_ACCEPT,
+    },
+  ],
+
   barbearia: [],
 
   salao: [],
@@ -42,6 +59,23 @@ export const nicheDocuments: Record<string, NicheDocumentItem[]> = {
   advocacia: [],
 
   certificado: [],
+
+  tatuador: [
+    {
+      id: "referencia_tatuagem",
+      label: "Referência da tatuagem",
+      description: "Imagem, desenho ou inspiração para orientar a arte",
+      required: false,
+      accept: DEFAULT_DOCUMENT_ACCEPT,
+    },
+    {
+      id: "documento_pessoal",
+      label: "Documento pessoal",
+      description: "CPF, RG ou outro documento de identificação",
+      required: false,
+      accept: DEFAULT_DOCUMENT_ACCEPT,
+    },
+  ],
 
   generico: [],
 }
