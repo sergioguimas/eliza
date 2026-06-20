@@ -13,7 +13,7 @@ import {
 import { getDictionary } from "@/lib/dictionaries/get-dictionary"
 import { CategoryIcon } from "@/components/shared/category-icon"
 import { AppointmentContextMenu } from "@/components/appointments/appointment-context-menu"
-import { cn } from "@/lib/utils"
+import { cn, formatSaoPauloTime } from "@/lib/utils"
 import { AppointmentCardActions } from "@/components/appointments/appointment-card-actions"
 import { RealtimeAppointments } from "@/components/layout/realtime-appointments"
 import { Database } from "@/utils/database.types"
@@ -324,10 +324,7 @@ export default async function DashboardPage() {
                           <span>{app.services?.title}</span>
                           <span className="text-border">•</span>
                           <span className="text-primary font-medium">
-                            {new Date(app.start_time).toLocaleTimeString("pt-BR", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
+                            {formatSaoPauloTime(app.start_time)}
                           </span>
                         </div>
                       </div>
