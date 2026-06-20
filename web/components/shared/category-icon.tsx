@@ -3,11 +3,14 @@
 import type { LucideProps } from 'lucide-react'
 import {
   Briefcase,
+  Brain,
   CalendarDays,
   FileBadge,
   FolderOpen,
   Gavel,
   HeartPulse,
+  Paintbrush,
+  PenTool,
   Scissors,
   ShieldCheck,
   Sparkles,
@@ -47,6 +50,15 @@ const clinicaIcons: IconMap = {
   documentos: FolderOpen,
 }
 
+const psicologiaIcons: IconMap = {
+  logo: Brain,
+  clientes: UserRound,
+  servicos: HeartPulse,
+  agenda: CalendarDays,
+  dashboard: Brain,
+  documentos: FolderOpen,
+}
+
 const barbeariaIcons: IconMap = {
   logo: Scissors,
   clientes: Users,
@@ -83,13 +95,24 @@ const certificadoIcons: IconMap = {
   documentos: FileBadge,
 }
 
+const tatuadorIcons: IconMap = {
+  logo: Paintbrush,
+  clientes: Users,
+  servicos: PenTool,
+  agenda: CalendarDays,
+  dashboard: Paintbrush,
+  documentos: FolderOpen,
+}
+
 const iconRegistry: Record<string, IconMap> = {
   generico: genericoIcons,
   clinica: clinicaIcons,
+  psicologia: psicologiaIcons,
   barbearia: barbeariaIcons,
   salao: salaoIcons,
   advocacia: advocaciaIcons,
   certificado: certificadoIcons,
+  tatuador: tatuadorIcons,
 }
 
 type CategoryIconProps = LucideProps & {

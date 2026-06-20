@@ -14,7 +14,7 @@ const createOrgSchema = z.object({
   slug: z.string()
     .min(3, "O slug deve ter pelo menos 3 caracteres")
     .regex(/^[a-z0-9-]+$/, "Use apenas letras minúsculas, números e traços"),
-  niche: z.enum(['clinica', 'barbearia', 'salao', 'advocacia', 'generico', 'certificado'])
+  niche: z.enum(['clinica', 'psicologia', 'barbearia', 'salao', 'advocacia', 'generico', 'certificado', 'tatuador'])
 })
 
 export async function createOrganization(formData: FormData) {

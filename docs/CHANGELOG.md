@@ -2,6 +2,11 @@
 
 ## 2026-06-20
 
+### Nichos
+
+- Adicionado nicho `psicologia` ao Keckleon, com metadados visuais, dicionário, ícones, documentos opcionais e migration de constraint.
+- Adicionado nicho `tatuador` ao Keckleon, com metadados visuais, dicionário, ícones, documentos opcionais e migration de constraint.
+
 ### Documentação
 
 - Criada documentação técnica em `docs/`.
@@ -22,4 +27,3 @@
 - O código usa status `arrived`, mas o `schema_public.sql` atual não inclui esse valor na constraint de `appointments.status`.
 - Não foi encontrado manifest/service worker de PWA no repositório.
 - Há usos restantes de `date-fns format(new Date(...))` em páginas de impressão/histórico que merecem revisão futura de timezone.
-

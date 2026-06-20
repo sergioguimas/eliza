@@ -8,10 +8,12 @@ Nichos conhecidos:
 
 - `generico`
 - `clinica`
+- `psicologia`
 - `barbearia`
 - `salao`
 - `advocacia`
 - `certificado`
+- `tatuador`
 
 O schema também cita `oficina`, mas o app atual não expõe esse nicho na enum de criação.
 
@@ -31,9 +33,11 @@ Exemplos:
 | Nicho | Cliente | Serviço | Agendamento |
 | --- | --- | --- | --- |
 | Clínica | Paciente | Procedimento | Consulta |
+| Psicologia | Paciente | Atendimento | Sessão |
 | Barbearia | Cliente | Serviço | Horário |
 | Salão | Cliente | Serviço | Agendamento |
 | Advocacia | Cliente | Serviço | Compromisso |
+| Tatuador | Cliente | Arte | Sessão |
 | Genérico | Cliente | Serviço | Agendamento |
 
 ## Como Usar em Componentes
@@ -97,4 +101,3 @@ Antes de finalizar uma tela:
 - confirmar se está dentro de dicionário, exemplo ou documentação;
 - trocar textos de UI por `dict.entities`, `dict.messages`, `dict.sections` ou `dict.actions`;
 - usar fallback genérico, como `atendimento`.
-

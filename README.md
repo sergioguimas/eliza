@@ -25,7 +25,7 @@ https://eliza.sgdev.cloud
 - Configuração de expediente da organização e disponibilidade por profissional.
 - Painel financeiro e histórico/registros de atendimento.
 - Recuperação de senha e primeiro acesso por link de e-mail.
-- Keckleon para nichos como `generico`, `clinica`, `barbearia`, `salao`, `advocacia` e `certificado`.
+- Keckleon para nichos como `generico`, `clinica`, `psicologia`, `barbearia`, `salao`, `advocacia`, `certificado` e `tatuador`.
 
 ## Estrutura
 

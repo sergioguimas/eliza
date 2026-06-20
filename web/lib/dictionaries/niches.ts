@@ -142,6 +142,35 @@ export const nicheDictionaries = {
     },
   }),
 
+  psicologia: buildNiche({
+    niche_label: "Psicologia",
+    icon_set: "psychology",
+    boas_vindas: "Bem-vindo ao consultório",
+    dashboard_title: "Visão geral do consultório",
+    appointment_redirect_target: "a evolução",
+    notes_placeholder:
+      "Ex: demanda principal, evolução da sessão, observações importantes...",
+    return_prompt_title: "Agendar próxima sessão?",
+    return_prompt_description_suffix:
+      "foi registrada. Deseja deixar a próxima sessão preparada?",
+    estimate_notes_placeholder:
+      "Condições de pagamento, pacote de sessões ou observações adicionais...",
+    arrived_label: "Paciente chegou",
+    gender: "f",
+    entities: {
+      cliente: "Paciente",
+      cliente_plural: "Pacientes",
+      profissional: "Psicólogo",
+      profissional_plural: "Psicólogos",
+      prontuario: "Evolução",
+      prontuario_plural: "Evoluções",
+      servico: "Atendimento",
+      servico_plural: "Atendimentos",
+      agendamento: "Sessão",
+      agendamento_plural: "Sessões",
+    },
+  }),
+
   barbearia: buildNiche({
     niche_label: "Barbearia",
     icon_set: "grooming",
@@ -249,6 +278,35 @@ export const nicheDictionaries = {
       servico_plural: "Serviços",
       agendamento: "Atendimento",
       agendamento_plural: "Atendimentos",
+    },
+  }),
+
+  tatuador: buildNiche({
+    niche_label: "Estúdio de Tatuagem",
+    icon_set: "tattoo",
+    boas_vindas: "Bem-vindo ao estúdio",
+    dashboard_title: "Visão geral do estúdio",
+    appointment_redirect_target: "a ficha de tatuagem",
+    notes_placeholder:
+      "Ex: estilo da arte, local do corpo, tamanho aproximado, referências...",
+    return_prompt_title: "Agendar próxima sessão?",
+    return_prompt_description_suffix:
+      "foi registrada. Deseja deixar a próxima sessão preparada?",
+    estimate_notes_placeholder:
+      "Tamanho, local do corpo, estilo, número de sessões ou observações comerciais...",
+    arrived_label: "Cliente chegou",
+    gender: "f",
+    entities: {
+      cliente: "Cliente",
+      cliente_plural: "Clientes",
+      profissional: "Tatuador",
+      profissional_plural: "Tatuadores",
+      prontuario: "Ficha de Tatuagem",
+      prontuario_plural: "Fichas de Tatuagem",
+      servico: "Arte",
+      servico_plural: "Artes",
+      agendamento: "Sessão",
+      agendamento_plural: "Sessões",
     },
   }),
 

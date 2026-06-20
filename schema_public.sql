@@ -658,7 +658,7 @@ CREATE TABLE public.organizations (
     plan text DEFAULT 'free'::text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now(),
-    CONSTRAINT organizations_niche_check CHECK ((niche = ANY (ARRAY['clinica'::text, 'barbearia'::text, 'salao'::text, 'generico'::text, 'advocacia'::text, 'oficina'::text, 'certificado'::text])))
+    CONSTRAINT organizations_niche_check CHECK ((niche = ANY (ARRAY['clinica'::text, 'psicologia'::text, 'barbearia'::text, 'salao'::text, 'generico'::text, 'advocacia'::text, 'oficina'::text, 'certificado'::text, 'tatuador'::text])))
 );
 
 
