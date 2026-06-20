@@ -579,10 +579,10 @@ export function SetupForm() {
           {step > 1 ? (
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               onClick={handleBack}
               disabled={isLoading}
-              className="rounded-xl px-4 text-zinc-600 hover:text-zinc-900"
+              className="rounded-xl border-zinc-300 bg-white px-4 text-zinc-800 hover:bg-zinc-50 hover:text-zinc-950"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Voltar
@@ -603,7 +603,7 @@ export function SetupForm() {
                 <Button
                   type="button"
                   onClick={handleNext}
-                  className="rounded-xl px-5 shadow-sm"
+                  className="rounded-xl bg-primary px-5 text-primary-foreground shadow-sm hover:bg-primary/90"
                 >
                   Próximo
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -621,7 +621,7 @@ export function SetupForm() {
                   type="button"
                   onClick={onSubmit}
                   disabled={isLoading}
-                  className="min-w-[170px] rounded-xl px-5 shadow-sm"
+                  className="min-w-[170px] rounded-xl bg-primary px-5 text-primary-foreground shadow-sm hover:bg-primary/90"
                 >
                   {isLoading ? (
                     <>

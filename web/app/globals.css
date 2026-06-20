@@ -36,16 +36,23 @@
   --ring: 240 10% 3.9%;
 
   /* ---------- Branding default ---------- */
-  --brand-primary: #6366f1;
-  --brand-primary-soft: rgba(99, 102, 241, 0.1);
-  --brand-primary-border: rgba(99, 102, 241, 0.25);
-  --brand-primary-foreground: #ffffff;
-  --brand-accent: #4f46e5;
-  --brand-accent-soft: rgba(79, 70, 229, 0.08);
-  --brand-ring: rgba(99, 102, 241, 0.35);
-  --brand-sidebar-gradient-from: rgba(99, 102, 241, 0.16);
-  --brand-sidebar-gradient-to: rgba(79, 70, 229, 0.04);
-  --brand-card-glow: 0 10px 30px rgba(99, 102, 241, 0.12);
+  --brand-primary: 239 84% 67%;
+  --brand-primary-foreground: 0 0% 100%;
+  --brand-ring: 239 84% 67%;
+  --brand-soft: 239 100% 97%;
+  --brand-soft-foreground: 239 60% 36%;
+  --brand-border: 239 75% 88%;
+  --brand-glow: 239 84% 67%;
+  --brand-radius: 0.75rem;
+
+  /* Tokens legados/auxiliares */
+  --brand-primary-soft: hsl(var(--brand-primary) / 0.1);
+  --brand-primary-border: hsl(var(--brand-primary) / 0.25);
+  --brand-accent: 243 75% 59%;
+  --brand-accent-soft: hsl(var(--brand-accent) / 0.08);
+  --brand-sidebar-gradient-from: hsl(var(--brand-primary) / 0.16);
+  --brand-sidebar-gradient-to: hsl(var(--brand-accent) / 0.04);
+  --brand-card-glow: 0 10px 30px hsl(var(--brand-primary) / 0.12);
 
   /* ---------- Tokens consumidos pela UI ---------- */
   --primary: var(--brand-primary);

@@ -165,7 +165,7 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
                   </div>
 
                   <div className="space-y-2">
-                    <Label>{fields.appointment_duration || "Duração da Consulta (minutos)"}</Label>
+                    <Label>{messages.appointment_duration || "Duração da Consulta (minutos)"}</Label>
                     <Input type="number" name="appointment_duration" defaultValue={settings?.appointment_duration || 30} className="max-w-[200px]" />
                   </div>
 

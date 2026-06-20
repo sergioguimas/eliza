@@ -43,6 +43,7 @@ function buildNiche(config: NicheConfig) {
   const agendamentoPluralLower = lowercaseFirst(entities.agendamento_plural)
 
   const genderSuffix = config.gender === "f" ? "a" : "o"
+  const appointmentDurationArticle = config.gender === "f" ? "da" : "do"
 
   const redirectTarget =
     config.appointment_redirect_target || lowercaseFirst(entities.prontuario)
@@ -72,6 +73,8 @@ function buildNiche(config: NicheConfig) {
       dashboard_title: config.dashboard_title,
       dashboard_description:
         config.dashboard_description || "Resumo operacional do dia.",
+
+      appointment_duration: `Duração ${appointmentDurationArticle} ${agendamentoLower} (minutos)`,
 
       clientes_empty_title: `Nenhum ${clienteLower} cadastrado`,
       clientes_empty_description: `Cadastre seu primeiro ${clienteLower} para começar.`,
