@@ -1,6 +1,7 @@
 'use client'
 
 import { useTransition, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -17,6 +18,7 @@ import { useKeckleon } from "@/providers/keckleon-provider"
 
 export function PreferencesForm({ settings, organizationId, organizationData }: { settings: any, organizationId: string, organizationData?: any }) {
   const [isPending, startTransition] = useTransition()
+  const router = useRouter()
 
   // Refs para variáveis
   const pendingMsgRef = useRef<HTMLTextAreaElement>(null)
@@ -43,14 +45,17 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
   const sections = dict.sections || {}
 
   async function handleSubmit(formData: FormData) {
-      startTransition(async () => {
-        const result = await updatePreferences(formData)
-        if (result.error) {
-          toast.error(result.error)
-        } else {
-          toast.success(messages.settings_saved || "Configurações salvas com sucesso!")
-        }
-      })
+    startTransition(async () => {
+      const result = await updatePreferences(formData)
+
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
+
+      toast.success(messages.settings_saved || "Configurações salvas com sucesso!")
+      router.refresh()
+    })
   }
 
   const insertVariable = (

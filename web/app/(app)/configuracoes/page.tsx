@@ -53,6 +53,8 @@ export default async function SettingsPage() {
   const isProfessional = !!professional;
 
   let organization = null;
+  let organizationSettings = null;
+
   if (isAdminOrOwner) {
     const { data: org } = await supabase
       .from("organizations")
@@ -61,6 +63,14 @@ export default async function SettingsPage() {
       .single();
 
     organization = org;
+
+    const { data: settings } = await supabase
+      .from("organization_settings")
+      .select("*")
+      .eq("organization_id", typedProfile.organization_id)
+      .maybeSingle();
+
+    organizationSettings = settings;
   }
 
   const defaultTab = isAdminOrOwner ? "organization" : "profile";
@@ -115,7 +125,7 @@ export default async function SettingsPage() {
 
             <TabsContent value="preferences">
               <PreferencesForm
-                settings={organization}
+                settings={organizationSettings || organization}
                 organizationId={organization.id}
               />
             </TabsContent>
