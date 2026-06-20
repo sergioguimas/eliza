@@ -1,6 +1,5 @@
 import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
-import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -18,16 +17,19 @@ import {
 } from "@/components/ui/table"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Mail, Shield, Trash2 } from "lucide-react"
+import { Mail, Shield } from "lucide-react"
 import { InviteCard } from "@/components/shared/invite-card"
 import { Database } from "@/utils/database.types"
 import { getDictionary } from "@/lib/dictionaries/get-dictionary"
+import { TeamMemberActions } from "@/components/settings/team-member-actions"
+
+type MemberRole = "owner" | "admin" | "professional" | "staff"
 
 type ProfileRow = {
   id: string
   full_name: string | null
   email: string | null
-  role: "owner" | "admin" | "professional" | "staff"
+  role: MemberRole
   organization_id: string
   avatar_url: string | null
   organizations?: {
@@ -50,7 +52,10 @@ export default async function EquipePage() {
     .eq("id", user.id)
     .single()
 
-  const myProfile = rawProfile as unknown as ProfileRow
+  const myProfile = {
+    ...(rawProfile as any),
+    role: normalizeRole((rawProfile as any)?.role),
+  } as ProfileRow
 
   if (!myProfile?.organization_id) {
     redirect("/setup")
@@ -70,7 +75,10 @@ export default async function EquipePage() {
     .eq("organization_id", myProfile.organization_id)
     .order("full_name", { ascending: true })
 
-  const members = (rawMembers || []) as unknown as ProfileRow[]
+  const members = ((rawMembers || []) as any[]).map((member) => ({
+    ...member,
+    role: normalizeRole(member.role),
+  })) as ProfileRow[]
 
   const getInitials = (name: string | null) =>
     name
@@ -93,6 +101,19 @@ export default async function EquipePage() {
       default:
         return "Staff / Recepção"
     }
+  }
+  
+  function normalizeRole(role: string | null): MemberRole {
+    if (
+      role === "owner" ||
+      role === "admin" ||
+      role === "professional" ||
+      role === "staff"
+    ) {
+      return role
+    }
+
+    return "staff"
   }
 
   return (
@@ -166,16 +187,14 @@ export default async function EquipePage() {
                   </TableCell>
 
                   <TableCell className="text-right">
-                    {member.id !== user.id && member.role !== "owner" && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                      // <RemoveMemberButton memberId={member.id} />
-                    )}
+                    <TeamMemberActions
+                      memberId={member.id}
+                      memberName={member.full_name || member.email || "este membro"}
+                      memberRole={member.role}
+                      currentUserRole={myProfile.role}
+                      isCurrentUser={member.id === user.id}
+                      professionalLabel={profissionalSingular}
+                    />
                   </TableCell>
                 </TableRow>
               ))}
