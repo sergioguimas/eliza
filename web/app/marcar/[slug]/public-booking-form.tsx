@@ -280,9 +280,7 @@ export function PublicBookingForm({
     setIsPending(true)
 
     try {
-      const [hours, minutes] = values.time.split(':')
-      const startDateTime = new Date(values.date)
-      startDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0)
+      const startDateTime = `${format(values.date, "yyyy-MM-dd")}T${values.time}:00`
 
       const rawPhone = values.customer_phone.replace(/\D/g, "")
       const phoneWithDDI = rawPhone.length <= 11 ? `55${rawPhone}` : rawPhone
@@ -292,7 +290,7 @@ export function PublicBookingForm({
       formData.append('organization_id', values.organization_id)
       formData.append('service_id', values.service_id)
       formData.append('professional_id', values.professional_id)
-      formData.append('start_time', startDateTime.toISOString())
+      formData.append('start_time', startDateTime)
       formData.append('customer_name', values.customer_name)
       formData.append('customer_document', values.customer_document)
       formData.append('customer_birth_date', values.customer_birth_date || "")

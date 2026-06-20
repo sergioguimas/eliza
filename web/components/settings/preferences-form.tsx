@@ -39,10 +39,12 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
   
   const { dict } = useKeckleon()
 
+  const entities = dict.entities || {}
   const actions = dict.actions || {}
   const messages = dict.messages || {}
   const fields = dict.fields || {}
   const sections = dict.sections || {}
+  const agendamentoPlural = entities.agendamento_plural || "atendimentos"
 
   async function handleSubmit(formData: FormData) {
     startTransition(async () => {
@@ -165,7 +167,7 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
                   </div>
 
                   <div className="space-y-2">
-                    <Label>{messages.appointment_duration || "Duração da Consulta (minutos)"}</Label>
+                    <Label>{messages.appointment_duration || "Duração do atendimento (minutos)"}</Label>
                     <Input type="number" name="appointment_duration" defaultValue={settings?.appointment_duration || 30} className="max-w-[200px]" />
                   </div>
 
@@ -260,7 +262,7 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
                   </div>
                   <div className="space-y-2">
                     <Label className="text-base font-semibold text-blue-600 flex justify-between">
-                        {messages.msg_reminder || "Lembrete de Consulta"}
+                        {messages.msg_reminder || "Lembrete"}
                         <VariableBadges
                           targetRef={reminderMsgRef}
                           variables={['{name}', '{date}', '{time}', '{service}', '{professional}']}
@@ -293,7 +295,7 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
 
                   {appointments}
 
-                  Total: {count} paciente(s).`}
+                  Total: {count} ${agendamentoPlural.toLowerCase()}.`}
                       rows={5}
                     />
                   </div>

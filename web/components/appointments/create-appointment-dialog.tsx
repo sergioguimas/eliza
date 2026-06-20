@@ -162,7 +162,7 @@ export function CreateAppointmentDialog({
   const isWithinBusinessHours = (dateStr: string, timeStr: string) => {
     if (!settings) return true;
 
-    const selectedDate = new Date(`${dateStr}T${timeStr}`);
+    const selectedDate = new Date(`${dateStr}T12:00:00`);
     const dayOfWeek = selectedDate.getDay(); 
 
     if (settings.days_of_week && !settings.days_of_week.includes(dayOfWeek)) {
@@ -202,7 +202,7 @@ export function CreateAppointmentDialog({
 
     // 2. Preparação dos Dados para Validação
     // Garante que 'date' seja um objeto Date real para pegar o dia da semana
-    const dateObj = new Date(date)
+    const dateObj = new Date(`${date}T12:00:00`)
     const dayOfWeek = dateObj.getDay()
     const timeStr = time.length === 5 ? time + ":00" : time
 
@@ -216,18 +216,18 @@ export function CreateAppointmentDialog({
 
     // VERIFICAÇÃO DO PROFISSIONAL
     if (specificAvailability) {
-        // Verifica Turno do Médico
+        // Verifica turno do profissional
         const isOutsideProHours = 
         timeStr < specificAvailability.start_time || 
         timeStr >= specificAvailability.end_time
 
-        // Verifica Intervalo/Almoço do Médico
+        // Verifica intervalo/pausa do profissional
         const isProLunchTime = 
         specificAvailability.break_start && specificAvailability.break_end &&
         timeStr >= specificAvailability.break_start && 
         timeStr < specificAvailability.break_end
 
-        // 2. Verificação dos Horários Comerciais da Clínica
+        // 2. Verificação dos horários comerciais da organização
         if (isOutsideProHours || isProLunchTime) {
         isOutside = true
         } else {
@@ -253,7 +253,7 @@ export function CreateAppointmentDialog({
     const finalCustomerName = customerId === 'new' ? customerName : customers.find(c => c.id === customerId)?.name
     
     if (!date || !time || !finalCustomerName || !selectedProfessionalId) {
-      toast.error("Preencha data, hora, paciente e profissional.")
+      toast.error(`Preencha data, hora, ${cliente.toLowerCase()} e profissional.`)
       return
     }
 

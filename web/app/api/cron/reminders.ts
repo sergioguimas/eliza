@@ -213,13 +213,18 @@ export async function processDoctorDailySummaries() {
 
     const settings = normalizeRelation(firstAppointment.settings)
     const template = settings?.msg_doctor_daily_summary
+    const professionalName = professional?.name ?? "profissional"
+    const appointmentsText = lines.join("\n")
 
     const message =
       render(template, {
+        name: professionalName,
         date: formatDate(now),
-        agenda: lines.join("\n"),
+        appointments: appointmentsText,
+        agenda: appointmentsText,
+        count: list.length,
       }) ||
-      `📅 Agenda do dia:\n\n${lines.join("\n")}`
+      `Bom dia, ${professionalName}!\n\nSua agenda de hoje:\n\n${appointmentsText}\n\nTotal: ${list.length} atendimento(s).`
 
     const result = await sendWhatsAppMessage({
       phone,

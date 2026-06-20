@@ -73,6 +73,24 @@ export function UpdateAppointmentDialog({
   const servico = entities.servico || "Serviço"
   const agendamento = entities.agendamento || "Agendamento"
 
+  function formatSaoPauloDateInput(value: string) {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Sao_Paulo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date(value))
+  }
+
+  function formatSaoPauloTimeInput(value: string) {
+    return new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(new Date(value))
+  }
+
   const [isLoading, setIsLoading] = useState(false)
   const [isCancelOpen, setIsCancelOpen] = useState(false)
   const [showOutsideHoursAlert, setShowOutsideHoursAlert] = useState(false)
@@ -86,9 +104,8 @@ export function UpdateAppointmentDialog({
   useEffect(() => {
     if (appointment && open) {
       if (appointment.start_time) {
-        const d = new Date(appointment.start_time)
-        setDate(d.toISOString().split('T')[0])
-        setTime(d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }))
+        setDate(formatSaoPauloDateInput(appointment.start_time))
+        setTime(formatSaoPauloTimeInput(appointment.start_time))
       }
 
       setNotes(appointment.notes || "")
@@ -100,7 +117,7 @@ export function UpdateAppointmentDialog({
   const isWithinBusinessHours = (dateStr: string, timeStr: string) => {
     if (!settings) return true
 
-    const selectedDate = new Date(`${dateStr}T${timeStr}`)
+    const selectedDate = new Date(`${dateStr}T12:00:00`)
     const dayOfWeek = selectedDate.getDay()
 
     if (settings.days_of_week && !settings.days_of_week.includes(dayOfWeek)) {

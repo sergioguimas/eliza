@@ -70,9 +70,7 @@ export async function removeTeamMember(memberId: string) {
 
   if (!profile.organization_id) {
     return { error: "Organização não encontrada para o usuário atual." }
-    }
-
-    const organizationId = profile.organization_id
+  }
 
   if (!canManageMembers(profile.role)) {
     return { error: "Você não tem permissão para remover membros." }
