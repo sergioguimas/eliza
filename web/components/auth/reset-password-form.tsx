@@ -61,9 +61,9 @@ export function ResetPasswordForm() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle>Definir nova senha</CardTitle>
+        <CardTitle>Criar nova senha</CardTitle>
         <CardDescription>
-          Crie uma nova senha para acessar sua conta.
+          Informe e confirme a nova senha que será usada para acessar sua conta.
         </CardDescription>
       </CardHeader>
 

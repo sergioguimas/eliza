@@ -7,7 +7,7 @@ import { createClient } from "@/utils/supabase/client"
 
 function getSafeNextPath(value: string | null) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/reset-password"
+    return "/update-password"
   }
 
   return value

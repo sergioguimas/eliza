@@ -64,7 +64,7 @@ export async function createTenant(formData: FormData) {
     if (!authUser.user) throw new Error("Falha ao criar usuário")
 
     const appUrl = await getAppUrl()
-    const nextPath = "/reset-password?first_access=true"
+    const nextPath = "/update-password?first_access=true"
 
     const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(
       email,

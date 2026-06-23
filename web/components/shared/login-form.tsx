@@ -39,7 +39,7 @@ export function LoginForm() {
     setRedirectingRecovery(true)
 
     const callbackUrl = new URL('/auth/callback', window.location.origin)
-    callbackUrl.searchParams.set('next', '/reset-password')
+    callbackUrl.searchParams.set('next', '/update-password')
     callbackUrl.hash = window.location.hash
 
     window.location.replace(callbackUrl.toString())
