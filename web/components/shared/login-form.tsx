@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,11 +21,37 @@ import Link from 'next/link'
 export function LoginForm() {
   const [isLogin, setIsLogin] = useState(true)
   const [loading, setLoading] = useState(false)
+  const [redirectingRecovery, setRedirectingRecovery] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
 
   const next = searchParams.get('next')
   const isInvite = next?.includes('/convite/')
+
+  useEffect(() => {
+    const hashParams = new URLSearchParams(window.location.hash.slice(1))
+    const isRecovery = hashParams.get('type') === 'recovery'
+    const hasRecoverySession =
+      hashParams.has('access_token') && hashParams.has('refresh_token')
+
+    if (!isRecovery || !hasRecoverySession) return
+
+    setRedirectingRecovery(true)
+
+    const callbackUrl = new URL('/auth/callback', window.location.origin)
+    callbackUrl.searchParams.set('next', '/reset-password')
+    callbackUrl.hash = window.location.hash
+
+    window.location.replace(callbackUrl.toString())
+  }, [])
+
+  if (redirectingRecovery) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Preparando a definição da sua nova senha...
+      </p>
+    )
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
