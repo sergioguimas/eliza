@@ -18,7 +18,7 @@ export function TenantForm() {
     } else {
       toast.success(
         result?.message ||
-          "Organização criada. Um link de definição de senha foi enviado ao responsável."
+          "Usuário criado. Um link de definição de senha foi enviado ao responsável."
       )
       formRef.current?.reset()
     }
