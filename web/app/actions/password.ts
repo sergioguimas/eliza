@@ -20,7 +20,7 @@ export async function requestPasswordReset(formData: FormData) {
   const appUrl = await getAppUrl()
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${appUrl}/auth/callback?next=${encodeURIComponent("/reset-password")}`,
+    redirectTo: `${appUrl}/auth/callback?next=${encodeURIComponent("/update-password")}`,
   })
 
   if (error) {
@@ -78,6 +78,12 @@ export async function updatePassword(formData: FormData) {
   if (error) {
     console.error("[updatePassword]", error)
     return { error: "Não foi possível atualizar a senha." }
+  }
+
+  const { error: signOutError } = await supabase.auth.signOut()
+
+  if (signOutError) {
+    console.error("[updatePassword:signOut]", signOutError)
   }
 
   return {
