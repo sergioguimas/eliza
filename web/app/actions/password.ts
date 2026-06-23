@@ -1,15 +1,8 @@
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
+import { getAppUrl } from "@/lib/app-url"
 import { isValidEmail, normalizeEmail, validatePassword } from "@/lib/validation"
-
-function getAppUrl() {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    "http://localhost:3000"
-  ).replace(/\/$/, "")
-}
 
 export async function requestPasswordReset(formData: FormData) {
   const rawEmail = String(formData.get("email") || "")
@@ -24,9 +17,10 @@ export async function requestPasswordReset(formData: FormData) {
   }
 
   const supabase = await createClient()
+  const appUrl = await getAppUrl()
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${getAppUrl()}/reset-password`,
+    redirectTo: `${appUrl}/auth/callback?next=${encodeURIComponent("/reset-password")}`,
   })
 
   if (error) {

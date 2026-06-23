@@ -4,17 +4,10 @@ import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/utils/supabase/server'
 import { Database } from "@/utils/database.types"
 import { isValidEmail, normalizeEmail } from "@/lib/validation"
-
-function getAppUrl() {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    "http://localhost:3000"
-  ).replace(/\/$/, "")
-}
+import { getAppUrl } from "@/lib/app-url"
 
 function generateTemporaryPassword() {
-  return `${crypto.randomUUID()}-${crypto.randomUUID()}-Aa1!`
+  return `${crypto.randomUUID()}Aa1!`
 }
 
 export async function createTenant(formData: FormData) {
@@ -70,10 +63,13 @@ export async function createTenant(formData: FormData) {
     if (authError) throw authError
     if (!authUser.user) throw new Error("Falha ao criar usuário")
 
+    const appUrl = await getAppUrl()
+    const nextPath = "/reset-password?first_access=true"
+
     const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(
       email,
       {
-        redirectTo: `${getAppUrl()}/reset-password?first_access=true`,
+        redirectTo: `${appUrl}/auth/callback?next=${encodeURIComponent(nextPath)}`,
       }
     )
 
@@ -88,10 +84,12 @@ export async function createTenant(formData: FormData) {
 
     return {
       success: true,
-      message: `Organização criada. Um link para criação de senha foi enviado para ${email}.`,
+      message: `Usuário criado. Um link para criação de senha foi enviado para ${email}.`,
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('Erro:', error)
-    return { error: error.message || 'Erro ao criar usuário.' }
+    return {
+      error: error instanceof Error ? error.message : 'Erro ao criar usuário.',
+    }
   }
 }
