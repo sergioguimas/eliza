@@ -26,28 +26,34 @@ export default function AuthCallbackPage() {
       const code = currentUrl.searchParams.get("code")
       const nextPath = getSafeNextPath(currentUrl.searchParams.get("next"))
       const hashParams = new URLSearchParams(currentUrl.hash.slice(1))
+      const accessToken = hashParams.get("access_token")
+      const refreshToken = hashParams.get("refresh_token")
+
+      // O cliente SSR usa PKCE e processa callbacks automaticamente. Removemos
+      // os parâmetros antes de criá-lo para evitar disputa com links implicit.
+      window.history.replaceState(
+        null,
+        document.title,
+        currentUrl.pathname
+      )
+
       const supabase = createClient()
       let error: Error | null = null
 
       if (code) {
         const result = await supabase.auth.exchangeCodeForSession(code)
         error = result.error
+      } else if (accessToken && refreshToken) {
+        const result = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        })
+        error = result.error
       } else {
-        const accessToken = hashParams.get("access_token")
-        const refreshToken = hashParams.get("refresh_token")
+        const result = await supabase.auth.getSession()
 
-        if (accessToken && refreshToken) {
-          const result = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          })
-          error = result.error
-        } else {
-          const result = await supabase.auth.getSession()
-
-          if (!result.data.session) {
-            error = new Error("Sessão de recuperação não encontrada.")
-          }
+        if (!result.data.session) {
+          error = new Error("Sessão de recuperação não encontrada.")
         }
       }
 
