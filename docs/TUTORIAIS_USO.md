@@ -21,10 +21,11 @@
 ## Primeiro Acesso do Cliente
 
 1. Responsável recebe link por e-mail.
-2. Abre `/reset-password?first_access=true`.
-3. Define senha forte.
-4. Entra pelo `/login`.
-5. Confere dados da organização.
+2. O link passa por `/auth/callback`.
+3. O sistema abre `/update-password?first_access=true`.
+4. O responsável informa e confirma uma senha forte.
+5. Após salvar, entra pelo `/login`.
+6. Confere os dados e conclui o onboarding necessário.
 
 ## Configurar Preferências
 
@@ -128,9 +129,9 @@
 
 ## Recuperar Senha
 
-1. Acesse `/forgot-password`.
+1. Acesse `/forgot-password` ou `/reset-password`.
 2. Informe e-mail.
 3. Abra o link recebido.
-4. Defina nova senha em `/reset-password`.
-5. Entre novamente pelo `/login`.
-
+4. O link passa por `/auth/callback`.
+5. Defina e confirme a nova senha em `/update-password`.
+6. Entre novamente pelo `/login`.

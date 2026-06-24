@@ -96,12 +96,15 @@ O login client-side espera que `signIn()` retorne `{ success: true, redirectTo }
 ## Testar Recuperação de Senha
 
 1. Configure Redirect URLs no Supabase:
-   - `http://localhost:3000/reset-password`
-   - `https://eliza.sgdev.cloud/reset-password`
-2. Acesse `/forgot-password`.
-3. Envie o e-mail.
-4. Abra o link recebido.
-5. Defina nova senha em `/reset-password`.
+   - `http://localhost:3000/auth/callback`
+   - `https://eliza.sgdev.cloud/auth/callback`
+2. Confirme que o template de recuperação usa `{{ .ConfirmationURL }}`.
+3. Acesse `/forgot-password` ou `/reset-password`.
+4. Envie o e-mail.
+5. Abra o link recebido.
+6. Confirme a passagem por `/auth/callback`.
+7. Defina a nova senha em `/update-password`.
+8. Confirme o retorno para `/login`.
 
 Validações esperadas:
 
@@ -110,4 +113,6 @@ Validações esperadas:
 - senha com letra;
 - senha com número;
 - confirmação igual.
-
+- `/update-password` bloqueia acesso sem sessão válida;
+- tokens são removidos da URL após a callback;
+- a nova senha permite login após o encerramento da sessão de recuperação.

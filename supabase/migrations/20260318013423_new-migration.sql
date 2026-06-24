@@ -1,0 +1,3 @@
+-- Reserved migration version.
+-- The schema changes present in the March database snapshot are consolidated
+-- in 20260623183000_fix_auth_profile_and_services_is_active.sql.

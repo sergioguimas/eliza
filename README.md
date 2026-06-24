@@ -100,6 +100,7 @@ EVOLUTION_API_KEY=
 - [Setup local](docs/SETUP_LOCAL.md)
 - [Deploy](docs/DEPLOY.md)
 - [Supabase](docs/SUPABASE.md)
+- [Autenticação e recuperação de senha](docs/AUTH_E_RECUPERACAO.md)
 - [WhatsApp / Evolution API](docs/WHATSAPP_EVOLUTION.md)
 - [Cron e lembretes](docs/CRON.md)
 - [Agendamento](docs/AGENDAMENTO.md)
@@ -115,7 +116,9 @@ EVOLUTION_API_KEY=
 | --- | --- |
 | `/login` | Login |
 | `/forgot-password` | Solicitar recuperação de senha |
-| `/reset-password` | Definir nova senha |
+| `/reset-password` | Solicitar recuperação de senha; rota compatível |
+| `/auth/callback` | Validar link de autenticação ou recuperação |
+| `/update-password` | Definir e confirmar a nova senha |
 | `/setup` | Criar organização inicial |
 | `/dashboard` | Visão geral |
 | `/agendamentos` | Agenda interna |
@@ -134,5 +137,4 @@ EVOLUTION_API_KEY=
 - O timezone operacional é `America/Sao_Paulo`.
 - Horários de agendamento são gravados como `timestamptz`, mas entradas de UI devem representar a hora local do Brasil.
 - `profiles.role` controla permissão; `professionals` controla agenda e atendimento.
-- `services` no schema atual usa `title`, `duration_minutes` e `active`.
-- O código usa status `arrived`, mas o `schema_public.sql` atual ainda não lista esse valor no check constraint. Veja [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+- `services` no schema atual usa `title`, `duration_minutes` e `is_active`.

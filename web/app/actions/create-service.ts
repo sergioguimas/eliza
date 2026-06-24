@@ -26,7 +26,7 @@ export async function upsertService(formData: FormData) {
     price,
     color,
     organization_id,
-    active: true 
+    is_active: true
   }
 
   try {

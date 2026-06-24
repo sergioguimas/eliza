@@ -74,11 +74,19 @@ EVOLUTION_API_KEY=
 Em Authentication > URL Configuration, inclua:
 
 ```txt
-https://eliza.sgdev.cloud/reset-password
-http://localhost:3000/reset-password
+https://eliza.sgdev.cloud/auth/callback
+http://localhost:3000/auth/callback
 ```
 
 Inclua também URLs usadas em fluxos de convite/cadastro se forem ativadas no Auth.
+
+No template de recuperação de senha, use:
+
+```html
+<a href="{{ .ConfirmationURL }}">Redefinir senha</a>
+```
+
+Não fixe o destino em `/login`, `/reset-password` ou `/update-password`.
 
 ## Cron
 
@@ -98,6 +106,9 @@ Use timezone `America/Sao_Paulo` no agendador sempre que ele permitir.
 3. Validar `/dashboard`.
 4. Validar `/marcar/[slug]`.
 5. Validar recuperação de senha.
+   - solicitar link em `/reset-password`;
+   - confirmar callback;
+   - definir senha em `/update-password`;
+   - entrar novamente em `/login`.
 6. Validar QR Code e status do WhatsApp.
 7. Rodar chamada manual do cron com `curl`.
-

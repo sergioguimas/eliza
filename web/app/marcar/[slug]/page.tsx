@@ -18,7 +18,7 @@ export default async function PublicBookingPage({params}: {params: Promise<{ slu
 
   // 2. Busca serviços e profissionais ativos
   const [servicesRes, professionalsRes] = await Promise.all([
-    supabase.from('services').select('*').eq('organization_id', organization.id).eq('active', true),
+    supabase.from('services').select('*').eq('organization_id', organization.id).eq('is_active', true),
     supabase.from('professionals').select('*').eq('organization_id', organization.id).eq('is_active', true)
   ])
 

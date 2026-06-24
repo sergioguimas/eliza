@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-06-23
+
+### Autenticação e Primeiro Acesso
+
+- Corrigida a senha temporária do Super Admin para respeitar o limite de 72 caracteres do BCrypt/Supabase Auth.
+- Mensagem de sucesso alterada de “Organização criada” para “Usuário criado”.
+- Criada callback de autenticação compatível com PKCE e implicit recovery.
+- Separadas as rotas de solicitação (`/reset-password`) e troca efetiva (`/update-password`).
+- Adicionado fallback para links antigos de recuperação que terminem em `/login#...`.
+- A página de troca de senha agora exige sessão válida e encerra a sessão de recuperação após salvar.
+- Documentado o fluxo, as Redirect URLs e o template de e-mail do Supabase.
+
 ## 2026-06-20
 
 ### Nichos

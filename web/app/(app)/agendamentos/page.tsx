@@ -59,7 +59,7 @@ export default async function AgendamentosPage({
       .from('services')
       .select('id, title, color')
       .eq('organization_id', orgId)
-      .eq('active', true),
+      .eq('is_active', true),
 
     supabase
       .from('professionals')
