@@ -29,12 +29,6 @@ Também podem existir credenciais por organização:
 
 A prioridade no código costuma ser banco da organização e depois variável global.
 
-Infra conhecida:
-
-```txt
-Evolution API via Tailscale: 100.64.0.2:8080
-```
-
 ## Instância
 
 A instância pode ser vinculada ao `slug` da organização.
