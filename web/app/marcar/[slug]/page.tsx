@@ -8,9 +8,11 @@ export default async function PublicBookingPage({params}: {params: Promise<{ slu
   const supabase = await createClient<Database>()
 
   // 1. Busca a organização pelo slug
+  // Colunas explícitas: o papel anon só tem SELECT nas colunas públicas da org
+  // (credenciais da Evolution e dados de billing ficam fora do alcance).
   const { data: organization } = await supabase
     .from('organizations')
-    .select('*')
+    .select('id, name, slug, niche')
     .eq('slug', slug)
     .single()
 

@@ -94,8 +94,9 @@ export async function createCompany(formData: FormData) {
       name: companyName,
       slug: slug,
       niche: 'generico', // Padrão
-      plan: 'free',
-      subscription_status: 'active'
+      // plan e subscription_status não são enviados de propósito: o client não
+      // tem privilégio de INSERT nessas colunas (senão dá para nascer com
+      // plan='enterprise'). Os DEFAULTs da tabela cobrem 'free' / 'active'.
     })
     .select()
     .single()

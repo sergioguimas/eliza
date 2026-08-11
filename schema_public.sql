@@ -1366,10 +1366,10 @@ CREATE POLICY "Disponibilidade visível publicamente" ON public.professional_ava
 
 
 --
--- Name: organizations New users can create org; Type: POLICY; Schema: public; Owner: -
+-- Name: organizations Authenticated users can create org; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "New users can create org" ON public.organizations FOR INSERT WITH CHECK (true);
+CREATE POLICY "Authenticated users can create org" ON public.organizations FOR INSERT TO authenticated WITH CHECK (true);
 
 
 --
@@ -1488,10 +1488,14 @@ CREATE POLICY "Update own profile" ON public.profiles FOR UPDATE USING ((id = au
 
 
 --
--- Name: organizations Users can update own org; Type: POLICY; Schema: public; Owner: -
+-- Name: organizations Owners and admins update own org; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Users can update own org" ON public.organizations FOR UPDATE USING ((id = public.get_user_org_id()));
+CREATE POLICY "Owners and admins update own org" ON public.organizations FOR UPDATE TO authenticated USING (((id = public.get_user_org_id()) AND (EXISTS ( SELECT 1
+   FROM public.profiles
+  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['owner'::text, 'admin'::text]))))))) WITH CHECK (((id = public.get_user_org_id()) AND (EXISTS ( SELECT 1
+   FROM public.profiles
+  WHERE ((profiles.id = auth.uid()) AND (profiles.role = ANY (ARRAY['owner'::text, 'admin'::text])))))));
 
 
 --
@@ -1601,6 +1605,28 @@ ALTER TABLE public.service_records ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.services ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: TABLE organizations; Type: ACL; Schema: public; Owner: -
+--
+-- Este dump não traz os privilégios padrão do Supabase (anon/authenticated
+-- recebem ALL nas tabelas de `public`). O bloco abaixo é a exceção: policy de
+-- RLS não restringe COLUNA, então billing e credenciais da Evolution são
+-- protegidos por privilégio de coluna. Ver a migration
+-- 20260809160000_harden_organizations_access.sql.
+--
+-- Fora destes GRANTs, só service role escreve: plan, subscription_status,
+-- stripe_customer_id, evolution_api_url, evolution_api_key, slug.
+
+REVOKE UPDATE ON TABLE public.organizations FROM anon, authenticated;
+GRANT UPDATE (name, niche, whatsapp_instance_name, whatsapp_status) ON TABLE public.organizations TO authenticated;
+
+REVOKE INSERT ON TABLE public.organizations FROM anon, authenticated;
+GRANT INSERT (name, slug, niche) ON TABLE public.organizations TO authenticated;
+
+REVOKE SELECT ON TABLE public.organizations FROM anon;
+GRANT SELECT (id, name, slug, niche, created_at) ON TABLE public.organizations TO anon;
+
 
 --
 -- PostgreSQL database dump complete
