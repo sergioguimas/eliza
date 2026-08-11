@@ -30,12 +30,6 @@ organização — as colunas `organizations.evolution_api_url` / `evolution_api_
 foram removidas (migration `20260809170000`). A resolução do servidor vive em
 `web/lib/evolution.ts`, e é o único lugar que lê essas envs.
 
-Infra conhecida:
-
-```txt
-Evolution API via Tailscale: 100.64.0.2:8080
-```
-
 ## Instância
 
 A instância é o que separa um tenant do outro: é o número de onde a mensagem
