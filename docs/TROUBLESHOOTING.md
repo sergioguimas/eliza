@@ -76,6 +76,7 @@ Verificar:
 - SMTP/Auth configurado no Supabase;
 - Redirect URLs;
 - `NEXT_PUBLIC_APP_URL`;
+- template usando `{{ .ConfirmationURL }}`;
 - spam/quarentena do domínio;
 - logs de Auth.
 
@@ -84,9 +85,80 @@ Verificar:
 Adicionar no Supabase:
 
 ```txt
-http://localhost:3000/reset-password
-https://eliza.sgdev.cloud/reset-password
+http://localhost:3000/auth/callback
+https://eliza.sgdev.cloud/auth/callback
 ```
+
+## Link de recuperação abre o login
+
+Sintoma: o e-mail abre uma URL como:
+
+```txt
+/login#access_token=...&type=recovery
+```
+
+Causa provável: template do Supabase fixado em `/login` em vez de usar a URL de confirmação.
+
+Correções:
+
+- usar `{{ .ConfirmationURL }}` no template;
+- manter o fallback de recovery em `web/components/shared/login-form.tsx`;
+- gerar um novo link depois de publicar a correção.
+
+## Callback retorna `recovery_link_invalid`
+
+Sintoma:
+
+```txt
+/forgot-password?error=recovery_link_invalid
+```
+
+Verificar:
+
+- link expirou ou já foi consumido;
+- callback está cadastrada nas Redirect URLs;
+- tokens ou parâmetro `code` chegaram à rota;
+- cliente PKCE não processou antecipadamente um link implicit;
+- logs do browser para `[AuthCallbackPage]`;
+- data e hora do dispositivo estão corretas.
+
+A callback captura os tokens antes de criar o cliente Supabase, limpa a URL e então estabelece a sessão manualmente. Para PKCE, chama `exchangeCodeForSession`.
+
+## `/update-password` volta para solicitar o e-mail
+
+Isso ocorre quando não existe sessão válida de recuperação.
+
+Verificar:
+
+- acesso foi feito pelo link recebido, não digitando a rota manualmente;
+- callback concluiu sem erro;
+- cookies do domínio estão habilitados;
+- link não foi aberto anteriormente;
+- usuário não tentou reutilizar um link antigo.
+
+Solicite um novo e-mail e repita o fluxo completo.
+
+## Senha alterada, mas login falha
+
+Verificar:
+
+- usuário está usando a nova senha;
+- e-mail informado corresponde ao usuário recuperado;
+- senha atende às regras mínimas;
+- action executou `updateUser({ password })`;
+- sessão de recuperação foi encerrada antes do novo login.
+
+## Erro 500 ao criar usuário pelo Super Admin
+
+Verificar:
+
+- senha temporária não ultrapassa 72 caracteres;
+- logs do Supabase Auth;
+- trigger `on_auth_user_created`;
+- função `public.handle_new_user`;
+- constraints e permissões de `public.profiles`.
+
+A senha temporária atual possui 40 caracteres. Falhas em triggers executadas após o insert em `auth.users` também aparecem como erro de criação de usuário.
 
 ## Cron rodando fora de horário
 
@@ -142,4 +214,3 @@ Não altere isso sem confirmar a regra de negócio de produção.
 ## PWA não instala
 
 Nesta revisão não foi encontrado `manifest.ts`, `manifest.json` ou service worker. Confirmar se PWA está pendente, removido ou implementado fora do repositório.
-

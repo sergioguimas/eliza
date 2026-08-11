@@ -110,18 +110,23 @@ Supabase Auth é usado para login, cadastro, recuperação de senha e criação 
 
 Fluxo de recuperação:
 
-1. `/forgot-password`;
+1. `/forgot-password` ou `/reset-password`;
 2. `supabase.auth.resetPasswordForEmail`;
-3. redirect para `/reset-password`;
-4. `supabase.auth.updateUser({ password })`.
+3. redirect para `/auth/callback?next=/update-password`;
+4. troca de `code` PKCE ou tokens implicit por uma sessão;
+5. redirect para `/update-password`;
+6. `supabase.auth.updateUser({ password })`;
+7. encerramento da sessão de recuperação.
+
+A callback também aceita links antigos que chegam em `/login#access_token=...&type=recovery`, encaminhando-os para o fluxo correto.
 
 ## Redirect URLs
 
 Configure:
 
 ```txt
-http://localhost:3000/reset-password
-https://eliza.sgdev.cloud/reset-password
+http://localhost:3000/auth/callback
+https://eliza.sgdev.cloud/auth/callback
 ```
 
 Variáveis recomendadas:
@@ -171,10 +176,13 @@ Ao criar novas tabelas multi-tenant:
 Fluxo atual esperado no super admin:
 
 1. admin/GOD informa nome da organização e e-mail do responsável;
-2. servidor gera senha temporária forte;
+2. servidor gera senha temporária forte, com 40 caracteres e abaixo do limite de 72 do BCrypt;
 3. Supabase Admin API cria usuário;
-4. sistema envia reset de senha com `/reset-password?first_access=true`;
-5. responsável define a própria senha.
+4. a trigger `on_auth_user_created` cria ou atualiza `profiles`;
+5. sistema envia reset com destino final em `/update-password?first_access=true`;
+6. `/auth/callback` estabelece a sessão;
+7. responsável define a própria senha.
 
-Ponto de atenção: confirme se a action também cria/vincula `organizations` e `profiles` no fluxo final de produção. O arquivo `web/app/actions/admin-create-tenant.ts` atualmente trata a criação do usuário e envio do link.
+Ponto de atenção: `web/app/actions/admin-create-tenant.ts` cria o usuário e envia o link, mas não cria nem vincula uma linha em `organizations`. O onboarding da organização continua separado.
 
+Detalhes completos em [AUTH_E_RECUPERACAO.md](AUTH_E_RECUPERACAO.md).

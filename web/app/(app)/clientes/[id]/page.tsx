@@ -135,7 +135,7 @@ export default async function CustomerPage({
     .from("services")
     .select("id, title, price, duration_minutes")
     .eq("organization_id", typedProfile.organization_id)
-    .eq("active", true)
+    .eq("is_active", true)
 
   return (
     <div className="space-y-6 pb-10">

@@ -19,7 +19,8 @@ DROP TABLE IF EXISTS whatsapp_instances CASCADE;
 -- ==============================================================================
 -- 1. EXTENSÕES
 -- ==============================================================================
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions;
 
 -- ==============================================================================
 -- 2. TABELAS CORE

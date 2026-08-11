@@ -25,6 +25,20 @@ Eliza é um app Next.js com backend no próprio App Router, usando Server Action
 4. Tabelas como `customers`, `services`, `appointments`, `professionals` e `organization_settings` usam `organization_id`.
 5. RLS filtra dados pelo helper SQL `get_user_org_id()`.
 
+## Autenticação e Recuperação
+
+O fluxo de recuperação separa solicitação, validação do link e troca da senha:
+
+```txt
+/forgot-password ou /reset-password
+  -> Supabase Auth
+  -> /auth/callback
+  -> /update-password
+  -> /login
+```
+
+`/auth/callback` aceita PKCE e implicit recovery. A callback estabelece a sessão antes de abrir a página protegida de troca de senha e remove tokens da URL. Consulte [AUTH_E_RECUPERACAO.md](AUTH_E_RECUPERACAO.md).
+
 ## Perfis e Profissionais
 
 `profiles` representa acesso ao sistema e permissão. `professionals` representa alguém que atende na agenda. Um usuário `admin` ou `professional` pode ter registro em `professionals`; `staff` normalmente não deve aparecer na agenda.
@@ -73,4 +87,3 @@ Evite textos fixos como `Paciente`, `Consulta`, `Procedimento`, `Doutor` e `Clí
 ## PWA
 
 O produto é tratado como PWA no escopo do projeto, mas nesta revisão não foi encontrado `manifest.ts`, `manifest.json` ou service worker no app. Isso deve ser confirmado antes de anunciar instalação offline como funcionalidade pronta.
-
