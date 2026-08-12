@@ -56,9 +56,12 @@ export default async function SettingsPage() {
   let organizationSettings = null;
 
   if (isAdminOrOwner) {
+    // Só as colunas públicas: authenticated não lê billing nem os campos de
+    // WhatsApp (ver migration 20260811120000). O que as abas usam daqui é
+    // id/name/slug — o estado do WhatsApp vem de getWhatsappStatus().
     const { data: org } = await supabase
       .from("organizations")
-      .select("*")
+      .select("id, name, slug, niche")
       .eq("id", typedProfile.organization_id)
       .single();
 

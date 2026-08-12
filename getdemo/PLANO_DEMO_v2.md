@@ -37,7 +37,10 @@ Não há MCP do Supabase nesta máquina — **por escolha**. Toda mudança de sc
 como arquivo em `supabase/migrations/`, para ser copiada e executada no Studio web.
 Nenhum passo deste plano executa DDL diretamente.
 
-- Fase 1 → `supabase/migrations/20260809143000_demo_tenant.sql` ✅ escrita
+- Fase 1 → `supabase/migrations/20260809143000_demo_tenant.sql` ✅ **aplicada em produção**.
+  As quatro tabelas `demo_*`, as colunas `is_demo`/`expires_at`, o CHECK e o índice de
+  expiração estão de pé, e `web/utils/database.types.ts` já foi regenerado. Nada a executar
+  antes de começar a codar.
 
 ---
 
@@ -91,15 +94,21 @@ RLS: `demo_interactions`, `demo_timeline_events` seguem o padrão existente
 (`organization_id = public.get_user_org_id()`). `demo_leads` e `demo_rate_limits`
 sem policy — acesso apenas por service role.
 
-### 1.2 🔴 Isolar o cron das orgs demo (crítico — bloqueia deploy)
+### 1.2 ✅ Isolar o cron das orgs demo — FEITO
 
 `processPatientMorningReminders` e `processDoctorDailySummaries` selecionam `appointments`
 por faixa de data, **sem nenhum filtro de organização** ([reminders.ts:150](../web/app/api/cron/reminders.ts)).
 Uma org demo semeada entra na varredura e dispara lembrete agendado horas depois do tour —
 mensagem inesperada, para um número real, fora de qualquer contexto.
 
-Correção: `organizations!inner(is_demo)` no select das duas funções, filtrando `is_demo=false`.
+Correção aplicada em [reminders.ts](../web/app/api/cron/reminders.ts): `organization:organizations!inner(is_demo)`
+no select das duas funções + `.eq("organization.is_demo", false)`.
 **Todos os envios da demo são explícitos, comandados pelo tour.** O cron nunca toca demo.
+
+Validado contra o banco de produção com query de leitura: `is_demo=false` retorna os 21
+agendamentos reais, `is_demo=true` retorna 0 — se o filtro não estivesse sendo aplicado,
+os dois retornariam 21. Nenhuma linha se perde no `!inner`, porque `appointments.organization_id`
+é `NOT NULL` com FK para `organizations`.
 
 ### 1.3 ✅ Fail-closed na instância do WhatsApp — RESOLVIDO fora da demo
 
@@ -120,15 +129,69 @@ O servidor Evolution é único e por env; as colunas `organizations.evolution_ap
 `20260809170000`.
 
 **O que isso muda para a demo:** o tenant demo não precisa mais de caminho de envio
-separado para não vazar pelo número admin — o fail-closed é global. Se a demo for
-mandar WhatsApp de verdade, grave `organizations.whatsapp_instance_name` da org demo
-no seed apontando para a instância dedicada da demo. Sem isso, ela simplesmente não
-envia, que é o comportamento seguro.
+separado para não vazar pelo número admin — o fail-closed é global.
+
+⚠️ **Mas não siga a sugestão de gravar `organizations.whatsapp_instance_name` na org demo.**
+Ver 1.4.
+
+### 1.4 ✅ Sequestro de instância pelo visitante da demo — MITIGADO
+
+A demo entrega uma **sessão `authenticated` real a um desconhecido**. Com a anon key
+(pública) e o token da sessão, ele fala direto com o REST do Supabase, sem passar pelo app:
+
+```sql
+-- 1. authenticated tem SELECT em nível de TABELA (schema_public.sql:2301) e a policy
+--    "Public profiles are viewable by everyone" é FOR SELECT USING (true), sem restrição
+--    de role. Resultado: lê TODAS as colunas de TODAS as orgs.
+select whatsapp_instance_name, stripe_customer_id, plan from organizations;
+
+-- 2. authenticated tem GRANT UPDATE(whatsapp_instance_name) (schema_public.sql:2350) e a
+--    policy "Users can update own org" libera a própria org.
+update organizations set whatsapp_instance_name = '<instância de um tenant real>'
+  where id = '<a própria org demo>';
+
+-- 3. dispara o envio do tour → a mensagem sai pelo WhatsApp de um cliente real seu.
+```
+
+Gravar a instância dedicada na org demo, como a 1.3 sugere, é o que fecha essa cadeia:
+a partir daí o visitante controla de qual número a demo envia.
+
+**Correção aplicada, sem tocar no banco:** `sendDemoWhatsAppMessage` em
+[send-demo-whatsapp.ts](../web/app/actions/demo/send-demo-whatsapp.ts) **não lê a coluna**.
+Usa `DEMO_WHATSAPP_INSTANCE` do ambiente, direto, e `organizations.whatsapp_instance_name`
+da org demo fica **nula**. O passo 3 morre mesmo que o visitante adultere o passo 2, e
+qualquer caminho não-demo que escape do filtro do cron falha fechado pela 1.3.
+
+A função também recusa org com `is_demo=false` (impede um tenant real de sair pelo chip da
+demo por engano) e org com `expires_at` vencido. **Os controles de abuso da 8.2 são do
+chamador** — a função é só o primitivo de envio e nunca deve receber texto livre do visitante.
+
+> ⚠️ **Os passos 1 e 2 valiam para tenants reais, independente da demo:** qualquer usuário
+> logado de qualquer tenant lia `whatsapp_instance_name`, `stripe_customer_id`, `plan` e
+> `subscription_status` de todos os outros, e podia reapontar o próprio número.
+> A demo não criava esse furo — ela o transformaria de "seus clientes se enxergam" em "a
+> internet enxerga".
+>
+> **Fechado em `20260811120000_restrict_authenticated_select_on_organizations.sql`** (SELECT
+> de `authenticated` restrito a `id/name/slug/niche`, `UPDATE(whatsapp_instance_name)`
+> revogado, fluxo de conexão movido para service role). ⏳ **Falta executar no Studio** —
+> enquanto não rodar, o furo está de pé em produção.
 
 ### Testes
+
+Verificado agora (query de leitura contra produção):
+- [x] Filtro embutido é aceito pelo PostgREST — a query do cron não quebra
+- [x] Filtro discrimina: `is_demo=false` → 21 agendamentos, `is_demo=true` → 0
+- [x] `!inner` não descarta linha nenhuma (`organization_id` é `NOT NULL` + FK)
+- [x] `tsc --noEmit` limpo
+
+Pendente até existir um tenant demo semeado (Fase 3):
 - [ ] Cron completo com org demo semeada → zero dispatches para a demo
-- [ ] Org normal continua recebendo lembretes
-- [ ] Org demo sem `whatsapp_instance_name` → envio abortado, nada sai pelo número admin
+- [ ] Org normal continua recebendo lembretes (regressão)
+- [ ] Org demo com `whatsapp_instance_name` nula envia pelo chip dedicado
+- [ ] Sessão demo altera `whatsapp_instance_name` da própria org → envio do tour **continua
+      saindo pelo chip dedicado**, ignorando a coluna
+- [ ] `DEMO_WHATSAPP_INSTANCE` ausente → aborta, zero envio
 
 **Tempo:** 4–5h
 
@@ -143,6 +206,14 @@ Fluxo, espelhando `app/actions/admin-create-tenant.ts`:
 1. Validar `niche` contra `getSetupNicheOptions()` (fonte única de verdade)
 2. Rate limit por hash de IP em `demo_rate_limits`
 3. Service role: `auth.admin.createUser({ email: demo-<uuid>@demo.eliza.local, password: random, email_confirm: true })`
+
+> 🔴 **O tenant demo tem que nascer por service role — não é preferência, é obrigatório.**
+> `is_demo` e `expires_at` ficaram **de fora dos grants de coluna do `authenticated`**, de
+> propósito: senão qualquer usuário marcaria a própria org como demo. Um client anônimo ou
+> autenticado toma `permission denied` na coluna `is_demo`, e o erro **não** vai fazer sentido
+> olhando a policy — quem barra é o privilégio de coluna, não o RLS.
+> `createOrganization` em [organization.ts](../web/app/actions/organization.ts) é o modelo
+> certo de client admin.
 4. Insert `organizations` — `is_demo=true`, `expires_at=now()+24h`, `slug=demo-<uuid>`, `plan='demo'`
 5. Insert `profiles` — `organization_id` da org, `role='owner'`
 6. Rodar seed (Fase 3)
@@ -262,8 +333,12 @@ ponto com superfície de abuso.
 ### 8.1 Configuração
 
 - Nova instância Evolution para o chip dedicado, exposta como `DEMO_WHATSAPP_INSTANCE`.
-- O seed grava esse valor em `organization_settings.whatsapp_instance_name` da org demo.
-- Ausência da env → passo degrada para card estático. Nunca cai no número admin (Fase 1.3).
+- O envio da demo lê **a env, direto**. `organizations.whatsapp_instance_name` da org demo
+  fica **nula** — o visitante tem `GRANT UPDATE` nessa coluna e poderia reapontá-la para a
+  instância de um tenant real (Fase 1.4).
+- Ausência da env → passo degrada para card estático, zero envio.
+- `organization_settings.whatsapp_instance_name` não existe mais: foi dropada na migration
+  `20260809170000`. A coluna viva é `organizations.whatsapp_instance_name`.
 
 ### 8.2 Controles de abuso (obrigatórios)
 
@@ -364,7 +439,7 @@ reverter é desligar a rota `/demo/start`, sem tocar em dados de produção.
 
 | Fase | Tempo | Status |
 |------|-------|--------|
-| 1. Banco + isolamento do cron + fail-closed 🔴 | 4–5h | 🟡 migration escrita |
+| 1. Banco + isolamento do cron + anti-sequestro | 4–5h | 🟢 **DONE** |
 | 2. Criação do tenant demo | 5–6h | 🔴 TODO |
 | 3. Seed por nicho | 4–5h | 🔴 TODO |
 | 4. Página `/demo/start` | 3h | 🔴 TODO |
@@ -392,7 +467,11 @@ público.
 - [ ] Contratar o chip virtual e criar a instância na Evolution
 - [ ] Definir `DEMO_WHATSAPP_INSTANCE` no `.env` da VPS
 - [ ] Considerar um segundo chip de reserva (troca por env var, sem deploy)
-- [ ] Executar `20260809143000_demo_tenant.sql` no Studio
+- [x] ~~Executar `20260809143000_demo_tenant.sql` no Studio~~ — aplicada
+- [ ] **Executar `20260811120000_restrict_authenticated_select_on_organizations.sql` no
+      Studio** (Fase 1.4). Decidido: SELECT de `authenticated` restrito a colunas, como já é
+      feito para `anon`. Migration e ajustes de código prontos. Não bloqueia o
+      desenvolvimento; **bloqueia o deploy público da demo**.
 
 **Fora de escopo (decidido):** signup self-serve, nichos novos (odontologia/personal/estética),
 dashboard de analytics. O logging entra desde a Fase 1 para o dashboard nascer com histórico.

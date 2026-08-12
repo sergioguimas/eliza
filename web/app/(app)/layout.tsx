@@ -35,9 +35,12 @@ export default async function AppLayout({
 
   if (!user) return redirect("/login")
 
+  // Colunas explícitas na org: o papel authenticated só tem SELECT nas colunas
+  // públicas (id, name, slug, niche). `organizations(*)` daria 42501 — e era
+  // por ele que billing e whatsapp_instance_name vazavam para o client.
   const { data: rawProfile } = await supabase
     .from("profiles")
-    .select("*, organizations(*)")
+    .select("*, organizations(id, name, slug, niche)")
     .eq("id", user.id)
     .single()
 

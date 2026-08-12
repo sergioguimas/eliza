@@ -98,7 +98,10 @@ export async function createCompany(formData: FormData) {
       // tem privilégio de INSERT nessas colunas (senão dá para nascer com
       // plan='enterprise'). Os DEFAULTs da tabela cobrem 'free' / 'active'.
     })
-    .select()
+    // `.select()` sem argumento vira `select=*` no PostgREST, e o RETURNING de
+    // todas as colunas exige SELECT em todas elas — que authenticated não tem
+    // mais (migration 20260811120000). Só o id é usado abaixo.
+    .select('id')
     .single()
 
   if (orgError) {
