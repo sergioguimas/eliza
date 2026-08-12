@@ -284,9 +284,36 @@ Terminologia e branding: **nada a fazer** — vem do Keckleon via `organizations
 
 `app/demo/start/page.tsx` — fora do route group `(app)` (não exige sessão).
 
-Grid de cards com os 7 nichos, alimentado por `getSetupNicheOptions()` + branding do
-`niche-config.ts` (ícone e cor já existem lá — não inventar novos). Loading state,
-error state com retry, responsivo, navegável por teclado.
+Implementado em [page.tsx](../web/app/demo/start/page.tsx) e
+[demo-niche-picker.tsx](../web/app/demo/start/demo-niche-picker.tsx).
+
+Grid dos 7 nichos vindo de `getSetupNicheOptions()`, filtrado por `DEMO_NICHES`, com o
+mesmo vocabulário visual dos cards de `/setup` — ícone, cor e gradiente já existiam no
+`niche-config.ts`. Um clique já cria o tenant: card em estado de carregamento, os outros
+esmaecidos e desabilitados, erro em `role="alert"`. São `<button>`, então teclado funciona
+sem nada extra.
+
+A navegação pós-criação é **dura** (`window.location.assign`), não `router.push`: o
+endpoint acabou de gravar o cookie de sessão e o layout do app é renderizado no servidor —
+um push de client poderia reaproveitar cache anterior à sessão e cair no `/setup`.
+
+**Descobertas na verificação:**
+- ⚠️ **A criação leva ~6s em dev** (`render: 5.7s`, fora o compile). São muitas idas ao
+  Supabase em série: cria usuário, insere org, vincula perfil, semeia 6 conjuntos, faz
+  login e loga a interação. Em produção deve cair, mas 6s de spinner numa landing é muito.
+  Candidato a paralelizar os inserts do seed que não dependem uns dos outros.
+- ⚠️ O card **Financeiro do dashboard tem `R$` hardcoded**, sem valor
+  (`dashboard/page.tsx:282`). Pré-existente, afeta todos os tenants, mas cai bem na
+  primeira tela da demonstração. Fora do escopo — chip aberto à parte.
+- O ajuste do seed para o compromisso cair hoje não bastava: visitando às 18h, o dia útil
+  já tinha acabado e a tela voltava a mostrar "0 hoje". O segundo atendimento concluído
+  agora vai para as 9h de hoje quando já passou das 11h de um dia útil.
+
+### Testes
+- [x] Página carrega com os 7 nichos, `certificado` fora
+- [x] Clique → estado de carregamento no card, demais desabilitados
+- [x] Criação, redirect e dashboard com o dicionário do nicho aplicado (barbearia e psicologia)
+- [x] Dashboard povoado: `SESSÕES 1 hoje`, `PACIENTES 2`, atendimento das 09:00 finalizado
 
 **Tempo:** 3h
 
@@ -474,7 +501,7 @@ reverter é desligar a rota `/demo/start`, sem tocar em dados de produção.
 | 1. Banco + isolamento do cron + anti-sequestro | 4–5h | 🟢 **DONE** |
 | 2. Criação do tenant demo | 5–6h | 🟢 **DONE** (verificado ponta a ponta) |
 | 3. Seed por nicho | 4–5h | 🟢 **DONE** (7 nichos verificados) |
-| 4. Página `/demo/start` | 3h | 🔴 TODO |
+| 4. Página `/demo/start` | 3h | 🟢 **DONE** (verificado no browser) |
 | 5. Tour guiado | 6–8h | 🔴 TODO |
 | 6. Defaults de agendamento | 3–4h | 🔴 TODO |
 | 7. Timeline fast-forward | 5–6h | 🔴 TODO |

@@ -114,6 +114,26 @@ function isWeekday(daysOffset: number) {
  * horas para o passo do lembrete da Fase 8 fazer sentido (o lembrete sai 1h
  * antes). Fora disso, vai para o próximo dia útil.
  */
+/**
+ * Onde fica o segundo atendimento concluído.
+ *
+ * O painel conta como "hoje" tudo que começa dentro do dia, inclusive o que já
+ * foi concluído. Sem isto, quem abre a demonstração de noite num dia útil vê
+ * "0 hoje" — o dia inteiro passou e nada aconteceu, que é uma leitura pior do
+ * que a de um sistema vazio.
+ *
+ * Então, passadas as 11h de um dia útil, este atendimento vai para as 9h de
+ * hoje e o dia nunca parece morto. No fim de semana ele recua junto com o
+ * resto: agenda parada no domingo é o que a pessoa espera ver mesmo.
+ */
+function recentPastSlot(): { dayOffset: number; hour: number } {
+  if (isWeekday(0) && saoPauloHour() >= 11) {
+    return { dayOffset: 0, hour: 9 }
+  }
+
+  return { dayOffset: toWeekday(-3, -1), hour: 15 }
+}
+
 function upcomingSlot(): { dayOffset: number; hour: number } {
   const candidate = saoPauloHour() + 2
 
@@ -273,12 +293,11 @@ export async function seedDemoOrganization(
 
   // Os dois primeiros ficam no passado e entram como concluídos; o terceiro é o
   // compromisso à frente, que o tour usa como ponto de partida.
-  const upcoming = upcomingSlot()
-
   const plan = [
+    // O mais antigo dá profundidade ao histórico e é o que recebe o registro.
     { dayOffset: toWeekday(-7, -1), hour: 10, professional: 0, service: 0, customer: 0, past: true },
-    { dayOffset: toWeekday(-3, -1), hour: 15, professional: 1, service: 1, customer: 1, past: true },
-    { ...upcoming, professional: 0, service: 0, customer: 0, past: false },
+    { ...recentPastSlot(), professional: 1, service: 1, customer: 1, past: true },
+    { ...upcomingSlot(), professional: 0, service: 0, customer: 0, past: false },
   ]
 
   const appointmentRows = plan.map((item) => {
