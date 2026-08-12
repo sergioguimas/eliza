@@ -216,6 +216,157 @@ export type Database = {
           },
         ]
       }
+      demo_interactions: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          niche: string | null
+          organization_id: string | null
+          step_number: number | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          niche?: string | null
+          organization_id?: string | null
+          step_number?: number | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          niche?: string | null
+          organization_id?: string | null
+          step_number?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demo_interactions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      demo_leads: {
+        Row: {
+          contact: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          name: string
+          niche: string | null
+          organization_id: string | null
+          source: string
+        }
+        Insert: {
+          contact: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          name: string
+          niche?: string | null
+          organization_id?: string | null
+          source?: string
+        }
+        Update: {
+          contact?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          name?: string
+          niche?: string | null
+          organization_id?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demo_leads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      demo_rate_limits: {
+        Row: {
+          count: number
+          key: string
+          updated_at: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          key: string
+          updated_at?: string
+          window_start?: string
+        }
+        Update: {
+          count?: number
+          key?: string
+          updated_at?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
+      demo_timeline_events: {
+        Row: {
+          appointment_id: string | null
+          created_at: string
+          delivered_for_real: boolean
+          event_type: string
+          id: string
+          message_text: string | null
+          organization_id: string
+          response_text: string | null
+          simulated_time: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          created_at?: string
+          delivered_for_real?: boolean
+          event_type: string
+          id?: string
+          message_text?: string | null
+          organization_id: string
+          response_text?: string | null
+          simulated_time: string
+        }
+        Update: {
+          appointment_id?: string | null
+          created_at?: string
+          delivered_for_real?: boolean
+          event_type?: string
+          id?: string
+          message_text?: string | null
+          organization_id?: string
+          response_text?: string | null
+          simulated_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demo_timeline_events_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demo_timeline_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       estimates: {
         Row: {
           created_at: string | null
@@ -446,7 +597,6 @@ export type Database = {
           open_hours_start: string | null
           organization_id: string
           updated_at: string | null
-          whatsapp_instance_name: string | null
         }
         Insert: {
           appointment_duration?: number | null
@@ -463,7 +613,6 @@ export type Database = {
           open_hours_start?: string | null
           organization_id: string
           updated_at?: string | null
-          whatsapp_instance_name?: string | null
         }
         Update: {
           appointment_duration?: number | null
@@ -480,7 +629,6 @@ export type Database = {
           open_hours_start?: string | null
           organization_id?: string
           updated_at?: string | null
-          whatsapp_instance_name?: string | null
         }
         Relationships: [
           {
@@ -495,9 +643,9 @@ export type Database = {
       organizations: {
         Row: {
           created_at: string
-          evolution_api_key: string | null
-          evolution_api_url: string | null
+          expires_at: string | null
           id: string
+          is_demo: boolean
           name: string
           niche: string
           plan: string | null
@@ -510,9 +658,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          evolution_api_key?: string | null
-          evolution_api_url?: string | null
+          expires_at?: string | null
           id?: string
+          is_demo?: boolean
           name: string
           niche: string
           plan?: string | null
@@ -525,9 +673,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          evolution_api_key?: string | null
-          evolution_api_url?: string | null
+          expires_at?: string | null
           id?: string
+          is_demo?: boolean
           name?: string
           niche?: string
           plan?: string | null
@@ -787,34 +935,34 @@ export type Database = {
       }
       services: {
         Row: {
-          is_active: boolean | null
           color: string | null
           created_at: string
           description: string | null
           duration_minutes: number
           id: string
+          is_active: boolean | null
           organization_id: string
           price: number | null
           title: string
         }
         Insert: {
-          is_active?: boolean | null
           color?: string | null
           created_at?: string
           description?: string | null
           duration_minutes?: number
           id?: string
+          is_active?: boolean | null
           organization_id: string
           price?: number | null
           title: string
         }
         Update: {
-          is_active?: boolean | null
           color?: string | null
           created_at?: string
           description?: string | null
           duration_minutes?: number
           id?: string
+          is_active?: boolean | null
           organization_id?: string
           price?: number | null
           title?: string

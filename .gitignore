@@ -37,5 +37,5 @@ package-lock.json
 # --- Documentos internos de negócio (não versionar) ---
 business/
 marketing/
-getdemo/PLANO_DEMO.md
+getdemo/
 MARKETING.md
