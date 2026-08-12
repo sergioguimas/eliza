@@ -40,7 +40,7 @@ type NavItem = {
   mobileLabel?: string
   icon: React.ComponentType<{ className?: string }>
   nicheIconName?: "logo" | "clientes" | "servicos" | "agenda" | "dashboard" | "documentos"
-  ownerOnly?: boolean
+  adminOnly?: boolean
 }
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -75,7 +75,11 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
   }, [collapsed, hydrated])
 
   const role = profile?.role || "staff"
-  const isOwner = role === "owner"
+  // Mesmo gate das páginas que estes itens abrem: /configuracoes, /equipe e
+  // /horarios autorizam ["owner","admin"]. Enquanto aqui exigia só "owner", o
+  // admin perdia os itens do menu mas continuava autorizado digitando a URL —
+  // escondia demais de um lado e permitia do outro.
+  const canManageOrg = role === "owner" || role === "admin"
   const isSuperAdmin = user?.email === process.env.NEXT_PUBLIC_GOD_EMAIL
 
   const userInitials = profile?.full_name
@@ -127,28 +131,28 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
         label: nav.configuracoes || "Configurações",
         mobileLabel: nav.configuracoes_mobile || "Configurações",
         icon: Settings,
-        ownerOnly: true,
+        adminOnly: true,
       },
       {
         href: "/configuracoes/equipe",
         label: nav.equipe || "Equipe",
         mobileLabel: nav.equipe_mobile || "Equipe",
         icon: Users,
-        ownerOnly: true,
+        adminOnly: true,
       },
       {
         href: "/configuracoes/horarios",
         label: nav.horarios || "Horários",
         mobileLabel: nav.horarios_mobile || "Horários",
         icon: Clock,
-        ownerOnly: true,
+        adminOnly: true,
       },
     ],
     [nav]
   )
 
   const visibleManagementItems = managementItems.filter(
-    (item) => !item.ownerOnly || isOwner
+    (item) => !item.adminOnly || canManageOrg
   )
 
   const mobileItems = useMemo(() => {
@@ -163,9 +167,13 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
 
   const mobileGridCols = mobileItems.length >= 5 ? "grid-cols-5" : "grid-cols-4"
 
+  // `admin` não tinha ramo próprio e caía no fallback, aparecendo como "Staff".
+  // "Proprietário" para owner alinha com o cargo exibido na dashboard.
   const roleLabel =
     role === "owner"
-      ? messages.role_owner || "Admin"
+      ? messages.role_owner || "Proprietário"
+      : role === "admin"
+      ? messages.role_admin || "Admin"
       : role === "professional"
       ? entities.profissional || "Profissional"
       : messages.role_staff || "Staff"
