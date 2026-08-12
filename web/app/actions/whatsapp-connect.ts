@@ -78,7 +78,15 @@ async function loadOwnOrgForWhatsapp(): Promise<LoadOwnOrgResult> {
     .single()
 
   if (!profile?.organization_id) {
-    return { ok: false, error: "Organização não encontrada." }
+    console.error(
+      "[whatsapp-connect] Perfil sem organization_id (ou perfil não lido) para o usuário",
+      user.id
+    )
+
+    return {
+      ok: false,
+      error: "Seu perfil não está vinculado a uma organização.",
+    }
   }
 
   if (!["owner", "admin"].includes(profile.role ?? "")) {
@@ -98,11 +106,15 @@ async function loadOwnOrgForWhatsapp(): Promise<LoadOwnOrgResult> {
 
   if (error || !org) {
     console.error(
-      "[whatsapp-connect] Falha ao carregar a organização:",
+      "[whatsapp-connect] Falha ao ler a organização com service role:",
+      profile.organization_id,
       error?.message
     )
 
-    return { ok: false, error: "Organização não encontrada." }
+    return {
+      ok: false,
+      error: "Não foi possível carregar os dados da organização.",
+    }
   }
 
   return { ok: true, org: org as OwnOrg }
