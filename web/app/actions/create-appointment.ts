@@ -210,10 +210,14 @@ export async function createAppointment(formData: FormData) {
   const finalCustomerName = finalCustomer.name
   const finalCustomerPhone = onlyNumbers(finalCustomer.phone)
 
+  // O filtro por organização não é decorativo: esta action roda com service
+  // role, então o RLS não escopa nada e `service_id` vem do formData. Sem ele,
+  // dava para agendar na org A usando serviço (e preço) da org B.
   const { data: service, error: serviceError } = await supabase
     .from("services")
     .select("duration_minutes, price, title")
     .eq("id", service_id)
+    .eq("organization_id", organization_id)
     .single()
 
   if (serviceError || !service) {
@@ -221,10 +225,14 @@ export async function createAppointment(formData: FormData) {
     return { error: "Serviço não encontrado." }
   }
 
+  // Mesmo motivo: sem o escopo, `professional_id` do formData podia apontar
+  // para profissional de outro tenant — o agendamento nasceria na org A com a
+  // agenda de alguém da org B, e a notificação sairia para o telefone dele.
   const { data: professional, error: professionalError } = await supabase
     .from("professionals")
     .select("name, phone")
     .eq("id", professional_id)
+    .eq("organization_id", organization_id)
     .single()
 
   if (professionalError || !professional) {
