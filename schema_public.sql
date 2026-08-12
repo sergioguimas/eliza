@@ -2,12 +2,12 @@
 -- PostgreSQL database dump
 --
 
-\restrict sKDMDQKZXqMnaCOdZP7gKPIQdZaz2dwQvMFB6zBls51AilVp4rFWLtJcBQDmHwu
+\restrict hlOJBQbgToKqYalOpWFyhE97Cj5fleQUh8v9infGN9rmBNvxzIxxCWbbuTjd2X9
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.1
 
--- Started on 2026-08-11 21:25:37
+-- Started on 2026-08-12 09:28:58
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -63,7 +63,7 @@ CREATE TABLE public.service_records (
 ALTER TABLE public.service_records OWNER TO postgres;
 
 --
--- TOC entry 696 (class 1255 OID 99758)
+-- TOC entry 689 (class 1255 OID 99758)
 -- Name: finalize_service_record(uuid); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -139,7 +139,7 @@ CREATE TABLE public.customers (
 ALTER TABLE public.customers OWNER TO postgres;
 
 --
--- TOC entry 447 (class 1255 OID 99746)
+-- TOC entry 440 (class 1255 OID 99746)
 -- Name: find_or_create_public_customer(uuid, text, text, text, text, date, text, text, text); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -240,7 +240,7 @@ $$;
 ALTER FUNCTION public.find_or_create_public_customer(p_organization_id uuid, p_name text, p_phone text, p_document text, p_email text, p_birth_date date, p_gender text, p_address text, p_notes text) OWNER TO postgres;
 
 --
--- TOC entry 575 (class 1255 OID 33385)
+-- TOC entry 568 (class 1255 OID 33385)
 -- Name: get_user_org_id(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -254,7 +254,7 @@ $$;
 ALTER FUNCTION public.get_user_org_id() OWNER TO postgres;
 
 --
--- TOC entry 530 (class 1255 OID 33533)
+-- TOC entry 523 (class 1255 OID 33533)
 -- Name: handle_new_organization(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -302,7 +302,7 @@ $$;
 ALTER FUNCTION public.handle_new_organization() OWNER TO postgres;
 
 --
--- TOC entry 655 (class 1255 OID 33531)
+-- TOC entry 648 (class 1255 OID 33531)
 -- Name: handle_new_user(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -382,7 +382,7 @@ $_$;
 ALTER FUNCTION public.handle_new_user() OWNER TO postgres;
 
 --
--- TOC entry 701 (class 1255 OID 99742)
+-- TOC entry 694 (class 1255 OID 99742)
 -- Name: normalize_customer_fields(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -435,7 +435,7 @@ CREATE TABLE public.appointments (
 ALTER TABLE public.appointments OWNER TO postgres;
 
 --
--- TOC entry 4393 (class 0 OID 0)
+-- TOC entry 4373 (class 0 OID 0)
 -- Dependencies: 396
 -- Name: COLUMN appointments.payment_method; Type: COMMENT; Schema: public; Owner: postgres
 --
@@ -444,7 +444,7 @@ COMMENT ON COLUMN public.appointments.payment_method IS 'Método de pagamento ut
 
 
 --
--- TOC entry 4394 (class 0 OID 0)
+-- TOC entry 4374 (class 0 OID 0)
 -- Dependencies: 396
 -- Name: COLUMN appointments.payment_status; Type: COMMENT; Schema: public; Owner: postgres
 --
@@ -453,7 +453,7 @@ COMMENT ON COLUMN public.appointments.payment_status IS 'Status do pagamento par
 
 
 --
--- TOC entry 610 (class 1255 OID 99751)
+-- TOC entry 603 (class 1255 OID 99751)
 -- Name: request_public_appointment(uuid, uuid, uuid, timestamp with time zone, text, text, text, text, date, text, text, text, text); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -577,7 +577,7 @@ $$;
 ALTER FUNCTION public.request_public_appointment(p_organization_id uuid, p_service_id uuid, p_professional_id uuid, p_start_time timestamp with time zone, p_name text, p_phone text, p_document text, p_email text, p_birth_date date, p_gender text, p_address text, p_notes text, p_appointment_notes text) OWNER TO postgres;
 
 --
--- TOC entry 491 (class 1255 OID 63692)
+-- TOC entry 484 (class 1255 OID 63692)
 -- Name: rls_auto_enable(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -613,7 +613,7 @@ $$;
 ALTER FUNCTION public.rls_auto_enable() OWNER TO postgres;
 
 --
--- TOC entry 667 (class 1255 OID 99757)
+-- TOC entry 660 (class 1255 OID 99757)
 -- Name: sign_service_record(uuid); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -664,7 +664,7 @@ $$;
 ALTER FUNCTION public.sign_service_record(p_service_record_id uuid) OWNER TO postgres;
 
 --
--- TOC entry 477 (class 1255 OID 121891)
+-- TOC entry 470 (class 1255 OID 121891)
 -- Name: update_updated_at_column(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -700,7 +700,7 @@ CREATE TABLE public.appointment_logs (
 ALTER TABLE public.appointment_logs OWNER TO postgres;
 
 --
--- TOC entry 416 (class 1259 OID 126839)
+-- TOC entry 409 (class 1259 OID 126839)
 -- Name: demo_interactions; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -720,7 +720,7 @@ CREATE TABLE public.demo_interactions (
 ALTER TABLE public.demo_interactions OWNER TO postgres;
 
 --
--- TOC entry 418 (class 1259 OID 126880)
+-- TOC entry 411 (class 1259 OID 126880)
 -- Name: demo_leads; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -739,7 +739,7 @@ CREATE TABLE public.demo_leads (
 ALTER TABLE public.demo_leads OWNER TO postgres;
 
 --
--- TOC entry 419 (class 1259 OID 126897)
+-- TOC entry 412 (class 1259 OID 126897)
 -- Name: demo_rate_limits; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -754,7 +754,7 @@ CREATE TABLE public.demo_rate_limits (
 ALTER TABLE public.demo_rate_limits OWNER TO postgres;
 
 --
--- TOC entry 417 (class 1259 OID 126858)
+-- TOC entry 410 (class 1259 OID 126858)
 -- Name: demo_timeline_events; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -994,7 +994,7 @@ CREATE TABLE public.services (
 ALTER TABLE public.services OWNER TO postgres;
 
 --
--- TOC entry 4116 (class 2606 OID 48279)
+-- TOC entry 4095 (class 2606 OID 48279)
 -- Name: appointment_logs appointment_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1003,7 +1003,7 @@ ALTER TABLE ONLY public.appointment_logs
 
 
 --
--- TOC entry 4104 (class 2606 OID 33447)
+-- TOC entry 4083 (class 2606 OID 33447)
 -- Name: appointments appointments_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1012,7 +1012,7 @@ ALTER TABLE ONLY public.appointments
 
 
 --
--- TOC entry 4106 (class 2606 OID 121535)
+-- TOC entry 4085 (class 2606 OID 121535)
 -- Name: appointments appointments_professional_overlap_idx; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1021,7 +1021,7 @@ ALTER TABLE ONLY public.appointments
 
 
 --
--- TOC entry 4097 (class 2606 OID 33414)
+-- TOC entry 4076 (class 2606 OID 33414)
 -- Name: customers customers_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1030,7 +1030,7 @@ ALTER TABLE ONLY public.customers
 
 
 --
--- TOC entry 4132 (class 2606 OID 126850)
+-- TOC entry 4111 (class 2606 OID 126850)
 -- Name: demo_interactions demo_interactions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1039,7 +1039,7 @@ ALTER TABLE ONLY public.demo_interactions
 
 
 --
--- TOC entry 4139 (class 2606 OID 126890)
+-- TOC entry 4118 (class 2606 OID 126890)
 -- Name: demo_leads demo_leads_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1048,7 +1048,7 @@ ALTER TABLE ONLY public.demo_leads
 
 
 --
--- TOC entry 4142 (class 2606 OID 126906)
+-- TOC entry 4121 (class 2606 OID 126906)
 -- Name: demo_rate_limits demo_rate_limits_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1057,7 +1057,7 @@ ALTER TABLE ONLY public.demo_rate_limits
 
 
 --
--- TOC entry 4136 (class 2606 OID 126868)
+-- TOC entry 4115 (class 2606 OID 126868)
 -- Name: demo_timeline_events demo_timeline_events_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1066,7 +1066,7 @@ ALTER TABLE ONLY public.demo_timeline_events
 
 
 --
--- TOC entry 4126 (class 2606 OID 69382)
+-- TOC entry 4105 (class 2606 OID 69382)
 -- Name: estimates estimates_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1075,7 +1075,7 @@ ALTER TABLE ONLY public.estimates
 
 
 --
--- TOC entry 4124 (class 2606 OID 60317)
+-- TOC entry 4103 (class 2606 OID 60317)
 -- Name: expenses expenses_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1084,7 +1084,7 @@ ALTER TABLE ONLY public.expenses
 
 
 --
--- TOC entry 4112 (class 2606 OID 33512)
+-- TOC entry 4091 (class 2606 OID 33512)
 -- Name: invitations invitations_code_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1093,7 +1093,7 @@ ALTER TABLE ONLY public.invitations
 
 
 --
--- TOC entry 4114 (class 2606 OID 33510)
+-- TOC entry 4093 (class 2606 OID 33510)
 -- Name: invitations invitations_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1102,7 +1102,7 @@ ALTER TABLE ONLY public.invitations
 
 
 --
--- TOC entry 4128 (class 2606 OID 105365)
+-- TOC entry 4107 (class 2606 OID 105365)
 -- Name: notification_dispatches notification_dispatches_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1111,7 +1111,7 @@ ALTER TABLE ONLY public.notification_dispatches
 
 
 --
--- TOC entry 4094 (class 2606 OID 33398)
+-- TOC entry 4073 (class 2606 OID 33398)
 -- Name: organization_settings organization_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1120,7 +1120,7 @@ ALTER TABLE ONLY public.organization_settings
 
 
 --
--- TOC entry 4088 (class 2606 OID 33360)
+-- TOC entry 4067 (class 2606 OID 33360)
 -- Name: organizations organizations_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1129,7 +1129,7 @@ ALTER TABLE ONLY public.organizations
 
 
 --
--- TOC entry 4090 (class 2606 OID 33362)
+-- TOC entry 4069 (class 2606 OID 33362)
 -- Name: organizations organizations_slug_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1138,7 +1138,7 @@ ALTER TABLE ONLY public.organizations
 
 
 --
--- TOC entry 4118 (class 2606 OID 50540)
+-- TOC entry 4097 (class 2606 OID 50540)
 -- Name: professional_availability professional_availability_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1147,7 +1147,7 @@ ALTER TABLE ONLY public.professional_availability
 
 
 --
--- TOC entry 4120 (class 2606 OID 50542)
+-- TOC entry 4099 (class 2606 OID 50542)
 -- Name: professional_availability professional_availability_professional_id_day_of_week_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1156,7 +1156,7 @@ ALTER TABLE ONLY public.professional_availability
 
 
 --
--- TOC entry 4122 (class 2606 OID 50594)
+-- TOC entry 4101 (class 2606 OID 50594)
 -- Name: professionals professionals_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1165,7 +1165,7 @@ ALTER TABLE ONLY public.professionals
 
 
 --
--- TOC entry 4092 (class 2606 OID 33374)
+-- TOC entry 4071 (class 2606 OID 33374)
 -- Name: profiles profiles_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1174,7 +1174,7 @@ ALTER TABLE ONLY public.profiles
 
 
 --
--- TOC entry 4110 (class 2606 OID 33479)
+-- TOC entry 4089 (class 2606 OID 33479)
 -- Name: service_records service_records_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1183,7 +1183,7 @@ ALTER TABLE ONLY public.service_records
 
 
 --
--- TOC entry 4102 (class 2606 OID 33431)
+-- TOC entry 4081 (class 2606 OID 33431)
 -- Name: services services_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1192,7 +1192,7 @@ ALTER TABLE ONLY public.services
 
 
 --
--- TOC entry 4095 (class 1259 OID 121443)
+-- TOC entry 4074 (class 1259 OID 121443)
 -- Name: customers_phone_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1200,7 +1200,7 @@ CREATE INDEX customers_phone_idx ON public.customers USING btree (phone);
 
 
 --
--- TOC entry 4107 (class 1259 OID 56920)
+-- TOC entry 4086 (class 1259 OID 56920)
 -- Name: idx_appointments_finance_report; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1208,7 +1208,7 @@ CREATE INDEX idx_appointments_finance_report ON public.appointments USING btree 
 
 
 --
--- TOC entry 4098 (class 1259 OID 64829)
+-- TOC entry 4077 (class 1259 OID 64829)
 -- Name: idx_customers_not_deleted; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1216,7 +1216,7 @@ CREATE INDEX idx_customers_not_deleted ON public.customers USING btree (id) WHER
 
 
 --
--- TOC entry 4133 (class 1259 OID 126857)
+-- TOC entry 4112 (class 1259 OID 126857)
 -- Name: idx_demo_interactions_funnel; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1224,7 +1224,7 @@ CREATE INDEX idx_demo_interactions_funnel ON public.demo_interactions USING btre
 
 
 --
--- TOC entry 4134 (class 1259 OID 126856)
+-- TOC entry 4113 (class 1259 OID 126856)
 -- Name: idx_demo_interactions_org; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1232,7 +1232,7 @@ CREATE INDEX idx_demo_interactions_org ON public.demo_interactions USING btree (
 
 
 --
--- TOC entry 4140 (class 1259 OID 126896)
+-- TOC entry 4119 (class 1259 OID 126896)
 -- Name: idx_demo_leads_created; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1240,7 +1240,7 @@ CREATE INDEX idx_demo_leads_created ON public.demo_leads USING btree (created_at
 
 
 --
--- TOC entry 4143 (class 1259 OID 126907)
+-- TOC entry 4122 (class 1259 OID 126907)
 -- Name: idx_demo_rate_limits_window; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1248,7 +1248,7 @@ CREATE INDEX idx_demo_rate_limits_window ON public.demo_rate_limits USING btree 
 
 
 --
--- TOC entry 4137 (class 1259 OID 126879)
+-- TOC entry 4116 (class 1259 OID 126879)
 -- Name: idx_demo_timeline_events_org; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1256,7 +1256,7 @@ CREATE INDEX idx_demo_timeline_events_org ON public.demo_timeline_events USING b
 
 
 --
--- TOC entry 4086 (class 1259 OID 126838)
+-- TOC entry 4065 (class 1259 OID 126838)
 -- Name: idx_organizations_demo_expiry; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1264,7 +1264,7 @@ CREATE INDEX idx_organizations_demo_expiry ON public.organizations USING btree (
 
 
 --
--- TOC entry 4108 (class 1259 OID 121545)
+-- TOC entry 4087 (class 1259 OID 121545)
 -- Name: idx_reminder_sent_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1272,7 +1272,7 @@ CREATE INDEX idx_reminder_sent_at ON public.appointments USING btree (reminder_s
 
 
 --
--- TOC entry 4129 (class 1259 OID 105386)
+-- TOC entry 4108 (class 1259 OID 105386)
 -- Name: notification_dispatches_unique_doctor; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1280,7 +1280,7 @@ CREATE UNIQUE INDEX notification_dispatches_unique_doctor ON public.notification
 
 
 --
--- TOC entry 4130 (class 1259 OID 105387)
+-- TOC entry 4109 (class 1259 OID 105387)
 -- Name: notification_dispatches_unique_patient; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1288,7 +1288,7 @@ CREATE UNIQUE INDEX notification_dispatches_unique_patient ON public.notificatio
 
 
 --
--- TOC entry 4099 (class 1259 OID 99744)
+-- TOC entry 4078 (class 1259 OID 99744)
 -- Name: uq_customers_org_document; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1296,7 +1296,7 @@ CREATE UNIQUE INDEX uq_customers_org_document ON public.customers USING btree (o
 
 
 --
--- TOC entry 4100 (class 1259 OID 99745)
+-- TOC entry 4079 (class 1259 OID 99745)
 -- Name: uq_customers_org_phone; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1304,7 +1304,7 @@ CREATE UNIQUE INDEX uq_customers_org_phone ON public.customers USING btree (orga
 
 
 --
--- TOC entry 4178 (class 2620 OID 33534)
+-- TOC entry 4157 (class 2620 OID 33534)
 -- Name: organizations on_organization_created; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1312,7 +1312,7 @@ CREATE TRIGGER on_organization_created AFTER INSERT ON public.organizations FOR 
 
 
 --
--- TOC entry 4179 (class 2620 OID 99743)
+-- TOC entry 4158 (class 2620 OID 99743)
 -- Name: customers trg_normalize_customer_fields; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1320,7 +1320,7 @@ CREATE TRIGGER trg_normalize_customer_fields BEFORE INSERT OR UPDATE ON public.c
 
 
 --
--- TOC entry 4180 (class 2620 OID 121892)
+-- TOC entry 4159 (class 2620 OID 121892)
 -- Name: appointments update_appointments_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1328,7 +1328,7 @@ CREATE TRIGGER update_appointments_updated_at BEFORE UPDATE ON public.appointmen
 
 
 --
--- TOC entry 4161 (class 2606 OID 48280)
+-- TOC entry 4140 (class 2606 OID 48280)
 -- Name: appointment_logs appointment_logs_appointment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1337,7 +1337,7 @@ ALTER TABLE ONLY public.appointment_logs
 
 
 --
--- TOC entry 4162 (class 2606 OID 48285)
+-- TOC entry 4141 (class 2606 OID 48285)
 -- Name: appointment_logs appointment_logs_customer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1346,7 +1346,7 @@ ALTER TABLE ONLY public.appointment_logs
 
 
 --
--- TOC entry 4149 (class 2606 OID 33453)
+-- TOC entry 4128 (class 2606 OID 33453)
 -- Name: appointments appointments_customer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1355,7 +1355,7 @@ ALTER TABLE ONLY public.appointments
 
 
 --
--- TOC entry 4150 (class 2606 OID 33448)
+-- TOC entry 4129 (class 2606 OID 33448)
 -- Name: appointments appointments_organization_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1364,7 +1364,7 @@ ALTER TABLE ONLY public.appointments
 
 
 --
--- TOC entry 4151 (class 2606 OID 69340)
+-- TOC entry 4130 (class 2606 OID 69340)
 -- Name: appointments appointments_professional_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1373,7 +1373,7 @@ ALTER TABLE ONLY public.appointments
 
 
 --
--- TOC entry 4152 (class 2606 OID 33458)
+-- TOC entry 4131 (class 2606 OID 33458)
 -- Name: appointments appointments_service_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1382,7 +1382,7 @@ ALTER TABLE ONLY public.appointments
 
 
 --
--- TOC entry 4147 (class 2606 OID 33415)
+-- TOC entry 4126 (class 2606 OID 33415)
 -- Name: customers customers_organization_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1391,7 +1391,7 @@ ALTER TABLE ONLY public.customers
 
 
 --
--- TOC entry 4174 (class 2606 OID 126851)
+-- TOC entry 4153 (class 2606 OID 126851)
 -- Name: demo_interactions demo_interactions_organization_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1400,7 +1400,7 @@ ALTER TABLE ONLY public.demo_interactions
 
 
 --
--- TOC entry 4177 (class 2606 OID 126891)
+-- TOC entry 4156 (class 2606 OID 126891)
 -- Name: demo_leads demo_leads_organization_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1409,7 +1409,7 @@ ALTER TABLE ONLY public.demo_leads
 
 
 --
--- TOC entry 4175 (class 2606 OID 126874)
+-- TOC entry 4154 (class 2606 OID 126874)
 -- Name: demo_timeline_events demo_timeline_events_appointment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1418,7 +1418,7 @@ ALTER TABLE ONLY public.demo_timeline_events
 
 
 --
--- TOC entry 4176 (class 2606 OID 126869)
+-- TOC entry 4155 (class 2606 OID 126869)
 -- Name: demo_timeline_events demo_timeline_events_organization_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1427,7 +1427,7 @@ ALTER TABLE ONLY public.demo_timeline_events
 
 
 --
--- TOC entry 4167 (class 2606 OID 69388)
+-- TOC entry 4146 (class 2606 OID 69388)
 -- Name: estimates estimates_customer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1436,7 +1436,7 @@ ALTER TABLE ONLY public.estimates
 
 
 --
--- TOC entry 4168 (class 2606 OID 69383)
+-- TOC entry 4147 (class 2606 OID 69383)
 -- Name: estimates estimates_organization_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1445,7 +1445,7 @@ ALTER TABLE ONLY public.estimates
 
 
 --
--- TOC entry 4169 (class 2606 OID 69393)
+-- TOC entry 4148 (class 2606 OID 69393)
 -- Name: estimates estimates_professional_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1454,7 +1454,7 @@ ALTER TABLE ONLY public.estimates
 
 
 --
--- TOC entry 4166 (class 2606 OID 60318)
+-- TOC entry 4145 (class 2606 OID 60318)
 -- Name: expenses expenses_organization_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1463,7 +1463,7 @@ ALTER TABLE ONLY public.expenses
 
 
 --
--- TOC entry 4160 (class 2606 OID 33513)
+-- TOC entry 4139 (class 2606 OID 33513)
 -- Name: invitations invitations_organization_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1472,7 +1472,7 @@ ALTER TABLE ONLY public.invitations
 
 
 --
--- TOC entry 4170 (class 2606 OID 105371)
+-- TOC entry 4149 (class 2606 OID 105371)
 -- Name: notification_dispatches notification_dispatches_appointment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1481,7 +1481,7 @@ ALTER TABLE ONLY public.notification_dispatches
 
 
 --
--- TOC entry 4171 (class 2606 OID 105381)
+-- TOC entry 4150 (class 2606 OID 105381)
 -- Name: notification_dispatches notification_dispatches_customer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1490,7 +1490,7 @@ ALTER TABLE ONLY public.notification_dispatches
 
 
 --
--- TOC entry 4172 (class 2606 OID 105366)
+-- TOC entry 4151 (class 2606 OID 105366)
 -- Name: notification_dispatches notification_dispatches_organization_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1499,7 +1499,7 @@ ALTER TABLE ONLY public.notification_dispatches
 
 
 --
--- TOC entry 4173 (class 2606 OID 105376)
+-- TOC entry 4152 (class 2606 OID 105376)
 -- Name: notification_dispatches notification_dispatches_professional_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1508,7 +1508,7 @@ ALTER TABLE ONLY public.notification_dispatches
 
 
 --
--- TOC entry 4146 (class 2606 OID 33399)
+-- TOC entry 4125 (class 2606 OID 33399)
 -- Name: organization_settings organization_settings_organization_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1517,7 +1517,7 @@ ALTER TABLE ONLY public.organization_settings
 
 
 --
--- TOC entry 4163 (class 2606 OID 50610)
+-- TOC entry 4142 (class 2606 OID 50610)
 -- Name: professional_availability professional_availability_professional_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1526,7 +1526,7 @@ ALTER TABLE ONLY public.professional_availability
 
 
 --
--- TOC entry 4164 (class 2606 OID 50595)
+-- TOC entry 4143 (class 2606 OID 50595)
 -- Name: professionals professionals_organization_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1535,7 +1535,7 @@ ALTER TABLE ONLY public.professionals
 
 
 --
--- TOC entry 4165 (class 2606 OID 50600)
+-- TOC entry 4144 (class 2606 OID 50600)
 -- Name: professionals professionals_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1544,7 +1544,7 @@ ALTER TABLE ONLY public.professionals
 
 
 --
--- TOC entry 4144 (class 2606 OID 33375)
+-- TOC entry 4123 (class 2606 OID 33375)
 -- Name: profiles profiles_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1553,7 +1553,7 @@ ALTER TABLE ONLY public.profiles
 
 
 --
--- TOC entry 4145 (class 2606 OID 33380)
+-- TOC entry 4124 (class 2606 OID 33380)
 -- Name: profiles profiles_organization_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1562,7 +1562,7 @@ ALTER TABLE ONLY public.profiles
 
 
 --
--- TOC entry 4153 (class 2606 OID 64857)
+-- TOC entry 4132 (class 2606 OID 64857)
 -- Name: service_records service_records_appointment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1571,7 +1571,7 @@ ALTER TABLE ONLY public.service_records
 
 
 --
--- TOC entry 4154 (class 2606 OID 99732)
+-- TOC entry 4133 (class 2606 OID 99732)
 -- Name: service_records service_records_created_by_profile_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1580,7 +1580,7 @@ ALTER TABLE ONLY public.service_records
 
 
 --
--- TOC entry 4155 (class 2606 OID 33485)
+-- TOC entry 4134 (class 2606 OID 33485)
 -- Name: service_records service_records_customer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1589,7 +1589,7 @@ ALTER TABLE ONLY public.service_records
 
 
 --
--- TOC entry 4156 (class 2606 OID 33480)
+-- TOC entry 4135 (class 2606 OID 33480)
 -- Name: service_records service_records_organization_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1598,7 +1598,7 @@ ALTER TABLE ONLY public.service_records
 
 
 --
--- TOC entry 4157 (class 2606 OID 99727)
+-- TOC entry 4136 (class 2606 OID 99727)
 -- Name: service_records service_records_professional_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1607,7 +1607,7 @@ ALTER TABLE ONLY public.service_records
 
 
 --
--- TOC entry 4158 (class 2606 OID 33495)
+-- TOC entry 4137 (class 2606 OID 33495)
 -- Name: service_records service_records_signed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1616,7 +1616,7 @@ ALTER TABLE ONLY public.service_records
 
 
 --
--- TOC entry 4159 (class 2606 OID 99737)
+-- TOC entry 4138 (class 2606 OID 99737)
 -- Name: service_records service_records_updated_by_profile_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1625,7 +1625,7 @@ ALTER TABLE ONLY public.service_records
 
 
 --
--- TOC entry 4148 (class 2606 OID 33432)
+-- TOC entry 4127 (class 2606 OID 33432)
 -- Name: services services_organization_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1634,7 +1634,7 @@ ALTER TABLE ONLY public.services
 
 
 --
--- TOC entry 4364 (class 3256 OID 99747)
+-- TOC entry 4343 (class 3256 OID 99747)
 -- Name: professional_availability Admin manage all or Professional manage own availability; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1650,7 +1650,7 @@ CREATE POLICY "Admin manage all or Professional manage own availability" ON publ
 
 
 --
--- TOC entry 4356 (class 3256 OID 54019)
+-- TOC entry 4335 (class 3256 OID 54019)
 -- Name: professionals Admin total access or Professional self view; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1660,7 +1660,7 @@ CREATE POLICY "Admin total access or Professional self view" ON public.professio
 
 
 --
--- TOC entry 4357 (class 3256 OID 54020)
+-- TOC entry 4336 (class 3256 OID 54020)
 -- Name: professionals Admin total update or Professional self update; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1672,7 +1672,7 @@ CREATE POLICY "Admin total update or Professional self update" ON public.profess
 
 
 --
--- TOC entry 4354 (class 3256 OID 33530)
+-- TOC entry 4333 (class 3256 OID 33530)
 -- Name: invitations Admins manage invites; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1682,7 +1682,7 @@ CREATE POLICY "Admins manage invites" ON public.invitations USING (((organizatio
 
 
 --
--- TOC entry 4372 (class 3256 OID 126835)
+-- TOC entry 4351 (class 3256 OID 126835)
 -- Name: organizations Authenticated users can create org; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1690,7 +1690,7 @@ CREATE POLICY "Authenticated users can create org" ON public.organizations FOR I
 
 
 --
--- TOC entry 4366 (class 3256 OID 99750)
+-- TOC entry 4345 (class 3256 OID 99750)
 -- Name: professional_availability Disponibilidade visível publicamente; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1698,7 +1698,7 @@ CREATE POLICY "Disponibilidade visível publicamente" ON public.professional_ava
 
 
 --
--- TOC entry 4352 (class 3256 OID 33527)
+-- TOC entry 4332 (class 3256 OID 33527)
 -- Name: appointments Org access appointments; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1706,7 +1706,7 @@ CREATE POLICY "Org access appointments" ON public.appointments USING ((organizat
 
 
 --
--- TOC entry 4350 (class 3256 OID 33525)
+-- TOC entry 4330 (class 3256 OID 33525)
 -- Name: customers Org access customers; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1714,7 +1714,7 @@ CREATE POLICY "Org access customers" ON public.customers USING ((organization_id
 
 
 --
--- TOC entry 4373 (class 3256 OID 126908)
+-- TOC entry 4352 (class 3256 OID 126908)
 -- Name: demo_interactions Org access demo interactions; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1722,7 +1722,7 @@ CREATE POLICY "Org access demo interactions" ON public.demo_interactions USING (
 
 
 --
--- TOC entry 4374 (class 3256 OID 126909)
+-- TOC entry 4353 (class 3256 OID 126909)
 -- Name: demo_timeline_events Org access demo timeline; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1730,7 +1730,7 @@ CREATE POLICY "Org access demo timeline" ON public.demo_timeline_events USING ((
 
 
 --
--- TOC entry 4358 (class 3256 OID 69398)
+-- TOC entry 4337 (class 3256 OID 69398)
 -- Name: estimates Org access estimates; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1738,7 +1738,15 @@ CREATE POLICY "Org access estimates" ON public.estimates USING ((organization_id
 
 
 --
--- TOC entry 4370 (class 3256 OID 122477)
+-- TOC entry 4354 (class 3256 OID 126979)
+-- Name: expenses Org access expenses; Type: POLICY; Schema: public; Owner: postgres
+--
+
+CREATE POLICY "Org access expenses" ON public.expenses TO authenticated USING ((organization_id = public.get_user_org_id())) WITH CHECK ((organization_id = public.get_user_org_id()));
+
+
+--
+-- TOC entry 4349 (class 3256 OID 122477)
 -- Name: service_records Org access records delete drafts; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1746,7 +1754,7 @@ CREATE POLICY "Org access records delete drafts" ON public.service_records FOR D
 
 
 --
--- TOC entry 4368 (class 3256 OID 122475)
+-- TOC entry 4347 (class 3256 OID 122475)
 -- Name: service_records Org access records insert; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1754,7 +1762,7 @@ CREATE POLICY "Org access records insert" ON public.service_records FOR INSERT T
 
 
 --
--- TOC entry 4367 (class 3256 OID 122474)
+-- TOC entry 4346 (class 3256 OID 122474)
 -- Name: service_records Org access records select; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1762,7 +1770,7 @@ CREATE POLICY "Org access records select" ON public.service_records FOR SELECT T
 
 
 --
--- TOC entry 4369 (class 3256 OID 122476)
+-- TOC entry 4348 (class 3256 OID 122476)
 -- Name: service_records Org access records update drafts; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1770,7 +1778,7 @@ CREATE POLICY "Org access records update drafts" ON public.service_records FOR U
 
 
 --
--- TOC entry 4351 (class 3256 OID 33526)
+-- TOC entry 4331 (class 3256 OID 33526)
 -- Name: services Org access services; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1778,7 +1786,7 @@ CREATE POLICY "Org access services" ON public.services USING ((organization_id =
 
 
 --
--- TOC entry 4365 (class 3256 OID 99749)
+-- TOC entry 4344 (class 3256 OID 99749)
 -- Name: professional_availability Org can view all availabilities; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1789,7 +1797,7 @@ CREATE POLICY "Org can view all availabilities" ON public.professional_availabil
 
 
 --
--- TOC entry 4371 (class 3256 OID 126833)
+-- TOC entry 4350 (class 3256 OID 126833)
 -- Name: organizations Owners and admins update own org; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1801,7 +1809,7 @@ CREATE POLICY "Owners and admins update own org" ON public.organizations FOR UPD
 
 
 --
--- TOC entry 4362 (class 3256 OID 58043)
+-- TOC entry 4341 (class 3256 OID 58043)
 -- Name: professionals Public professionals are viewable by everyone; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1809,7 +1817,7 @@ CREATE POLICY "Public professionals are viewable by everyone" ON public.professi
 
 
 --
--- TOC entry 4360 (class 3256 OID 58041)
+-- TOC entry 4339 (class 3256 OID 58041)
 -- Name: organizations Public profiles are viewable by everyone; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1817,15 +1825,7 @@ CREATE POLICY "Public profiles are viewable by everyone" ON public.organizations
 
 
 --
--- TOC entry 4353 (class 3256 OID 33529)
--- Name: invitations Public read invite by code; Type: POLICY; Schema: public; Owner: postgres
---
-
-CREATE POLICY "Public read invite by code" ON public.invitations FOR SELECT USING (true);
-
-
---
--- TOC entry 4363 (class 3256 OID 58072)
+-- TOC entry 4342 (class 3256 OID 58072)
 -- Name: appointments Public select appointments; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1833,7 +1833,7 @@ CREATE POLICY "Public select appointments" ON public.appointments FOR SELECT TO 
 
 
 --
--- TOC entry 4361 (class 3256 OID 58042)
+-- TOC entry 4340 (class 3256 OID 58042)
 -- Name: services Public services are viewable by everyone; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1841,7 +1841,7 @@ CREATE POLICY "Public services are viewable by everyone" ON public.services FOR 
 
 
 --
--- TOC entry 4347 (class 3256 OID 33522)
+-- TOC entry 4327 (class 3256 OID 33522)
 -- Name: organization_settings Update org settings; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1849,7 +1849,7 @@ CREATE POLICY "Update org settings" ON public.organization_settings USING ((orga
 
 
 --
--- TOC entry 4349 (class 3256 OID 33524)
+-- TOC entry 4329 (class 3256 OID 33524)
 -- Name: profiles Update own profile; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1857,7 +1857,7 @@ CREATE POLICY "Update own profile" ON public.profiles FOR UPDATE USING ((id = au
 
 
 --
--- TOC entry 4359 (class 3256 OID 33518)
+-- TOC entry 4338 (class 3256 OID 33518)
 -- Name: organizations Users can view own org; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1865,7 +1865,7 @@ CREATE POLICY "Users can view own org" ON public.organizations FOR SELECT USING 
 
 
 --
--- TOC entry 4355 (class 3256 OID 51756)
+-- TOC entry 4334 (class 3256 OID 51756)
 -- Name: professionals Usuários veem profissionais da mesma org; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1875,7 +1875,7 @@ CREATE POLICY "Usuários veem profissionais da mesma org" ON public.professional
 
 
 --
--- TOC entry 4346 (class 3256 OID 33521)
+-- TOC entry 4326 (class 3256 OID 33521)
 -- Name: organization_settings View org settings; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1883,7 +1883,7 @@ CREATE POLICY "View org settings" ON public.organization_settings FOR SELECT USI
 
 
 --
--- TOC entry 4348 (class 3256 OID 33523)
+-- TOC entry 4328 (class 3256 OID 33523)
 -- Name: profiles View profiles in same org; Type: POLICY; Schema: public; Owner: postgres
 --
 
@@ -1891,7 +1891,7 @@ CREATE POLICY "View profiles in same org" ON public.profiles FOR SELECT USING ((
 
 
 --
--- TOC entry 4337 (class 0 OID 48271)
+-- TOC entry 4316 (class 0 OID 48271)
 -- Dependencies: 399
 -- Name: appointment_logs; Type: ROW SECURITY; Schema: public; Owner: postgres
 --
@@ -1899,7 +1899,7 @@ CREATE POLICY "View profiles in same org" ON public.profiles FOR SELECT USING ((
 ALTER TABLE public.appointment_logs ENABLE ROW LEVEL SECURITY;
 
 --
--- TOC entry 4334 (class 0 OID 33437)
+-- TOC entry 4313 (class 0 OID 33437)
 -- Dependencies: 396
 -- Name: appointments; Type: ROW SECURITY; Schema: public; Owner: postgres
 --
@@ -1907,7 +1907,7 @@ ALTER TABLE public.appointment_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
 
 --
--- TOC entry 4332 (class 0 OID 33404)
+-- TOC entry 4311 (class 0 OID 33404)
 -- Dependencies: 394
 -- Name: customers; Type: ROW SECURITY; Schema: public; Owner: postgres
 --
@@ -1915,39 +1915,39 @@ ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
 
 --
--- TOC entry 4342 (class 0 OID 126839)
--- Dependencies: 416
+-- TOC entry 4322 (class 0 OID 126839)
+-- Dependencies: 409
 -- Name: demo_interactions; Type: ROW SECURITY; Schema: public; Owner: postgres
 --
 
 ALTER TABLE public.demo_interactions ENABLE ROW LEVEL SECURITY;
 
 --
--- TOC entry 4344 (class 0 OID 126880)
--- Dependencies: 418
+-- TOC entry 4324 (class 0 OID 126880)
+-- Dependencies: 411
 -- Name: demo_leads; Type: ROW SECURITY; Schema: public; Owner: postgres
 --
 
 ALTER TABLE public.demo_leads ENABLE ROW LEVEL SECURITY;
 
 --
--- TOC entry 4345 (class 0 OID 126897)
--- Dependencies: 419
+-- TOC entry 4325 (class 0 OID 126897)
+-- Dependencies: 412
 -- Name: demo_rate_limits; Type: ROW SECURITY; Schema: public; Owner: postgres
 --
 
 ALTER TABLE public.demo_rate_limits ENABLE ROW LEVEL SECURITY;
 
 --
--- TOC entry 4343 (class 0 OID 126858)
--- Dependencies: 417
+-- TOC entry 4323 (class 0 OID 126858)
+-- Dependencies: 410
 -- Name: demo_timeline_events; Type: ROW SECURITY; Schema: public; Owner: postgres
 --
 
 ALTER TABLE public.demo_timeline_events ENABLE ROW LEVEL SECURITY;
 
 --
--- TOC entry 4340 (class 0 OID 69372)
+-- TOC entry 4320 (class 0 OID 69372)
 -- Dependencies: 403
 -- Name: estimates; Type: ROW SECURITY; Schema: public; Owner: postgres
 --
@@ -1955,7 +1955,15 @@ ALTER TABLE public.demo_timeline_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.estimates ENABLE ROW LEVEL SECURITY;
 
 --
--- TOC entry 4336 (class 0 OID 33500)
+-- TOC entry 4319 (class 0 OID 60307)
+-- Dependencies: 402
+-- Name: expenses; Type: ROW SECURITY; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
+
+--
+-- TOC entry 4315 (class 0 OID 33500)
 -- Dependencies: 398
 -- Name: invitations; Type: ROW SECURITY; Schema: public; Owner: postgres
 --
@@ -1963,7 +1971,7 @@ ALTER TABLE public.estimates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.invitations ENABLE ROW LEVEL SECURITY;
 
 --
--- TOC entry 4341 (class 0 OID 105356)
+-- TOC entry 4321 (class 0 OID 105356)
 -- Dependencies: 407
 -- Name: notification_dispatches; Type: ROW SECURITY; Schema: public; Owner: postgres
 --
@@ -1971,7 +1979,7 @@ ALTER TABLE public.invitations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notification_dispatches ENABLE ROW LEVEL SECURITY;
 
 --
--- TOC entry 4331 (class 0 OID 33386)
+-- TOC entry 4310 (class 0 OID 33386)
 -- Dependencies: 393
 -- Name: organization_settings; Type: ROW SECURITY; Schema: public; Owner: postgres
 --
@@ -1979,7 +1987,7 @@ ALTER TABLE public.notification_dispatches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organization_settings ENABLE ROW LEVEL SECURITY;
 
 --
--- TOC entry 4329 (class 0 OID 33347)
+-- TOC entry 4308 (class 0 OID 33347)
 -- Dependencies: 391
 -- Name: organizations; Type: ROW SECURITY; Schema: public; Owner: postgres
 --
@@ -1987,7 +1995,7 @@ ALTER TABLE public.organization_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
 
 --
--- TOC entry 4338 (class 0 OID 50532)
+-- TOC entry 4317 (class 0 OID 50532)
 -- Dependencies: 400
 -- Name: professional_availability; Type: ROW SECURITY; Schema: public; Owner: postgres
 --
@@ -1995,7 +2003,7 @@ ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.professional_availability ENABLE ROW LEVEL SECURITY;
 
 --
--- TOC entry 4339 (class 0 OID 50584)
+-- TOC entry 4318 (class 0 OID 50584)
 -- Dependencies: 401
 -- Name: professionals; Type: ROW SECURITY; Schema: public; Owner: postgres
 --
@@ -2003,7 +2011,7 @@ ALTER TABLE public.professional_availability ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.professionals ENABLE ROW LEVEL SECURITY;
 
 --
--- TOC entry 4330 (class 0 OID 33363)
+-- TOC entry 4309 (class 0 OID 33363)
 -- Dependencies: 392
 -- Name: profiles; Type: ROW SECURITY; Schema: public; Owner: postgres
 --
@@ -2011,7 +2019,7 @@ ALTER TABLE public.professionals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 --
--- TOC entry 4335 (class 0 OID 33468)
+-- TOC entry 4314 (class 0 OID 33468)
 -- Dependencies: 397
 -- Name: service_records; Type: ROW SECURITY; Schema: public; Owner: postgres
 --
@@ -2019,7 +2027,7 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.service_records ENABLE ROW LEVEL SECURITY;
 
 --
--- TOC entry 4333 (class 0 OID 33420)
+-- TOC entry 4312 (class 0 OID 33420)
 -- Dependencies: 395
 -- Name: services; Type: ROW SECURITY; Schema: public; Owner: postgres
 --
@@ -2027,7 +2035,7 @@ ALTER TABLE public.service_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.services ENABLE ROW LEVEL SECURITY;
 
 --
--- TOC entry 4384 (class 0 OID 0)
+-- TOC entry 4364 (class 0 OID 0)
 -- Dependencies: 138
 -- Name: SCHEMA public; Type: ACL; Schema: -; Owner: postgres
 --
@@ -2039,7 +2047,7 @@ GRANT USAGE ON SCHEMA public TO service_role;
 
 
 --
--- TOC entry 4385 (class 0 OID 0)
+-- TOC entry 4365 (class 0 OID 0)
 -- Dependencies: 397
 -- Name: TABLE service_records; Type: ACL; Schema: public; Owner: postgres
 --
@@ -2050,8 +2058,8 @@ GRANT ALL ON TABLE public.service_records TO service_role;
 
 
 --
--- TOC entry 4386 (class 0 OID 0)
--- Dependencies: 696
+-- TOC entry 4366 (class 0 OID 0)
+-- Dependencies: 689
 -- Name: FUNCTION finalize_service_record(p_service_record_id uuid); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -2061,7 +2069,7 @@ GRANT ALL ON FUNCTION public.finalize_service_record(p_service_record_id uuid) T
 
 
 --
--- TOC entry 4387 (class 0 OID 0)
+-- TOC entry 4367 (class 0 OID 0)
 -- Dependencies: 394
 -- Name: TABLE customers; Type: ACL; Schema: public; Owner: postgres
 --
@@ -2072,8 +2080,8 @@ GRANT ALL ON TABLE public.customers TO service_role;
 
 
 --
--- TOC entry 4388 (class 0 OID 0)
--- Dependencies: 447
+-- TOC entry 4368 (class 0 OID 0)
+-- Dependencies: 440
 -- Name: FUNCTION find_or_create_public_customer(p_organization_id uuid, p_name text, p_phone text, p_document text, p_email text, p_birth_date date, p_gender text, p_address text, p_notes text); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -2083,8 +2091,8 @@ GRANT ALL ON FUNCTION public.find_or_create_public_customer(p_organization_id uu
 
 
 --
--- TOC entry 4389 (class 0 OID 0)
--- Dependencies: 575
+-- TOC entry 4369 (class 0 OID 0)
+-- Dependencies: 568
 -- Name: FUNCTION get_user_org_id(); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -2094,8 +2102,8 @@ GRANT ALL ON FUNCTION public.get_user_org_id() TO service_role;
 
 
 --
--- TOC entry 4390 (class 0 OID 0)
--- Dependencies: 530
+-- TOC entry 4370 (class 0 OID 0)
+-- Dependencies: 523
 -- Name: FUNCTION handle_new_organization(); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -2105,8 +2113,8 @@ GRANT ALL ON FUNCTION public.handle_new_organization() TO service_role;
 
 
 --
--- TOC entry 4391 (class 0 OID 0)
--- Dependencies: 655
+-- TOC entry 4371 (class 0 OID 0)
+-- Dependencies: 648
 -- Name: FUNCTION handle_new_user(); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -2116,8 +2124,8 @@ GRANT ALL ON FUNCTION public.handle_new_user() TO service_role;
 
 
 --
--- TOC entry 4392 (class 0 OID 0)
--- Dependencies: 701
+-- TOC entry 4372 (class 0 OID 0)
+-- Dependencies: 694
 -- Name: FUNCTION normalize_customer_fields(); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -2127,7 +2135,7 @@ GRANT ALL ON FUNCTION public.normalize_customer_fields() TO service_role;
 
 
 --
--- TOC entry 4395 (class 0 OID 0)
+-- TOC entry 4375 (class 0 OID 0)
 -- Dependencies: 396
 -- Name: TABLE appointments; Type: ACL; Schema: public; Owner: postgres
 --
@@ -2138,8 +2146,8 @@ GRANT ALL ON TABLE public.appointments TO service_role;
 
 
 --
--- TOC entry 4396 (class 0 OID 0)
--- Dependencies: 610
+-- TOC entry 4376 (class 0 OID 0)
+-- Dependencies: 603
 -- Name: FUNCTION request_public_appointment(p_organization_id uuid, p_service_id uuid, p_professional_id uuid, p_start_time timestamp with time zone, p_name text, p_phone text, p_document text, p_email text, p_birth_date date, p_gender text, p_address text, p_notes text, p_appointment_notes text); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -2149,8 +2157,8 @@ GRANT ALL ON FUNCTION public.request_public_appointment(p_organization_id uuid, 
 
 
 --
--- TOC entry 4397 (class 0 OID 0)
--- Dependencies: 491
+-- TOC entry 4377 (class 0 OID 0)
+-- Dependencies: 484
 -- Name: FUNCTION rls_auto_enable(); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -2160,8 +2168,8 @@ GRANT ALL ON FUNCTION public.rls_auto_enable() TO service_role;
 
 
 --
--- TOC entry 4398 (class 0 OID 0)
--- Dependencies: 667
+-- TOC entry 4378 (class 0 OID 0)
+-- Dependencies: 660
 -- Name: FUNCTION sign_service_record(p_service_record_id uuid); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -2171,8 +2179,8 @@ GRANT ALL ON FUNCTION public.sign_service_record(p_service_record_id uuid) TO se
 
 
 --
--- TOC entry 4399 (class 0 OID 0)
--- Dependencies: 477
+-- TOC entry 4379 (class 0 OID 0)
+-- Dependencies: 470
 -- Name: FUNCTION update_updated_at_column(); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -2182,7 +2190,7 @@ GRANT ALL ON FUNCTION public.update_updated_at_column() TO service_role;
 
 
 --
--- TOC entry 4400 (class 0 OID 0)
+-- TOC entry 4380 (class 0 OID 0)
 -- Dependencies: 399
 -- Name: TABLE appointment_logs; Type: ACL; Schema: public; Owner: postgres
 --
@@ -2193,8 +2201,8 @@ GRANT ALL ON TABLE public.appointment_logs TO service_role;
 
 
 --
--- TOC entry 4401 (class 0 OID 0)
--- Dependencies: 416
+-- TOC entry 4381 (class 0 OID 0)
+-- Dependencies: 409
 -- Name: TABLE demo_interactions; Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -2204,8 +2212,8 @@ GRANT ALL ON TABLE public.demo_interactions TO service_role;
 
 
 --
--- TOC entry 4402 (class 0 OID 0)
--- Dependencies: 418
+-- TOC entry 4382 (class 0 OID 0)
+-- Dependencies: 411
 -- Name: TABLE demo_leads; Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -2215,8 +2223,8 @@ GRANT ALL ON TABLE public.demo_leads TO service_role;
 
 
 --
--- TOC entry 4403 (class 0 OID 0)
--- Dependencies: 419
+-- TOC entry 4383 (class 0 OID 0)
+-- Dependencies: 412
 -- Name: TABLE demo_rate_limits; Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -2226,8 +2234,8 @@ GRANT ALL ON TABLE public.demo_rate_limits TO service_role;
 
 
 --
--- TOC entry 4404 (class 0 OID 0)
--- Dependencies: 417
+-- TOC entry 4384 (class 0 OID 0)
+-- Dependencies: 410
 -- Name: TABLE demo_timeline_events; Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -2237,7 +2245,7 @@ GRANT ALL ON TABLE public.demo_timeline_events TO service_role;
 
 
 --
--- TOC entry 4405 (class 0 OID 0)
+-- TOC entry 4385 (class 0 OID 0)
 -- Dependencies: 403
 -- Name: TABLE estimates; Type: ACL; Schema: public; Owner: postgres
 --
@@ -2248,29 +2256,27 @@ GRANT ALL ON TABLE public.estimates TO service_role;
 
 
 --
--- TOC entry 4406 (class 0 OID 0)
+-- TOC entry 4386 (class 0 OID 0)
 -- Dependencies: 402
 -- Name: TABLE expenses; Type: ACL; Schema: public; Owner: postgres
 --
 
-GRANT ALL ON TABLE public.expenses TO anon;
 GRANT ALL ON TABLE public.expenses TO authenticated;
 GRANT ALL ON TABLE public.expenses TO service_role;
 
 
 --
--- TOC entry 4407 (class 0 OID 0)
+-- TOC entry 4387 (class 0 OID 0)
 -- Dependencies: 398
 -- Name: TABLE invitations; Type: ACL; Schema: public; Owner: postgres
 --
 
-GRANT ALL ON TABLE public.invitations TO anon;
 GRANT ALL ON TABLE public.invitations TO authenticated;
 GRANT ALL ON TABLE public.invitations TO service_role;
 
 
 --
--- TOC entry 4408 (class 0 OID 0)
+-- TOC entry 4388 (class 0 OID 0)
 -- Dependencies: 407
 -- Name: TABLE notification_dispatches; Type: ACL; Schema: public; Owner: postgres
 --
@@ -2281,7 +2287,7 @@ GRANT ALL ON TABLE public.notification_dispatches TO service_role;
 
 
 --
--- TOC entry 4409 (class 0 OID 0)
+-- TOC entry 4389 (class 0 OID 0)
 -- Dependencies: 393
 -- Name: TABLE organization_settings; Type: ACL; Schema: public; Owner: postgres
 --
@@ -2292,76 +2298,57 @@ GRANT ALL ON TABLE public.organization_settings TO service_role;
 
 
 --
--- TOC entry 4410 (class 0 OID 0)
+-- TOC entry 4390 (class 0 OID 0)
 -- Dependencies: 391
 -- Name: TABLE organizations; Type: ACL; Schema: public; Owner: postgres
 --
 
-GRANT REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE public.organizations TO anon;
-GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE public.organizations TO authenticated;
 GRANT ALL ON TABLE public.organizations TO service_role;
 
 
 --
--- TOC entry 4411 (class 0 OID 0)
--- Dependencies: 391 4410
+-- TOC entry 4391 (class 0 OID 0)
+-- Dependencies: 391 4390
 -- Name: COLUMN organizations.id; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT(id) ON TABLE public.organizations TO anon;
+GRANT SELECT(id) ON TABLE public.organizations TO authenticated;
 
 
 --
--- TOC entry 4412 (class 0 OID 0)
--- Dependencies: 391 4410
+-- TOC entry 4392 (class 0 OID 0)
+-- Dependencies: 391 4390
 -- Name: COLUMN organizations.name; Type: ACL; Schema: public; Owner: postgres
 --
 
-GRANT INSERT(name),UPDATE(name) ON TABLE public.organizations TO authenticated;
+GRANT SELECT(name),INSERT(name),UPDATE(name) ON TABLE public.organizations TO authenticated;
 GRANT SELECT(name) ON TABLE public.organizations TO anon;
 
 
 --
--- TOC entry 4413 (class 0 OID 0)
--- Dependencies: 391 4410
+-- TOC entry 4393 (class 0 OID 0)
+-- Dependencies: 391 4390
 -- Name: COLUMN organizations.slug; Type: ACL; Schema: public; Owner: postgres
 --
 
-GRANT INSERT(slug) ON TABLE public.organizations TO authenticated;
+GRANT SELECT(slug),INSERT(slug) ON TABLE public.organizations TO authenticated;
 GRANT SELECT(slug) ON TABLE public.organizations TO anon;
 
 
 --
--- TOC entry 4414 (class 0 OID 0)
--- Dependencies: 391 4410
+-- TOC entry 4394 (class 0 OID 0)
+-- Dependencies: 391 4390
 -- Name: COLUMN organizations.niche; Type: ACL; Schema: public; Owner: postgres
 --
 
-GRANT INSERT(niche),UPDATE(niche) ON TABLE public.organizations TO authenticated;
+GRANT SELECT(niche),INSERT(niche),UPDATE(niche) ON TABLE public.organizations TO authenticated;
 GRANT SELECT(niche) ON TABLE public.organizations TO anon;
 
 
 --
--- TOC entry 4415 (class 0 OID 0)
--- Dependencies: 391 4410
--- Name: COLUMN organizations.whatsapp_instance_name; Type: ACL; Schema: public; Owner: postgres
---
-
-GRANT UPDATE(whatsapp_instance_name) ON TABLE public.organizations TO authenticated;
-
-
---
--- TOC entry 4416 (class 0 OID 0)
--- Dependencies: 391 4410
--- Name: COLUMN organizations.whatsapp_status; Type: ACL; Schema: public; Owner: postgres
---
-
-GRANT UPDATE(whatsapp_status) ON TABLE public.organizations TO authenticated;
-
-
---
--- TOC entry 4417 (class 0 OID 0)
--- Dependencies: 391 4410
+-- TOC entry 4395 (class 0 OID 0)
+-- Dependencies: 391 4390
 -- Name: COLUMN organizations.created_at; Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -2369,7 +2356,7 @@ GRANT SELECT(created_at) ON TABLE public.organizations TO anon;
 
 
 --
--- TOC entry 4418 (class 0 OID 0)
+-- TOC entry 4396 (class 0 OID 0)
 -- Dependencies: 400
 -- Name: TABLE professional_availability; Type: ACL; Schema: public; Owner: postgres
 --
@@ -2380,7 +2367,7 @@ GRANT ALL ON TABLE public.professional_availability TO service_role;
 
 
 --
--- TOC entry 4419 (class 0 OID 0)
+-- TOC entry 4397 (class 0 OID 0)
 -- Dependencies: 401
 -- Name: TABLE professionals; Type: ACL; Schema: public; Owner: postgres
 --
@@ -2391,7 +2378,7 @@ GRANT ALL ON TABLE public.professionals TO service_role;
 
 
 --
--- TOC entry 4420 (class 0 OID 0)
+-- TOC entry 4398 (class 0 OID 0)
 -- Dependencies: 392
 -- Name: TABLE profiles; Type: ACL; Schema: public; Owner: postgres
 --
@@ -2402,7 +2389,7 @@ GRANT ALL ON TABLE public.profiles TO service_role;
 
 
 --
--- TOC entry 4421 (class 0 OID 0)
+-- TOC entry 4399 (class 0 OID 0)
 -- Dependencies: 395
 -- Name: TABLE services; Type: ACL; Schema: public; Owner: postgres
 --
@@ -2413,7 +2400,7 @@ GRANT ALL ON TABLE public.services TO service_role;
 
 
 --
--- TOC entry 2826 (class 826 OID 32074)
+-- TOC entry 2805 (class 826 OID 32074)
 -- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: public; Owner: postgres
 --
 
@@ -2424,7 +2411,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON SEQUENC
 
 
 --
--- TOC entry 2825 (class 826 OID 32073)
+-- TOC entry 2804 (class 826 OID 32073)
 -- Name: DEFAULT PRIVILEGES FOR FUNCTIONS; Type: DEFAULT ACL; Schema: public; Owner: postgres
 --
 
@@ -2435,7 +2422,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON FUNCTIO
 
 
 --
--- TOC entry 2824 (class 826 OID 32072)
+-- TOC entry 2803 (class 826 OID 32072)
 -- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: public; Owner: postgres
 --
 
@@ -2445,11 +2432,11 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES 
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES TO service_role;
 
 
--- Completed on 2026-08-11 21:26:06
+-- Completed on 2026-08-12 09:29:17
 
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict sKDMDQKZXqMnaCOdZP7gKPIQdZaz2dwQvMFB6zBls51AilVp4rFWLtJcBQDmHwu
+\unrestrict hlOJBQbgToKqYalOpWFyhE97Cj5fleQUh8v9infGN9rmBNvxzIxxCWbbuTjd2X9
 

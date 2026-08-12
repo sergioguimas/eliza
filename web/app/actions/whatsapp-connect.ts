@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server"
-import { SupabaseClient } from "@supabase/supabase-js"
+import { createAdminClient } from "@/utils/supabase/admin"
 import { Database } from "@/utils/database.types"
 import { getEvolutionServer } from "@/lib/evolution"
 
@@ -32,12 +32,93 @@ function resolveInstanceName(org: {
   return org.whatsapp_instance_name || org.slug
 }
 
+type OwnOrg = {
+  id: string
+  slug: string | null
+  whatsapp_instance_name: string | null
+}
+
+type LoadOwnOrgResult =
+  | { ok: true; org: OwnOrg }
+  | { ok: false; error: string }
+
+/**
+ * Carrega a org do usuário logado para o fluxo de WhatsApp, com service role.
+ *
+ * `whatsapp_instance_name` não é legível nem gravável pelo papel
+ * `authenticated` (migration 20260811120000). O motivo: a policy de SELECT em
+ * organizations é `USING (true)` — a página pública /marcar precisa disso e é
+ * aberta também por gente logada de outra org. Como policy de RLS não restringe
+ * COLUNA, qualquer GRANT dessa coluna para `authenticated` valeria para TODOS
+ * os tenants: a instância de WhatsApp de todo mundo ficaria legível via REST, e
+ * gravável apontando a própria org para a instância alheia (mensagem saindo
+ * pelo número de outra empresa).
+ *
+ * Com o privilégio fora do client, a autorização passa a morar aqui — RLS não
+ * está mais cobrindo esta escrita:
+ *   - sessão válida;
+ *   - papel owner/admin (mesmo gate da aba WhatsApp em /configuracoes);
+ *   - sempre a org do próprio perfil; o id nunca vem do client.
+ */
+async function loadOwnOrgForWhatsapp(): Promise<LoadOwnOrgResult> {
+  const supabase = await createClient<Database>()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { ok: false, error: "Usuário não autenticado" }
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("organization_id, role")
+    .eq("id", user.id)
+    .single()
+
+  if (!profile?.organization_id) {
+    return { ok: false, error: "Organização não encontrada." }
+  }
+
+  if (!["owner", "admin"].includes(profile.role ?? "")) {
+    return {
+      ok: false,
+      error: "Apenas o dono ou um admin da organização pode gerenciar o WhatsApp.",
+    }
+  }
+
+  const admin = createAdminClient<Database>()
+
+  const { data: org, error } = await admin
+    .from("organizations")
+    .select("id, slug, whatsapp_instance_name")
+    .eq("id", profile.organization_id)
+    .single()
+
+  if (error || !org) {
+    console.error(
+      "[whatsapp-connect] Falha ao carregar a organização:",
+      error?.message
+    )
+
+    return { ok: false, error: "Organização não encontrada." }
+  }
+
+  return { ok: true, org: org as OwnOrg }
+}
+
+/**
+ * Grava (ou solta, com null) o vínculo org -> instância. Service role pelo
+ * mesmo motivo do loadOwnOrgForWhatsapp; quem chama já autorizou o usuário.
+ */
 async function persistInstanceName(
-  supabase: SupabaseClient<Database>,
   organizationId: string,
-  instanceName: string
+  instanceName: string | null
 ) {
-  const { error } = await supabase
+  const admin = createAdminClient<Database>()
+
+  const { error } = await admin
     .from("organizations")
     .update({ whatsapp_instance_name: instanceName })
     .eq("id", organizationId)
@@ -48,12 +129,16 @@ async function persistInstanceName(
       error.message
     )
 
-    return
+    return { ok: false as const }
   }
 
   console.log(
-    `[whatsapp-connect] Instância "${instanceName}" vinculada à org ${organizationId}.`
+    instanceName
+      ? `[whatsapp-connect] Instância "${instanceName}" vinculada à org ${organizationId}.`
+      : `[whatsapp-connect] Vínculo de instância removido da org ${organizationId}.`
   )
+
+  return { ok: true as const }
 }
 
 function normalizeEvolutionState(data: any) {
@@ -80,30 +165,17 @@ function isEvolutionConnected(data: any) {
 export async function createWhatsappInstance(): Promise<WhatsappResponse> {
   console.log("--- [DEBUG] INICIANDO PROCESSO DE CONEXÃO WHATSAPP ---")
   
-  const supabase = await createClient<Database>()
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) {
-    console.error("[DEBUG ERROR] Usuário não autenticado")
-    return { error: "Usuário não autenticado" }
-  }
-
-  // 1. Busca dados da Organização
+  // 1. Busca dados da Organização (service role + checagem de papel)
   console.log("[DEBUG STEP 1] Buscando perfil e organização...")
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('organization_id, organizations:organization_id(slug, whatsapp_instance_name)')
-    .eq('id', user.id)
-    .single()
+  const loaded = await loadOwnOrgForWhatsapp()
 
-  const org = profile?.organizations
-
-  if (!profile?.organization_id || !org) {
-    console.error("[DEBUG ERROR] Organização não encontrada para o usuário")
-    return { error: "Organização não encontrada." }
+  if (!loaded.ok) {
+    console.error("[DEBUG ERROR]", loaded.error)
+    return { error: loaded.error }
   }
 
-  const organizationId = profile.organization_id
+  const org = loaded.org
+  const organizationId = org.id
   const instanceName = resolveInstanceName(org)
 
   if (!instanceName) {
@@ -131,7 +203,7 @@ export async function createWhatsappInstance(): Promise<WhatsappResponse> {
   // de send-whatsapp.ts e o webhook de entrada não acha a org.
   const withPersist = async (result: WhatsappResponse) => {
     if (result.success && org.whatsapp_instance_name !== instanceName) {
-      await persistInstanceName(supabase, organizationId, instanceName)
+      await persistInstanceName(organizationId, instanceName)
     }
 
     return result
@@ -271,20 +343,11 @@ async function connectWhatsappInstance(instanceName: string, url: string, key: s
 // --- DELETAR INSTÂNCIA (RESET) ---
 export async function deleteWhatsappInstance() {
     console.log("[DEBUG DELETE] Iniciando reset...")
-    const supabase = await createClient<Database>()
-    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!user) return { error: "Não autorizado" }
+    const loaded = await loadOwnOrgForWhatsapp()
+    if (!loaded.ok) return { error: loaded.error }
 
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('organization_id, organizations(slug, whatsapp_instance_name)')
-        .eq('id', user.id)
-        .single()
-
-    const org = profile?.organizations
-    if (!profile?.organization_id || !org) return { error: "Org não encontrada" }
-
+    const org = loaded.org
     const instanceName = resolveInstanceName(org)
     if (!instanceName) return { error: "Org sem instância para desconectar" }
 
@@ -305,13 +368,10 @@ export async function deleteWhatsappInstance() {
 
         // Solta o vínculo: sem instância, o envio falha explícito em vez de
         // sair por um número que não é mais da org.
-        const { error: updateError } = await supabase
-            .from('organizations')
-            .update({ whatsapp_instance_name: null })
-            .eq('id', profile.organization_id)
+        const cleared = await persistInstanceName(org.id, null)
 
-        if (updateError) {
-            console.error("[DEBUG DELETE] Instância removida na Evolution, mas o banco não limpou:", updateError.message)
+        if (!cleared.ok) {
+            console.error("[DEBUG DELETE] Instância removida na Evolution, mas o banco não limpou.")
             return { error: "Instância desconectada, mas o vínculo não foi removido. Tente novamente." }
         }
 
@@ -325,29 +385,15 @@ export async function deleteWhatsappInstance() {
 
 // --- CHECAR STATUS ---
 export async function getWhatsappStatus(): Promise<WhatsappResponse> {
-  const supabase = await createClient<Database>()
+  const loaded = await loadOwnOrgForWhatsapp()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  // Sem sessão, sem org ou sem papel owner/admin: a tela só mostra "não
+  // conectado" em vez de estourar um erro — a aba nem aparece para esse perfil.
+  if (!loaded.ok) {
     return { status: "unknown" }
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("organizations(slug, whatsapp_instance_name)")
-    .eq("id", user.id)
-    .single()
-
-  const org = profile?.organizations
-
-  if (!org) {
-    return { status: "unknown" }
-  }
-
-  const instanceName = resolveInstanceName(org)
+  const instanceName = resolveInstanceName(loaded.org)
 
   if (!instanceName) {
     return { status: "unknown" }

@@ -1,10 +1,12 @@
 "use server"
 
-import { createClient } from "@/utils/supabase/server"
+import { createAdminClient } from "@/utils/supabase/admin"
+import { Database } from "@/utils/database.types"
 
 type AvailableSlotsReason =
   | "organization_closed_day"
   | "professional_unavailable_day"
+  | "professional_not_in_organization"
   | "outside_business_hours"
   | "fully_booked"
   | "error"
@@ -58,15 +60,68 @@ function overlapsRange(
   return startMinutes < rangeEndMinutes && endMinutes > rangeStartMinutes
 }
 
+/**
+ * Calcula os horários livres de um profissional num dia.
+ *
+ * Roda com SERVICE ROLE. O único chamador é o formulário público
+ * (/marcar/[slug]), que não tem sessão — antes isso usava o client de cookie e
+ * caía no papel `anon`, com dois efeitos silenciosos:
+ *
+ *   1. `organization_settings` é isolada por `get_user_org_id()`, que é NULL
+ *      para anon. A query voltava vazia sem erro, então o expediente e o
+ *      almoço da organização eram simplesmente ignorados no cálculo — o
+ *      horário caía no fallback da agenda do profissional.
+ *   2. A policy de `appointments` para anon é `USING (status = 'pending')`.
+ *      Agendamentos `scheduled` e `confirmed` ficavam invisíveis aqui, então
+ *      horário ocupado era oferecido como livre. Quem tentasse reservar batia
+ *      na exclusion constraint e recebia "este horário acabou de ser ocupado".
+ *
+ * Com service role o RLS sai do caminho e as duas leituras ficam corretas. Em
+ * troca, o escopo passa a ser responsabilidade daqui: `professionalId` e
+ * `organizationId` vêm do client, então o vínculo entre os dois é validado
+ * explicitamente antes de qualquer leitura — senão dava para combinar o
+ * expediente de uma org com o profissional de outra.
+ *
+ * O retorno continua sendo só uma lista de horários livres, que é exatamente o
+ * que uma página pública de agendamento precisa expor.
+ */
 export async function getAvailableSlots(
   professionalId: string,
   date: Date,
   organizationId: string
 ): Promise<AvailableSlotsResult> {
-  const supabase = await createClient()
+  const supabase = createAdminClient<Database>()
 
   const dayOfWeek = getSaoPauloDayOfWeek(date)
   const dateOnly = getSaoPauloDateOnly(date)
+
+  // Substitui o escopo que o RLS dava: sem isto, service role leria a agenda
+  // de qualquer profissional de qualquer tenant.
+  const { data: professional, error: professionalError } = await supabase
+    .from("professionals")
+    .select("id")
+    .eq("id", professionalId)
+    .eq("organization_id", organizationId)
+    .eq("is_active", true)
+    .maybeSingle()
+
+  if (professionalError) {
+    console.error("[getAvailableSlots:professional]", professionalError)
+
+    return {
+      slots: [],
+      reason: "error",
+      message: "Erro ao validar o profissional.",
+    }
+  }
+
+  if (!professional) {
+    return {
+      slots: [],
+      reason: "professional_not_in_organization",
+      message: "Profissional indisponível para agendamento.",
+    }
+  }
 
   const { data: settings, error: settingsError } = await supabase
     .from("organization_settings")
@@ -158,10 +213,14 @@ export async function getAvailableSlots(
   const dayStart = new Date(`${dateOnly}T00:00:00.000${SAO_PAULO_OFFSET}`).toISOString()
   const dayEnd = new Date(`${dateOnly}T23:59:59.999${SAO_PAULO_OFFSET}`).toISOString()
 
+  // Agora enxerga TODOS os status menos 'canceled' — antes, como anon, só via
+  // os 'pending'. O filtro por organização é redundante (profissional pertence
+  // a uma org só) mas mantém a query escopada sem depender do RLS.
   const { data: existingAppointments, error: appointmentsError } = await supabase
     .from("appointments")
     .select("start_time, end_time")
     .eq("professional_id", professionalId)
+    .eq("organization_id", organizationId)
     .neq("status", "canceled")
     .gte("start_time", dayStart)
     .lte("start_time", dayEnd)
