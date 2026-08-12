@@ -386,9 +386,20 @@ Server action: apaga dados da org demo, re-executa o seed, mantém a sessão.
 
 ### 9.2 Cleanup de expirados
 Rota `GET /api/cron/cleanup-demo` com `Bearer CRON_SECRET`, no mesmo padrão de
-`send-reminders`. Para cada org com `expires_at < now()`:
-apaga dados → apaga org → **`auth.admin.deleteUser`** (senão o Supabase Auth acumula
-usuários órfãos contando MAU) → log.
+`send-reminders`. Para cada org com `expires_at < now()`, chamar
+`deleteDemoOrganization` de [cleanup.ts](../web/lib/demo/cleanup.ts) — o helper já
+existe, foi escrito na Fase 2 e está validado contra o banco.
+
+⚠️ **Apagar a organização direto não funciona.** Sete tabelas referenciam
+`organizations` sem `ON DELETE CASCADE` (`appointments`, `customers`, `estimates`,
+`organization_settings`, `profiles`, `service_records`, `services`), e um trigger cria
+`organization_settings` no insert da org — então o delete falha com violação de FK.
+Descoberto na prática ao limpar o tenant de teste da Fase 2. O helper apaga na ordem
+filha-antes-de-mãe e recusa organização com `is_demo=false`, para nunca poder ser
+apontado a um tenant real.
+
+O `auth.admin.deleteUser` também está lá dentro: sem ele o Supabase Auth acumula
+usuários órfãos contando MAU.
 
 Entra como uma linha na crontab da VPS, de hora em hora. Não precisa ser diária: rodando
 de hora em hora, o pior caso de sobrevida de um tenant expirado cai de 24h para 1h.
@@ -440,7 +451,7 @@ reverter é desligar a rota `/demo/start`, sem tocar em dados de produção.
 | Fase | Tempo | Status |
 |------|-------|--------|
 | 1. Banco + isolamento do cron + anti-sequestro | 4–5h | 🟢 **DONE** |
-| 2. Criação do tenant demo | 5–6h | 🔴 TODO |
+| 2. Criação do tenant demo | 5–6h | 🟢 **DONE** (verificado ponta a ponta) |
 | 3. Seed por nicho | 4–5h | 🔴 TODO |
 | 4. Página `/demo/start` | 3h | 🔴 TODO |
 | 5. Tour guiado | 6–8h | 🔴 TODO |
