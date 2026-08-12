@@ -15,6 +15,7 @@ import {
   hashIdentifier,
 } from "@/lib/demo/rate-limit"
 import { deleteDemoOrganization } from "@/lib/demo/cleanup"
+import { seedDemoOrganization } from "@/lib/demo/seed"
 
 export const dynamic = "force-dynamic"
 
@@ -139,8 +140,17 @@ export async function POST(request: Request) {
       throw profileError
     }
 
-    // TODO (Fase 3): semear profissionais, serviços, clientes e agenda do nicho
-    // antes do login, para o visitante cair num dashboard já povoado.
+    // Semear antes do login: o visitante precisa cair num sistema já em uso, e
+    // não num dashboard zerado que se povoa depois, na frente dele.
+    const seed = await seedDemoOrganization(supabaseAdmin, {
+      organizationId: org.id,
+      niche,
+      ownerProfileId: created.user.id,
+    })
+
+    if (!seed.ok) {
+      throw new Error(`Falha ao semear demonstração — ${seed.error}`)
+    }
 
     const supabase = await createServerClient()
 

@@ -242,18 +242,39 @@ Para cada nicho: 2 profissionais (+ `professional_availability`), 3 serviços, 2
 (`phone` é NOT NULL — usar números fictícios; o guard da Fase 1.2 garante que nada sai),
 2 agendamentos passados (`status='completed'`), 1 futuro.
 
+Implementado em [seed.ts](../web/lib/demo/seed.ts), com os dados por nicho separados em
+[fixtures.ts](../web/lib/demo/fixtures.ts).
+
 **Regras que o v1 errou:**
-- Datas **relativas a `now()`**, não literais de 2024.
-- Horários calculados via `get-available-slots.ts`, respeitando a EXCLUDE constraint GiST
-  de `appointments` — senão o tour estoura erro no meio.
-- 1 `service_records` pré-existente por cliente antigo, para o histórico não parecer vazio.
+- Datas **relativas a `now()`**, não literais de 2024. E ajustadas para dia útil: um seed
+  rodado na sexta jogaria compromisso no sábado, dia em que o profissional criado pelo
+  próprio seed não atende.
+- Não foi preciso usar `get-available-slots.ts`: o seed cria os profissionais, então sabe
+  que a agenda está vazia. Os dois passados entram como `completed`, status que fica fora
+  do índice de exclusão por profissional e portanto nunca colide com o que o visitante
+  criar no tour.
+- 1 `service_records` pré-existente no cliente recorrente, para o histórico não nascer vazio.
+
+**Descobertas na implementação:**
+- ⚠️ O trigger `handle_new_organization` **já cria um profissional padrão** ("Atendimento")
+  junto com a organização — o mesmo trigger que cria `organization_settings`. Inserir os
+  dois do fixture por cima deixava três, sendo um sem disponibilidade nem agenda. O seed
+  agora reaproveita o padrão como o primeiro profissional.
+- O compromisso futuro fica **hoje** sempre que ainda couber na jornada (até 15h, com folga
+  de 2h e desviando da pausa do almoço); fora disso, no próximo dia útil. Os contadores de
+  destaque do dashboard são todos de *hoje* — jogar o único compromisso para depois de
+  amanhã fazia o visitante chegar num "0 hoje", a sensação de sistema parado que a
+  demonstração existe para desfazer.
 
 Terminologia e branding: **nada a fazer** — vem do Keckleon via `organizations.niche`.
 
 ### Testes
-- [ ] Seed dos 7 nichos sem violar constraint de overlap
-- [ ] Executa em < 1s
-- [ ] Labels corretos na UI por nicho (prontuário/briefing/paciente/cliente)
+- [x] Seed dos 7 nichos, todos com 2 profissionais, 3 serviços, 2 clientes, 3 agendamentos
+      e 1 registro — sem violar constraint
+- [x] Cada profissional com as 5 faixas de disponibilidade, sem fantasma
+- [x] Datas caem em dia útil (verificado com `-3` caindo em domingo e recuando para sexta)
+- [x] Bordas da regra do compromisso de hoje, hora a hora
+- [x] Nicho inexistente (`odontologia`) e nicho fora da demo (`certificado`) → 400
 
 **Tempo:** 4–5h
 
@@ -452,7 +473,7 @@ reverter é desligar a rota `/demo/start`, sem tocar em dados de produção.
 |------|-------|--------|
 | 1. Banco + isolamento do cron + anti-sequestro | 4–5h | 🟢 **DONE** |
 | 2. Criação do tenant demo | 5–6h | 🟢 **DONE** (verificado ponta a ponta) |
-| 3. Seed por nicho | 4–5h | 🔴 TODO |
+| 3. Seed por nicho | 4–5h | 🟢 **DONE** (7 nichos verificados) |
 | 4. Página `/demo/start` | 3h | 🔴 TODO |
 | 5. Tour guiado | 6–8h | 🔴 TODO |
 | 6. Defaults de agendamento | 3–4h | 🔴 TODO |
