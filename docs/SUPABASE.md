@@ -28,8 +28,9 @@ Campos importantes:
 - `name`
 - `slug`
 - `niche`
-- `evolution_api_url`
-- `evolution_api_key`
+- `whatsapp_instance_name` — fonte única da instância Evolution da org (o número
+  de onde as mensagens saem). Nula = org sem WhatsApp conectado, e o envio é
+  ignorado de propósito.
 - `whatsapp_status`
 - `plan`
 - `subscription_status`

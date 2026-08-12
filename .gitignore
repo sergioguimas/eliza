@@ -33,3 +33,9 @@ Thumbs.db
 
 # --- npm ---
 package-lock.json
+
+# --- Documentos internos de negócio (não versionar) ---
+business/
+marketing/
+getdemo/PLANO_DEMO.md
+MARKETING.md

@@ -1,11 +1,8 @@
 'use server'
 
-import { createClient } from "@supabase/supabase-js"
+import { createClient, SupabaseClient } from "@supabase/supabase-js"
 import { Database } from "@/utils/database.types"
-
-const DEFAULT_URL = process.env.NEXT_PUBLIC_EVOLUTION_API_URL || ""
-const DEFAULT_KEY = process.env.EVOLUTION_API_KEY || ""
-const DEFAULT_INSTANCE = "admin-painel-1768703535"
+import { getEvolutionServer } from "@/lib/evolution"
 
 interface SendMessageProps {
   phone: string
@@ -21,6 +18,16 @@ interface SendMediaProps {
   organizationId: string
 }
 
+interface EvolutionConfig {
+  evolutionUrl: string
+  apiKey: string
+  instanceName: string
+}
+
+type ResolvedConfig =
+  | { ok: true; config: EvolutionConfig }
+  | { ok: false; error: string }
+
 function normalizePhone(phone: string) {
   let cleanPhone = phone.replace(/\D/g, "")
 
@@ -29,6 +36,68 @@ function normalizePhone(phone: string) {
   }
 
   return cleanPhone
+}
+
+/**
+ * Resolve o servidor Evolution e a instância de WhatsApp da organização.
+ *
+ * A instância é a identidade do tenant no WhatsApp — é o número de onde a
+ * mensagem sai. Por isso ela nunca tem fallback global: enviar pela instância
+ * de outra organização faria o cliente do tenant A receber mensagem do número
+ * do tenant B. Sem instância configurada, o envio falha explicitamente.
+ */
+async function resolveEvolutionConfig(
+  supabase: SupabaseClient<Database>,
+  organizationId: string,
+  logTag: string
+): Promise<ResolvedConfig> {
+  const server = getEvolutionServer()
+
+  if (!server) {
+    console.error(
+      `❌ [${logTag}] Servidor Evolution não configurado (EVOLUTION_API_URL / EVOLUTION_API_KEY).`
+    )
+
+    return { ok: false, error: "Configuração da Evolution API incompleta." }
+  }
+
+  const { data: org, error: orgError } = await supabase
+    .from("organizations")
+    .select("slug, whatsapp_instance_name")
+    .eq("id", organizationId)
+    .single()
+
+  if (orgError) {
+    console.error(`❌ [${logTag}] Erro ao buscar organização:`, orgError.message)
+  }
+
+  // organizations.whatsapp_instance_name é a fonte única: é o que o fluxo de
+  // conexão grava e o que o webhook de entrada consulta para achar a org.
+  const instanceName = org?.whatsapp_instance_name || null
+
+  if (!instanceName) {
+    // Não é erro: conectar um número é opcional. A org simplesmente não tem
+    // canal de WhatsApp, e o envio para aqui em vez de sair por outro número.
+    console.warn(
+      `🚫 [${logTag}] Envio ignorado: organização sem WhatsApp conectado.`,
+      { organizationId, slug: org?.slug ?? null }
+    )
+
+    return {
+      ok: false,
+      error:
+        "Organização sem WhatsApp conectado. Conecte um número em Configurações > WhatsApp antes de enviar mensagens.",
+    }
+  }
+
+  return {
+    ok: true,
+    config: {
+      evolutionUrl: server.url,
+      apiKey: server.apiKey,
+      instanceName,
+    },
+  }
 }
 
 export async function sendWhatsAppMessage({
@@ -43,48 +112,17 @@ export async function sendWhatsAppMessage({
 
   console.log(`📤 [SendWhatsApp] Iniciando envio para Org ID: ${organizationId}`)
 
-  const { data: org, error: orgError } = await supabase
-    .from("organizations")
-    .select("slug, evolution_api_url, evolution_api_key")
-    .eq("id", organizationId)
-    .single()
+  const resolved = await resolveEvolutionConfig(
+    supabase,
+    organizationId,
+    "SendWhatsApp"
+  )
 
-  if (orgError) {
-    console.error("❌ [SendWhatsApp] Erro ao buscar organização:", orgError.message)
+  if (!resolved.ok) {
+    return { success: false, error: resolved.error }
   }
 
-  const { data: settings, error: settingsError } = await supabase
-    .from("organization_settings")
-    .select("whatsapp_instance_name")
-    .eq("organization_id", organizationId)
-    .maybeSingle()
-
-  if (settingsError) {
-    console.error("❌ [SendWhatsApp] Erro ao buscar settings:", settingsError.message)
-  }
-
-  let evolutionUrl =
-    process.env.EVOLUTION_API_URL ||
-    org?.evolution_api_url ||
-    DEFAULT_URL
-
-  evolutionUrl = evolutionUrl.replace(/\/$/, "")
-
-  const apiKey =
-    process.env.EVOLUTION_API_KEY ||
-    org?.evolution_api_key ||
-    DEFAULT_KEY
-
-  const instanceName =
-    settings?.whatsapp_instance_name ||
-    DEFAULT_INSTANCE
-
-  if (!evolutionUrl || !apiKey || !instanceName) {
-    return {
-      success: false,
-      error: "Configuração da Evolution API incompleta.",
-    }
-  }
+  const { evolutionUrl, apiKey, instanceName } = resolved.config
 
   const cleanPhone = normalizePhone(phone)
   const finalEndpoint = `${evolutionUrl}/message/sendText/${instanceName}`
@@ -133,40 +171,17 @@ export async function sendWhatsAppMedia({
 
   console.log(`📤 [SendMedia] Preparando envio de arquivo para Org: ${organizationId}`)
 
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("slug, evolution_api_url, evolution_api_key")
-    .eq("id", organizationId)
-    .single()
+  const resolved = await resolveEvolutionConfig(
+    supabase,
+    organizationId,
+    "SendMedia"
+  )
 
-  const { data: settings } = await supabase
-    .from("organization_settings")
-    .select("whatsapp_instance_name")
-    .eq("organization_id", organizationId)
-    .maybeSingle()
-
-  let evolutionUrl =
-    process.env.EVOLUTION_API_URL ||
-    org?.evolution_api_url ||
-    DEFAULT_URL
-
-  evolutionUrl = evolutionUrl.replace(/\/$/, "")
-
-  const apiKey =
-    process.env.EVOLUTION_API_KEY ||
-    org?.evolution_api_key ||
-    DEFAULT_KEY
-
-  const instanceName =
-    settings?.whatsapp_instance_name ||
-    DEFAULT_INSTANCE
-
-  if (!evolutionUrl || !apiKey || !instanceName) {
-    return {
-      success: false,
-      error: "Configuração da Evolution API incompleta.",
-    }
+  if (!resolved.ok) {
+    return { success: false, error: resolved.error }
   }
+
+  const { evolutionUrl, apiKey, instanceName } = resolved.config
 
   const cleanPhone = normalizePhone(phone)
   const finalEndpoint = `${evolutionUrl}/message/sendMedia/${instanceName}`

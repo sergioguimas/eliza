@@ -4,6 +4,7 @@ import { createAdminClient } from "@/utils/supabase/admin"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Database } from "@/utils/database.types"
+import { getEvolutionServer } from "@/lib/evolution"
 
 type AppointmentMessageType = "pending" | "created" | "canceled"
 
@@ -22,10 +23,6 @@ function replaceVariables(template: string, data: TemplateData) {
     .replace(/{time}/g, data.time || "")
     .replace(/{service}/g, data.service || "")
     .replace(/{professional}/g, data.professional || "")
-}
-
-function normalizeEvolutionUrl(url?: string | null) {
-  return url?.replace(/\/$/, "") || ""
 }
 
 function normalizePhoneBR(phone?: string | null) {
@@ -90,8 +87,7 @@ async function sendAppointmentMessage(
       ),
       organizations (
         slug,
-        evolution_api_url,
-        evolution_api_key,
+        whatsapp_instance_name,
         organization_settings (
           msg_appointment_pending,
           msg_appointment_created,
@@ -122,21 +118,23 @@ async function sendAppointmentMessage(
     return { error: "Cliente sem telefone." }
   }
 
-  if (!organization?.slug) {
-    console.error(`❌ [WhatsApp] Agendamento ${appointmentId}: organização sem slug.`)
-    return { error: "Organização sem instância WhatsApp." }
+  // A instância é a identidade do tenant no WhatsApp. Nunca derivar do slug:
+  // ele pode ter mudado depois que a instância foi criada, e aí a mensagem
+  // iria para uma instância que não é a desta org (ou nem existe).
+  const instanceName = organization?.whatsapp_instance_name
+
+  if (!instanceName) {
+    console.warn(
+      `🚫 [WhatsApp] Agendamento ${appointmentId}: organização sem WhatsApp conectado.`,
+      { slug: organization?.slug ?? null }
+    )
+
+    return { error: "Organização sem WhatsApp conectado." }
   }
 
-  const evolutionUrl = normalizeEvolutionUrl(
-    process.env.EVOLUTION_API_URL || organization.evolution_api_url
-  )
+  const server = getEvolutionServer()
 
-  const apiKey =
-    process.env.EVOLUTION_API_KEY ||
-    organization.evolution_api_key ||
-    ""
-
-  if (!evolutionUrl || !apiKey) {
+  if (!server) {
     console.error("❌ [WhatsApp] Configuração da Evolution ausente.")
     return { error: "Configuração do WhatsApp ausente." }
   }
@@ -162,12 +160,12 @@ async function sendAppointmentMessage(
     console.log(`📤 [WhatsApp] Enviando mensagem "${type}" para ${phone}`)
 
     const response = await fetch(
-      `${evolutionUrl}/message/sendText/${organization.slug}`,
+      `${server.url}/message/sendText/${instanceName}`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          apikey: apiKey,
+          apikey: server.apiKey,
         },
         body: JSON.stringify({
           number: phone,
