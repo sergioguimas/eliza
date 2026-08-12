@@ -148,6 +148,10 @@ export async function processDoctorDailySummaries() {
 
   const { start: startDay, end: endDay } = getTodayRangeInTimeZone(now)
 
+  // O join com organizations é `!inner` só para poder filtrar `is_demo`: tenants
+  // de demonstração têm agenda semeada e entrariam nesta varredura, disparando
+  // mensagem agendada horas depois do tour. Todo envio da demo é explícito,
+  // comandado pelo próprio tour — o cron nunca toca nela.
   const { data: appointments, error } = await supabase
     .from("appointments")
     .select(`
@@ -157,11 +161,13 @@ export async function processDoctorDailySummaries() {
       reminder_morning_sent_at,
       professional:professionals(name, phone),
       customer:customers(name),
-      settings:organization_settings(msg_doctor_daily_summary)
+      settings:organization_settings(msg_doctor_daily_summary),
+      organization:organizations!inner(is_demo)
     `)
     .gte("start_time", startDay.toISOString())
     .lte("start_time", endDay.toISOString())
     .in("status", ["scheduled", "confirmed"])
+    .eq("organization.is_demo", false)
 
   if (error) {
     console.error("🔥 [CRON] Erro ao buscar agenda dos profissionais:", error)
@@ -268,6 +274,8 @@ export async function processPatientMorningReminders() {
   const now = new Date()
   const nextHour = new Date(now.getTime() + 60 * 60 * 1000)
 
+  // Ver nota em processDoctorDailySummaries: tenants demo ficam fora da varredura.
+  // Aqui o risco é maior, porque o telefone é o do visitante que fez o tour.
   const { data: appointments, error } = await supabase
     .from("appointments")
     .select(`
@@ -277,12 +285,14 @@ export async function processPatientMorningReminders() {
       reminder_sent_at,
       customer:customers(name, phone),
       professional:professionals(name),
-      service:services(title)
+      service:services(title),
+      organization:organizations!inner(is_demo)
     `)
     .gte("start_time", now.toISOString())
     .lte("start_time", nextHour.toISOString())
     .in("status", ["scheduled", "confirmed"])
     .is("reminder_sent_at", null)
+    .eq("organization.is_demo", false)
 
   if (error) {
     console.error("🔥 [CRON] Erro ao buscar lembretes dos pacientes:", error)
