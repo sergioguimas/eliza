@@ -474,13 +474,30 @@ na operação real, sairia 1h antes do horário."*
 # FASE 9 — Reset e cleanup
 
 ### 9.1 Reset manual
-Server action: apaga dados da org demo, re-executa o seed, mantém a sessão.
+[reset-demo.ts](../web/app/actions/demo/reset-demo.ts) — esvazia a organização e semeia de
+novo, preservando organização, perfil e sessão. A organização vem sempre da sessão, nunca de
+parâmetro: a função apaga dados, e aceitar um id de fora deixaria o visitante apontá-la para
+outro tenant.
+
+A ordem de limpeza é própria (`RESET_TABLES`), diferente da do delete completo: `professionals`
+entra, porque só sumiria por cascata da organização, que aqui continua de pé; e
+`organization_settings` fica de fora, porque quem cria essa linha é o trigger do insert da
+organização — apagá-la não teria quem a recriasse.
+
+`expires_at` não é renovado, de propósito: renovar a cada reset permitiria manter um tenant
+vivo indefinidamente clicando em "recomeçar".
+
+⚠️ **Ainda sem quem chame.** O botão "Reiniciar tour" é da Fase 10. A ordem de exclusão foi
+verificada contra um tenant povoado, mas o caminho completo pela sessão só será exercitado
+quando a Fase 10 ligar o botão.
 
 ### 9.2 Cleanup de expirados
-Rota `GET /api/cron/cleanup-demo` com `Bearer CRON_SECRET`, no mesmo padrão de
-`send-reminders`. Para cada org com `expires_at < now()`, chamar
-`deleteDemoOrganization` de [cleanup.ts](../web/lib/demo/cleanup.ts) — o helper já
-existe, foi escrito na Fase 2 e está validado contra o banco.
+[cleanup-demo/route.ts](../web/app/api/cron/cleanup-demo/route.ts), `Bearer CRON_SECRET`, no
+mesmo padrão de `send-reminders`. Para cada org com `expires_at < now()`, chama
+`deleteDemoOrganization` de [cleanup.ts](../web/lib/demo/cleanup.ts). Uma organização com
+falha não interrompe a varredura — as outras continuam vencendo enquanto aquela espera
+investigação. Acima de 100 remoções numa passagem, loga aviso: volume atípico é sinal de
+automação em cima da demonstração, ou de cron parado.
 
 ⚠️ **Apagar a organização direto não funciona.** Sete tabelas referenciam
 `organizations` sem `ON DELETE CASCADE` (`appointments`, `customers`, `estimates`,
@@ -499,6 +516,22 @@ de hora em hora, o pior caso de sobrevida de um tenant expirado cai de 24h para 
 `demo_interactions` e `demo_leads` são `ON DELETE SET NULL` — sobrevivem ao cleanup, com o
 nicho desnormalizado, para o dashboard de analytics nascer com histórico quando for a hora.
 `demo_timeline_events` é cascata, some junto.
+
+### Pendência operacional
+
+Linha na crontab da VPS, de hora em hora:
+
+    0 * * * * curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://eliza.sgdev.cloud/api/cron/cleanup-demo
+
+### Testes
+- [x] Sem header e com segredo errado → 401
+- [x] Com segredo correto → `{"expired":1,"removed":1,"failed":[]}`
+- [x] Só o vencido some; o tenant dentro do prazo permanece
+- [x] Usuário de auth do vencido removido (não acumula MAU)
+- [x] Dados do vencido zerados (agendamentos, clientes)
+- [x] Telemetria sobrevive órfã (`organization_id` nulo)
+- [x] Ordem do reset: tudo esvaziado sem erro de FK, `professional_availability` cascateia,
+      organização e perfil preservados, `organization_settings` intacta
 
 **Tempo:** 4h
 
@@ -550,7 +583,7 @@ reverter é desligar a rota `/demo/start`, sem tocar em dados de produção.
 | 6. Defaults de agendamento | 3–4h | 🔴 TODO |
 | 7. Timeline fast-forward | 5–6h | 🔴 TODO |
 | 8. WhatsApp real + controles de abuso | 6–7h | 🔴 TODO |
-| 9. Reset e cleanup | 4h | 🔴 TODO |
+| 9. Reset e cleanup | 4h | 🟢 **DONE** (cron verificado; reset sem caller até a Fase 10) |
 | 10. CTA e lead | 3–4h | 🔴 TODO |
 | 11. Testes | 5–6h | 🔴 TODO |
 | 12. Deploy | 1 dia | 🔴 TODO |
