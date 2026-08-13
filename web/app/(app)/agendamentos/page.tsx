@@ -111,7 +111,8 @@ export default async function AgendamentosPage({
         </p>
       </div>
 
-      <CalendarView 
+      <div data-tour="agenda-lista">
+        <CalendarView
         appointments={appointments as any}
         customers={customers} 
         services={services}
@@ -119,7 +120,8 @@ export default async function AgendamentosPage({
         organization_id={orgId}
         currentUser={profile}
         settings={settings}
-      />
+        />
+      </div>
     </div>
   )
 }

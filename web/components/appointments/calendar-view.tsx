@@ -631,6 +631,21 @@ function CalendarContent({
           </Tabs>
 
           <div className="h-6 w-px bg-zinc-800 mx-2 hidden md:block" />
+
+          {/*
+            Até aqui, criar só existia no menu de contexto do calendário — clique
+            direito num dia, ou toque longo no celular. Funciona, mas é um gesto
+            que ninguém descobre sozinho, e era a ação principal da tela.
+          */}
+          <Button
+            size="sm"
+            data-tour="novo-agendamento"
+            onClick={() => openCreateModal(date)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            {actions.create_agendamento ||
+              `Novo ${agendamentoSingular.toLowerCase()}`}
+          </Button>
         </div>
       </div>
 

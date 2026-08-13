@@ -9,7 +9,9 @@ import {
   Clock,
   MessageCircleWarningIcon,
   Coins,
+  Plus,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { getDictionary } from "@/lib/dictionaries/get-dictionary"
 import { CategoryIcon } from "@/components/shared/category-icon"
 import { AppointmentContextMenu } from "@/components/appointments/appointment-context-menu"
@@ -189,7 +191,19 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        <div className="flex gap-3 flex-wrap">
+        <div className="flex gap-3 flex-wrap items-center">
+          {/*
+            Atalho para a ação principal do produto. `?new=true` já é tratado
+            pelo calendário, que abre o formulário direto — evita o desvio de
+            entrar na agenda e procurar por onde começar.
+          */}
+          <Button asChild size="sm">
+            <Link href="/agendamentos?new=true">
+              <Plus className="mr-2 h-4 w-4" />
+              Novo {agendamentoSingular.toLowerCase()}
+            </Link>
+          </Button>
+
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border border-border">
             <Building2 className="h-4 w-4 text-muted-foreground" />
             <div className="flex flex-col">
@@ -216,7 +230,10 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div
+        data-tour="dashboard-resumo"
+        className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+      >
         <Dialog>
           <DialogTrigger asChild>
             <div className="block group cursor-pointer h-full">

@@ -323,6 +323,7 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
               <Link
                 key={item.href}
                 href={item.href}
+                data-tour={`nav-${item.href.replace(/^\//, "")}`}
                 className={cn(
                   "flex min-h-16 flex-col items-center justify-center rounded-2xl px-2 py-2 text-[11px] font-medium transition-all duration-200",
                   active ? "sidebar-item-active" : "sidebar-item-hover"
@@ -385,6 +386,7 @@ function SidebarSection({
             <Link
               key={item.href}
               href={item.href}
+              data-tour={`nav-${item.href.replace(/^\//, "")}`}
               title={collapsed ? item.label : undefined}
               className={cn(
                 "group relative flex items-center rounded-2xl transition-all duration-200",

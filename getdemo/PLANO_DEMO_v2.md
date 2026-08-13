@@ -342,17 +342,48 @@ Passos: 1 Dashboard · 2 Criar agendamento · 3 Marcar concluído · 4 Agendar r
 5 Prontuário · 6 Timeline fast-forward · 7 Aviso WhatsApp · 8 CTA lead.
 
 ### 5.2 Componente
-`components/demo/tour-guide.tsx` (client). Montado no `app/(app)/layout.tsx` sob
-`organization.is_demo`, não por query param — mais robusto contra refresh e navegação livre.
+[tour-guide.tsx](../web/components/demo/tour-guide.tsx) (client), montado no
+`app/(app)/layout.tsx`. Os 6 passos implementados percorrem
+dashboard → agenda → ficha do cliente, acompanhando o caminho que o produto já faz
+sozinho (concluir um atendimento redireciona para a ficha, onde o retorno é oferecido e
+o registro é escrito). Os passos 7 e 8 — aviso de WhatsApp e CTA — entram nas Fases 8 e 10.
 
-Adicionar `data-tour="..."` nos alvos: botão novo agendamento, card de agendamento,
-ação de concluir, `return-prompt-dialog`, campo de prontuário.
+**Gate por `user_metadata.is_demo`, não por `organizations.is_demo`:** depois do
+endurecimento de grants, o papel `authenticated` não enxerga mais a coluna. O metadata já
+vem na sessão e não custa consulta. Como o próprio usuário consegue alterá-lo pela API de
+auth, ele decide apenas se um balão aparece na tela — o que vira telemetria é revalidado
+no servidor por `logDemoInteraction`, que confirma `is_demo` no banco e tira a organização
+da sessão, nunca do cliente.
 
-**Pontas soltas que o v1 não previa — resolver aqui:**
-- Passo atual persistido em `localStorage` por `organization_id` → refresh retoma
-- Navegação para fora do trilho → tour reancorna no passo compatível com a rota
+**Pontas soltas, resolvidas:**
+- Passo persistido em `localStorage` por `organization_id` → refresh retoma
+- Fora do trilho → a cada navegação o tour procura o primeiro passo da rota atual e nunca
+  anda para trás; é isso que faz um passo de navegação se resolver sozinho
 - Duas abas → o `localStorage` é a fonte única
-- Fechar o tour → log `tour_abandoned` com `step_number`
+- Fechar → `tour_abandoned` com `step_number`
+- Alvo que ainda não montou → `MutationObserver` espera, com teto de 4s
+- Navegação e mobile → a busca prefere o elemento **visível**, porque a barra de navegação
+  existe duas vezes no DOM (desktop e mobile) e `querySelector` pegaria a escondida
+
+**Descobertas na verificação:**
+- ✅ **Não existia botão visível para criar agendamento** — criar era só por menu de contexto
+  (clique direito num dia ou horário), nas três visões. O botão "Novo" existia em
+  `create-appointment-dialog.tsx`, mas só no ramo não-controlado, que nenhum lugar usava: era
+  código morto. **Resolvido:** botão na barra da agenda, acima do calendário, e atalho no
+  cabeçalho do dashboard apontando para `/agendamentos?new=true` — parâmetro que o calendário
+  já tratava, abrindo o formulário direto. Muda a UI de todos os tenants, não só da demo.
+  O passo do tour voltou a apontar para o botão.
+- A copy do tour é escrita para **não precisar concordar em gênero** com as entidades:
+  "sessão" é feminino, "paciente" é masculino, e isso muda a cada nicho. A primeira versão
+  dizia "quantos sessões". Os termos entram como substantivo solto, nunca com artigo ou
+  quantificador.
+
+### Testes
+- [x] Passos 1→6 percorridos, com o dicionário de psicologia aplicado
+- [x] Passo de navegação sem botões, resolvido ao trocar de rota
+- [x] Progresso persistido a cada passo (`{"index":n,"done":false}`)
+- [x] Fim do tour: overlay removido, `done:true`
+- [x] Telemetria: `tour_started`, `step_completed` por passo, `tour_completed`
 
 **Tempo:** 6–8h
 
@@ -515,7 +546,7 @@ reverter é desligar a rota `/demo/start`, sem tocar em dados de produção.
 | 2. Criação do tenant demo | 5–6h | 🟢 **DONE** (verificado ponta a ponta) |
 | 3. Seed por nicho | 4–5h | 🟢 **DONE** (7 nichos verificados) |
 | 4. Página `/demo/start` | 3h | 🟢 **DONE** (verificado no browser) |
-| 5. Tour guiado | 6–8h | 🔴 TODO |
+| 5. Tour guiado | 6–8h | 🟢 **DONE** (6 passos; 7–8 nas Fases 8 e 10) |
 | 6. Defaults de agendamento | 3–4h | 🔴 TODO |
 | 7. Timeline fast-forward | 5–6h | 🔴 TODO |
 | 8. WhatsApp real + controles de abuso | 6–7h | 🔴 TODO |

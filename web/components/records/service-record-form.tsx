@@ -123,7 +123,11 @@ export function ServiceRecordForm({
   }
 
   return (
-    <Card id="service-form" className="border-l-6 border-l-blue-500 mb-8">
+    <Card
+      id="service-form"
+      data-tour="registro-form"
+      className="border-l-6 border-l-blue-500 mb-8"
+    >
       <CardHeader className="pt-2 bg-gray-50/50">
         <CardTitle className="text-base font-semibold text-gray-900">
           {messages.new_record_title || `Novo ${prontuario}`}
