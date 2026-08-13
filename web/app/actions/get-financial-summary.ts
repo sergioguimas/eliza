@@ -1,25 +1,24 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server"
-import { startOfMonth, endOfMonth } from "date-fns"
+import { getFinancialMonthRange } from "@/lib/utils"
 
 export async function getFinancialSummary(organizationId: string, dateParam?: string) {
   const supabase = await createClient()
-  const referenceDate = dateParam ? new Date(dateParam + "-01T03:00:00Z") : new Date()
-  const year = referenceDate.getFullYear()
-  const month = referenceDate.getMonth() + 1
-  const lastDay = new Date(year, month, 0).getDate()
-
-  const startOfMonthStr = `${year}-${String(month).padStart(2, '0')}-01`
-  const endOfMonthStr = `${year}-${String(month).padStart(2, '0')}-${lastDay}`
+  const {
+    startDate: startOfMonthStr,
+    endDate: endOfMonthStr,
+    start,
+    end,
+  } = getFinancialMonthRange(dateParam)
 
   // Buscar Agendamentos com detalhes de clientes e serviços
   const { data: appts } = await supabase
     .from('appointments')
     .select('id, price, status, payment_status, payment_method, start_time, customers(name), services(title), professionals(name)')
     .eq('organization_id', organizationId)
-    .gte('start_time', `${startOfMonthStr}T00:00:00Z`)
-    .lte('start_time', `${endOfMonthStr}T23:59:59Z`)
+    .gte('start_time', start)
+    .lte('start_time', end)
 
   // Buscar Despesas Brutas
   const { data: exps } = await supabase

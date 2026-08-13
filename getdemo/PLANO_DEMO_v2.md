@@ -302,9 +302,22 @@ um push de client poderia reaproveitar cache anterior à sessão e cair no `/set
   Supabase em série: cria usuário, insere org, vincula perfil, semeia 6 conjuntos, faz
   login e loga a interação. Em produção deve cair, mas 6s de spinner numa landing é muito.
   Candidato a paralelizar os inserts do seed que não dependem uns dos outros.
-- ⚠️ O card **Financeiro do dashboard tem `R$` hardcoded**, sem valor
-  (`dashboard/page.tsx:282`). Pré-existente, afeta todos os tenants, mas cai bem na
-  primeira tela da demonstração. Fora do escopo — chip aberto à parte.
+- ✅ O card **Financeiro do dashboard tinha `R$` hardcoded**, sem valor. Corrigido: agora
+  mostra o **recebido no mês**, somando `price` dos agendamentos `paid` e não cancelados
+  pela mesma faixa de `getFinancialSummary` — o card e a `/dashboard/financas` que ele abre
+  passam a mostrar o mesmo número (verificado no tenant demo de clínica: R$ 370,00 nos dois).
+  Escolhido "mês" em vez de "hoje" justamente por causa da demo: o segundo atendimento pago
+  só cai em hoje depois das 11h de um dia útil, então um card diário mostraria **R$ 0,00**
+  em toda visita de fim de semana ou de manhã — a sensação de sistema parado que a
+  demonstração existe para desfazer.
+- ✅ **Fuso da faixa do mês corrigido, junto.** A faixa virou `getFinancialMonthRange` em
+  [utils.ts](../web/lib/utils.ts), fonte única do card e de `getFinancialSummary`. Antes o
+  mês vinha de `getFullYear`/`getMonth` (hora local) com limites em `Z`: na VPS, que roda em
+  UTC, a janela ficava 3h adiantada — puxava as 21h–23h59 do último dia do mês anterior e
+  largava de fora esse mesmo horário do último dia do mês corrente. Agora o mês sai do fuso
+  de São Paulo e os limites levam `-03:00`. **Isso move levemente os números que a
+  /dashboard/financas já mostra**, para o lado certo. Coberto por teste das bordas (meses de
+  28/29/30/31 dias, virada de ano, contiguidade entre meses) sob cinco fusos de servidor.
 - O ajuste do seed para o compromisso cair hoje não bastava: visitando às 18h, o dia útil
   já tinha acabado e a tela voltava a mostrar "0 hoje". O segundo atendimento concluído
   agora vai para as 9h de hoje quando já passou das 11h de um dia útil.

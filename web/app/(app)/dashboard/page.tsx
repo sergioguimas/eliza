@@ -13,7 +13,12 @@ import {
 import { getDictionary } from "@/lib/dictionaries/get-dictionary"
 import { CategoryIcon } from "@/components/shared/category-icon"
 import { AppointmentContextMenu } from "@/components/appointments/appointment-context-menu"
-import { cn, formatSaoPauloTime } from "@/lib/utils"
+import {
+  cn,
+  formatBRL,
+  formatSaoPauloTime,
+  getFinancialMonthRange,
+} from "@/lib/utils"
 import { AppointmentCardActions } from "@/components/appointments/appointment-card-actions"
 import { RealtimeAppointments } from "@/components/layout/realtime-appointments"
 import { Database } from "@/utils/database.types"
@@ -85,8 +90,9 @@ export default async function DashboardPage() {
     "Aqui está o resumo operacional de hoje."
 
   const { start: todayStart, end: todayEnd } = getBrazilDayRange()
+  const { start: monthStart, end: monthEnd } = getFinancialMonthRange()
 
-  const [resServices, resCustomers, resToday, resAll] = await Promise.all([
+  const [resServices, resCustomers, resToday, resAll, resMonthRevenue] = await Promise.all([
     supabase
       .from("services")
       .select("*", { count: "exact", head: true })
@@ -125,6 +131,17 @@ export default async function DashboardPage() {
       .eq("organization_id", orgId)
       .neq("status", "canceled")
       .neq("status", "cancelled"),
+
+    // Mesmos filtros do `recebido` de `getFinancialSummary`, para o card bater
+    // com o "Recebido (Caixa)" da /dashboard/financas que ele abre.
+    supabase
+      .from("appointments")
+      .select("price")
+      .eq("organization_id", orgId)
+      .gte("start_time", monthStart)
+      .lte("start_time", monthEnd)
+      .eq("payment_status", "paid")
+      .neq("status", "canceled"),
   ])
 
   const { data: pendingRequests } = await supabase
@@ -151,6 +168,11 @@ export default async function DashboardPage() {
 
   const totalCustomers = resCustomers.data?.length || 0
   const totalPendingRequests = pendingRequests?.length || 0
+
+  const monthRevenue = (resMonthRevenue.data || []).reduce(
+    (total, appointment) => total + Number(appointment.price || 0),
+    0
+  )
 
   return (
     <div className="space-y-8">
@@ -280,8 +302,9 @@ export default async function DashboardPage() {
                   Financeiro
                 </p>
                 <h2 className="text-2xl font-bold tracking-tight text-foreground">
-                  R$
+                  {formatBRL(monthRevenue)}
                 </h2>
+                <p className="text-xs text-muted-foreground">Recebido no mês</p>
               </div>
               <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
                 <Coins className="h-4 w-4 text-blue-500" />
