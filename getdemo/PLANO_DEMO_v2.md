@@ -242,18 +242,39 @@ Para cada nicho: 2 profissionais (+ `professional_availability`), 3 serviços, 2
 (`phone` é NOT NULL — usar números fictícios; o guard da Fase 1.2 garante que nada sai),
 2 agendamentos passados (`status='completed'`), 1 futuro.
 
+Implementado em [seed.ts](../web/lib/demo/seed.ts), com os dados por nicho separados em
+[fixtures.ts](../web/lib/demo/fixtures.ts).
+
 **Regras que o v1 errou:**
-- Datas **relativas a `now()`**, não literais de 2024.
-- Horários calculados via `get-available-slots.ts`, respeitando a EXCLUDE constraint GiST
-  de `appointments` — senão o tour estoura erro no meio.
-- 1 `service_records` pré-existente por cliente antigo, para o histórico não parecer vazio.
+- Datas **relativas a `now()`**, não literais de 2024. E ajustadas para dia útil: um seed
+  rodado na sexta jogaria compromisso no sábado, dia em que o profissional criado pelo
+  próprio seed não atende.
+- Não foi preciso usar `get-available-slots.ts`: o seed cria os profissionais, então sabe
+  que a agenda está vazia. Os dois passados entram como `completed`, status que fica fora
+  do índice de exclusão por profissional e portanto nunca colide com o que o visitante
+  criar no tour.
+- 1 `service_records` pré-existente no cliente recorrente, para o histórico não nascer vazio.
+
+**Descobertas na implementação:**
+- ⚠️ O trigger `handle_new_organization` **já cria um profissional padrão** ("Atendimento")
+  junto com a organização — o mesmo trigger que cria `organization_settings`. Inserir os
+  dois do fixture por cima deixava três, sendo um sem disponibilidade nem agenda. O seed
+  agora reaproveita o padrão como o primeiro profissional.
+- O compromisso futuro fica **hoje** sempre que ainda couber na jornada (até 15h, com folga
+  de 2h e desviando da pausa do almoço); fora disso, no próximo dia útil. Os contadores de
+  destaque do dashboard são todos de *hoje* — jogar o único compromisso para depois de
+  amanhã fazia o visitante chegar num "0 hoje", a sensação de sistema parado que a
+  demonstração existe para desfazer.
 
 Terminologia e branding: **nada a fazer** — vem do Keckleon via `organizations.niche`.
 
 ### Testes
-- [ ] Seed dos 7 nichos sem violar constraint de overlap
-- [ ] Executa em < 1s
-- [ ] Labels corretos na UI por nicho (prontuário/briefing/paciente/cliente)
+- [x] Seed dos 7 nichos, todos com 2 profissionais, 3 serviços, 2 clientes, 3 agendamentos
+      e 1 registro — sem violar constraint
+- [x] Cada profissional com as 5 faixas de disponibilidade, sem fantasma
+- [x] Datas caem em dia útil (verificado com `-3` caindo em domingo e recuando para sexta)
+- [x] Bordas da regra do compromisso de hoje, hora a hora
+- [x] Nicho inexistente (`odontologia`) e nicho fora da demo (`certificado`) → 400
 
 **Tempo:** 4–5h
 
@@ -263,9 +284,49 @@ Terminologia e branding: **nada a fazer** — vem do Keckleon via `organizations
 
 `app/demo/start/page.tsx` — fora do route group `(app)` (não exige sessão).
 
-Grid de cards com os 7 nichos, alimentado por `getSetupNicheOptions()` + branding do
-`niche-config.ts` (ícone e cor já existem lá — não inventar novos). Loading state,
-error state com retry, responsivo, navegável por teclado.
+Implementado em [page.tsx](../web/app/demo/start/page.tsx) e
+[demo-niche-picker.tsx](../web/app/demo/start/demo-niche-picker.tsx).
+
+Grid dos 7 nichos vindo de `getSetupNicheOptions()`, filtrado por `DEMO_NICHES`, com o
+mesmo vocabulário visual dos cards de `/setup` — ícone, cor e gradiente já existiam no
+`niche-config.ts`. Um clique já cria o tenant: card em estado de carregamento, os outros
+esmaecidos e desabilitados, erro em `role="alert"`. São `<button>`, então teclado funciona
+sem nada extra.
+
+A navegação pós-criação é **dura** (`window.location.assign`), não `router.push`: o
+endpoint acabou de gravar o cookie de sessão e o layout do app é renderizado no servidor —
+um push de client poderia reaproveitar cache anterior à sessão e cair no `/setup`.
+
+**Descobertas na verificação:**
+- ⚠️ **A criação leva ~6s em dev** (`render: 5.7s`, fora o compile). São muitas idas ao
+  Supabase em série: cria usuário, insere org, vincula perfil, semeia 6 conjuntos, faz
+  login e loga a interação. Em produção deve cair, mas 6s de spinner numa landing é muito.
+  Candidato a paralelizar os inserts do seed que não dependem uns dos outros.
+- ✅ O card **Financeiro do dashboard tinha `R$` hardcoded**, sem valor. Corrigido: agora
+  mostra o **recebido no mês**, somando `price` dos agendamentos `paid` e não cancelados
+  pela mesma faixa de `getFinancialSummary` — o card e a `/dashboard/financas` que ele abre
+  passam a mostrar o mesmo número (verificado no tenant demo de clínica: R$ 370,00 nos dois).
+  Escolhido "mês" em vez de "hoje" justamente por causa da demo: o segundo atendimento pago
+  só cai em hoje depois das 11h de um dia útil, então um card diário mostraria **R$ 0,00**
+  em toda visita de fim de semana ou de manhã — a sensação de sistema parado que a
+  demonstração existe para desfazer.
+- ✅ **Fuso da faixa do mês corrigido, junto.** A faixa virou `getFinancialMonthRange` em
+  [utils.ts](../web/lib/utils.ts), fonte única do card e de `getFinancialSummary`. Antes o
+  mês vinha de `getFullYear`/`getMonth` (hora local) com limites em `Z`: na VPS, que roda em
+  UTC, a janela ficava 3h adiantada — puxava as 21h–23h59 do último dia do mês anterior e
+  largava de fora esse mesmo horário do último dia do mês corrente. Agora o mês sai do fuso
+  de São Paulo e os limites levam `-03:00`. **Isso move levemente os números que a
+  /dashboard/financas já mostra**, para o lado certo. Coberto por teste das bordas (meses de
+  28/29/30/31 dias, virada de ano, contiguidade entre meses) sob cinco fusos de servidor.
+- O ajuste do seed para o compromisso cair hoje não bastava: visitando às 18h, o dia útil
+  já tinha acabado e a tela voltava a mostrar "0 hoje". O segundo atendimento concluído
+  agora vai para as 9h de hoje quando já passou das 11h de um dia útil.
+
+### Testes
+- [x] Página carrega com os 7 nichos, `certificado` fora
+- [x] Clique → estado de carregamento no card, demais desabilitados
+- [x] Criação, redirect e dashboard com o dicionário do nicho aplicado (barbearia e psicologia)
+- [x] Dashboard povoado: `SESSÕES 1 hoje`, `PACIENTES 2`, atendimento das 09:00 finalizado
 
 **Tempo:** 3h
 
@@ -281,17 +342,48 @@ Passos: 1 Dashboard · 2 Criar agendamento · 3 Marcar concluído · 4 Agendar r
 5 Prontuário · 6 Timeline fast-forward · 7 Aviso WhatsApp · 8 CTA lead.
 
 ### 5.2 Componente
-`components/demo/tour-guide.tsx` (client). Montado no `app/(app)/layout.tsx` sob
-`organization.is_demo`, não por query param — mais robusto contra refresh e navegação livre.
+[tour-guide.tsx](../web/components/demo/tour-guide.tsx) (client), montado no
+`app/(app)/layout.tsx`. Os 6 passos implementados percorrem
+dashboard → agenda → ficha do cliente, acompanhando o caminho que o produto já faz
+sozinho (concluir um atendimento redireciona para a ficha, onde o retorno é oferecido e
+o registro é escrito). Os passos 7 e 8 — aviso de WhatsApp e CTA — entram nas Fases 8 e 10.
 
-Adicionar `data-tour="..."` nos alvos: botão novo agendamento, card de agendamento,
-ação de concluir, `return-prompt-dialog`, campo de prontuário.
+**Gate por `user_metadata.is_demo`, não por `organizations.is_demo`:** depois do
+endurecimento de grants, o papel `authenticated` não enxerga mais a coluna. O metadata já
+vem na sessão e não custa consulta. Como o próprio usuário consegue alterá-lo pela API de
+auth, ele decide apenas se um balão aparece na tela — o que vira telemetria é revalidado
+no servidor por `logDemoInteraction`, que confirma `is_demo` no banco e tira a organização
+da sessão, nunca do cliente.
 
-**Pontas soltas que o v1 não previa — resolver aqui:**
-- Passo atual persistido em `localStorage` por `organization_id` → refresh retoma
-- Navegação para fora do trilho → tour reancorna no passo compatível com a rota
+**Pontas soltas, resolvidas:**
+- Passo persistido em `localStorage` por `organization_id` → refresh retoma
+- Fora do trilho → a cada navegação o tour procura o primeiro passo da rota atual e nunca
+  anda para trás; é isso que faz um passo de navegação se resolver sozinho
 - Duas abas → o `localStorage` é a fonte única
-- Fechar o tour → log `tour_abandoned` com `step_number`
+- Fechar → `tour_abandoned` com `step_number`
+- Alvo que ainda não montou → `MutationObserver` espera, com teto de 4s
+- Navegação e mobile → a busca prefere o elemento **visível**, porque a barra de navegação
+  existe duas vezes no DOM (desktop e mobile) e `querySelector` pegaria a escondida
+
+**Descobertas na verificação:**
+- ✅ **Não existia botão visível para criar agendamento** — criar era só por menu de contexto
+  (clique direito num dia ou horário), nas três visões. O botão "Novo" existia em
+  `create-appointment-dialog.tsx`, mas só no ramo não-controlado, que nenhum lugar usava: era
+  código morto. **Resolvido:** botão na barra da agenda, acima do calendário, e atalho no
+  cabeçalho do dashboard apontando para `/agendamentos?new=true` — parâmetro que o calendário
+  já tratava, abrindo o formulário direto. Muda a UI de todos os tenants, não só da demo.
+  O passo do tour voltou a apontar para o botão.
+- A copy do tour é escrita para **não precisar concordar em gênero** com as entidades:
+  "sessão" é feminino, "paciente" é masculino, e isso muda a cada nicho. A primeira versão
+  dizia "quantos sessões". Os termos entram como substantivo solto, nunca com artigo ou
+  quantificador.
+
+### Testes
+- [x] Passos 1→6 percorridos, com o dicionário de psicologia aplicado
+- [x] Passo de navegação sem botões, resolvido ao trocar de rota
+- [x] Progresso persistido a cada passo (`{"index":n,"done":false}`)
+- [x] Fim do tour: overlay removido, `done:true`
+- [x] Telemetria: `tour_started`, `step_completed` por passo, `tour_completed`
 
 **Tempo:** 6–8h
 
@@ -382,13 +474,41 @@ na operação real, sairia 1h antes do horário."*
 # FASE 9 — Reset e cleanup
 
 ### 9.1 Reset manual
-Server action: apaga dados da org demo, re-executa o seed, mantém a sessão.
+[reset-demo.ts](../web/app/actions/demo/reset-demo.ts) — esvazia a organização e semeia de
+novo, preservando organização, perfil e sessão. A organização vem sempre da sessão, nunca de
+parâmetro: a função apaga dados, e aceitar um id de fora deixaria o visitante apontá-la para
+outro tenant.
+
+A ordem de limpeza é própria (`RESET_TABLES`), diferente da do delete completo: `professionals`
+entra, porque só sumiria por cascata da organização, que aqui continua de pé; e
+`organization_settings` fica de fora, porque quem cria essa linha é o trigger do insert da
+organização — apagá-la não teria quem a recriasse.
+
+`expires_at` não é renovado, de propósito: renovar a cada reset permitiria manter um tenant
+vivo indefinidamente clicando em "recomeçar".
+
+⚠️ **Ainda sem quem chame.** O botão "Reiniciar tour" é da Fase 10. A ordem de exclusão foi
+verificada contra um tenant povoado, mas o caminho completo pela sessão só será exercitado
+quando a Fase 10 ligar o botão.
 
 ### 9.2 Cleanup de expirados
-Rota `GET /api/cron/cleanup-demo` com `Bearer CRON_SECRET`, no mesmo padrão de
-`send-reminders`. Para cada org com `expires_at < now()`:
-apaga dados → apaga org → **`auth.admin.deleteUser`** (senão o Supabase Auth acumula
-usuários órfãos contando MAU) → log.
+[cleanup-demo/route.ts](../web/app/api/cron/cleanup-demo/route.ts), `Bearer CRON_SECRET`, no
+mesmo padrão de `send-reminders`. Para cada org com `expires_at < now()`, chama
+`deleteDemoOrganization` de [cleanup.ts](../web/lib/demo/cleanup.ts). Uma organização com
+falha não interrompe a varredura — as outras continuam vencendo enquanto aquela espera
+investigação. Acima de 100 remoções numa passagem, loga aviso: volume atípico é sinal de
+automação em cima da demonstração, ou de cron parado.
+
+⚠️ **Apagar a organização direto não funciona.** Sete tabelas referenciam
+`organizations` sem `ON DELETE CASCADE` (`appointments`, `customers`, `estimates`,
+`organization_settings`, `profiles`, `service_records`, `services`), e um trigger cria
+`organization_settings` no insert da org — então o delete falha com violação de FK.
+Descoberto na prática ao limpar o tenant de teste da Fase 2. O helper apaga na ordem
+filha-antes-de-mãe e recusa organização com `is_demo=false`, para nunca poder ser
+apontado a um tenant real.
+
+O `auth.admin.deleteUser` também está lá dentro: sem ele o Supabase Auth acumula
+usuários órfãos contando MAU.
 
 Entra como uma linha na crontab da VPS, de hora em hora. Não precisa ser diária: rodando
 de hora em hora, o pior caso de sobrevida de um tenant expirado cai de 24h para 1h.
@@ -396,6 +516,22 @@ de hora em hora, o pior caso de sobrevida de um tenant expirado cai de 24h para 
 `demo_interactions` e `demo_leads` são `ON DELETE SET NULL` — sobrevivem ao cleanup, com o
 nicho desnormalizado, para o dashboard de analytics nascer com histórico quando for a hora.
 `demo_timeline_events` é cascata, some junto.
+
+### Pendência operacional
+
+Linha na crontab da VPS, de hora em hora:
+
+    0 * * * * curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://eliza.sgdev.cloud/api/cron/cleanup-demo
+
+### Testes
+- [x] Sem header e com segredo errado → 401
+- [x] Com segredo correto → `{"expired":1,"removed":1,"failed":[]}`
+- [x] Só o vencido some; o tenant dentro do prazo permanece
+- [x] Usuário de auth do vencido removido (não acumula MAU)
+- [x] Dados do vencido zerados (agendamentos, clientes)
+- [x] Telemetria sobrevive órfã (`organization_id` nulo)
+- [x] Ordem do reset: tudo esvaziado sem erro de FK, `professional_availability` cascateia,
+      organização e perfil preservados, `organization_settings` intacta
 
 **Tempo:** 4h
 
@@ -440,14 +576,14 @@ reverter é desligar a rota `/demo/start`, sem tocar em dados de produção.
 | Fase | Tempo | Status |
 |------|-------|--------|
 | 1. Banco + isolamento do cron + anti-sequestro | 4–5h | 🟢 **DONE** |
-| 2. Criação do tenant demo | 5–6h | 🔴 TODO |
-| 3. Seed por nicho | 4–5h | 🔴 TODO |
-| 4. Página `/demo/start` | 3h | 🔴 TODO |
-| 5. Tour guiado | 6–8h | 🔴 TODO |
+| 2. Criação do tenant demo | 5–6h | 🟢 **DONE** (verificado ponta a ponta) |
+| 3. Seed por nicho | 4–5h | 🟢 **DONE** (7 nichos verificados) |
+| 4. Página `/demo/start` | 3h | 🟢 **DONE** (verificado no browser) |
+| 5. Tour guiado | 6–8h | 🟢 **DONE** (6 passos; 7–8 nas Fases 8 e 10) |
 | 6. Defaults de agendamento | 3–4h | 🔴 TODO |
 | 7. Timeline fast-forward | 5–6h | 🔴 TODO |
 | 8. WhatsApp real + controles de abuso | 6–7h | 🔴 TODO |
-| 9. Reset e cleanup | 4h | 🔴 TODO |
+| 9. Reset e cleanup | 4h | 🟢 **DONE** (cron verificado; reset sem caller até a Fase 10) |
 | 10. CTA e lead | 3–4h | 🔴 TODO |
 | 11. Testes | 5–6h | 🔴 TODO |
 | 12. Deploy | 1 dia | 🔴 TODO |

@@ -5,6 +5,7 @@ import { KeckleonProvider } from "@/providers/keckleon-provider"
 import { Database } from "@/utils/database.types"
 import { getNicheMetadata } from "@/lib/niche-config"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
+import { TourGuide } from "@/components/demo/tour-guide"
 
 type Organization = {
   id: string
@@ -52,6 +53,12 @@ export default async function AppLayout({
     redirect("/setup")
   }
 
+  // O papel `authenticated` não enxerga `organizations.is_demo` (grant de
+  // coluna), então a marca vem do metadata do usuário, que já está na sessão e
+  // não custa consulta nenhuma. Serve para decidir se um balão aparece na tela;
+  // o que vira telemetria é revalidado no servidor, em `logDemoInteraction`.
+  const isDemoVisitor = user.user_metadata?.is_demo === true
+
   const niche = organization?.niche || "generico"
   const meta = getNicheMetadata(niche)
   const nicheMeta = getNicheMetadata(niche)
@@ -71,6 +78,10 @@ export default async function AppLayout({
   return (
     <div className={`min-h-screen bg-background text-foreground`}>
       <KeckleonProvider niche={niche}>
+        {isDemoVisitor && organization && (
+          <TourGuide organizationId={organization.id} niche={niche} />
+        )}
+
         <div className="flex min-h-screen">
           <AppSidebar user={user} organization={organization} profile={profile} />
 

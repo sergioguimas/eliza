@@ -139,7 +139,10 @@ export default async function CustomerPage({
 
   return (
     <div className="space-y-6 pb-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card p-6 rounded-xl border shadow-sm">
+      <div
+        data-tour="ficha-cliente"
+        className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card p-6 rounded-xl border shadow-sm"
+      >
         <div className="flex items-center gap-4">
           <Avatar className="h-16 w-16 border-2 border-primary/10">
             <AvatarFallback className="text-xl bg-primary/5 text-primary font-bold">
