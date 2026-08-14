@@ -284,6 +284,12 @@ export function CreateAppointmentDialog({
           toast.success("Agendamento criado com sucesso!")
           if (setOpen) setOpen(false)
           router.refresh()
+
+          // Evento genérico, não específico de demo: barato para todo tenant
+          // (ninguém escuta fora do tour) e é o sinal que o tour usa para só
+          // avançar quando o agendamento existe de verdade no banco, em vez
+          // de confiar num clique em "Entendi".
+          window.dispatchEvent(new CustomEvent("eliza:appointment-created"))
         }
     } catch (error) {
         toast.error("Erro inesperado ao criar agendamento.")
@@ -299,7 +305,7 @@ export function CreateAppointmentDialog({
         <DialogTrigger asChild>
           <Button size="sm">
             <Plus className="mr-2 h-4 w-4" />
-            {actions.new || "Novo"} {agendamento}
+            {actions.create_agendamento || `${actions.new || "Novo"} ${agendamento}`}
           </Button>
         </DialogTrigger>
       )}
@@ -307,7 +313,7 @@ export function CreateAppointmentDialog({
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {actions.new || "Novo"} {agendamento}
+            {actions.create_agendamento || `${actions.new || "Novo"} ${agendamento}`}
           </DialogTitle>
         </DialogHeader>
 
