@@ -25,6 +25,7 @@ type NicheConfig = {
   estimate_notes_placeholder?: string
   arrived_label?: string
   gender?: "m" | "f"
+  servico_gender?: "m" | "f"
 }
 
 function lowercaseFirst(value: string) {
@@ -44,6 +45,8 @@ function buildNiche(config: NicheConfig) {
 
   const genderSuffix = config.gender === "f" ? "a" : "o"
   const appointmentDurationArticle = config.gender === "f" ? "da" : "do"
+  const newAgendamentoPrefix = config.gender === "f" ? "Nova" : "Novo"
+  const newServicoPrefix = config.servico_gender === "f" ? "Nova" : "Novo"
 
   const redirectTarget =
     config.appointment_redirect_target || lowercaseFirst(entities.prontuario)
@@ -61,8 +64,8 @@ function buildNiche(config: NicheConfig) {
 
     actions: {
       create_cliente: `Novo ${clienteLower}`,
-      create_servico: `Novo ${servicoLower}`,
-      create_agendamento: `Novo ${agendamentoLower}`,
+      create_servico: `${newServicoPrefix} ${servicoLower}`,
+      create_agendamento: `${newAgendamentoPrefix} ${agendamentoLower}`,
       add_service: `Adicionar ${servicoLower}`,
       arrived: config.arrived_label || "Chegada confirmada",
       edit_cliente: `Editar ${entities.cliente}`,
@@ -128,6 +131,7 @@ export const nicheDictionaries = {
       "foi registrado. Deseja deixar o retorno pré-agendado para garantir a vaga?",
     estimate_notes_placeholder:
       "Condições de pagamento ou observações clínicas...",
+    gender: "f",
     entities: {
       cliente: "Paciente",
       cliente_plural: "Pacientes",
@@ -296,6 +300,7 @@ export const nicheDictionaries = {
       "Tamanho, local do corpo, estilo, número de sessões ou observações comerciais...",
     arrived_label: "Cliente chegou",
     gender: "f",
+    servico_gender: "f",
     entities: {
       cliente: "Cliente",
       cliente_plural: "Clientes",
