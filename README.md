@@ -5,7 +5,7 @@ Eliza é um SaaS multi-tenant para gestão de agendas, clientes, profissionais, 
 Produção atual:
 
 ```txt
-https://eliza.sgdev.cloud
+https://eliza.solasoftware.com.br
 ```
 
 ## Stack

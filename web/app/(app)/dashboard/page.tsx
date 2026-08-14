@@ -200,7 +200,7 @@ export default async function DashboardPage() {
           <Button asChild size="sm">
             <Link href="/agendamentos?new=true">
               <Plus className="mr-2 h-4 w-4" />
-              Novo {agendamentoSingular.toLowerCase()}
+              {dict.actions?.create_agendamento || `Novo ${agendamentoSingular.toLowerCase()}`}
             </Link>
           </Button>
 

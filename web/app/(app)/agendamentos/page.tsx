@@ -36,6 +36,12 @@ export default async function AgendamentosPage({
   const orgId = profile.organization_id
   const niche = profile?.organizations?.niche || 'generico'
 
+  // `authenticated` não enxerga `organizations.is_demo` (grant de coluna).
+  // O metadata do usuário já vem na sessão e é o mesmo sinal que o layout usa
+  // para decidir se o tour aparece — aqui decide só se o formulário de
+  // agendamento é pré-preenchido, nada que precise de mais confiança que isso.
+  const isDemo = user.user_metadata?.is_demo === true
+
   // 🔥 NOVO PADRÃO
   const dict = getDictionary(niche)
   const { entities, messages } = dict
@@ -120,6 +126,7 @@ export default async function AgendamentosPage({
         organization_id={orgId}
         currentUser={profile}
         settings={settings}
+        isDemo={isDemo}
         />
       </div>
     </div>

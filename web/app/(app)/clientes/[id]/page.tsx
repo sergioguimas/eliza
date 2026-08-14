@@ -26,6 +26,7 @@ import { ServiceRecordForm } from "@/components/records/service-record-form"
 import { unstable_noStore as noStore } from "next/cache"
 import { Database } from "@/utils/database.types"
 import { AppointmentContextMenu } from "@/components/appointments/appointment-context-menu"
+import { AppointmentCardActions } from "@/components/appointments/appointment-card-actions"
 import { ReturnModalWrapper } from "@/components/appointments/return-modal-wrapper"
 import { getDictionary } from "@/lib/dictionaries/get-dictionary"
 
@@ -179,7 +180,9 @@ export default async function CustomerPage({
 
       <Tabs defaultValue="records" className="w-full">
         <TabsList className="grid w-full grid-cols-3 h-12 p-1 bg-gray-100/80 dark:bg-gray-800/80 rounded-xl mb-6">
-          <TabsTrigger value="history">{agendamentoPlural}</TabsTrigger>
+          <TabsTrigger value="history" data-tour="tab-agendamentos">
+            {agendamentoPlural}
+          </TabsTrigger>
           <TabsTrigger value="records">{prontuarioSingular}</TabsTrigger>
           <TabsTrigger value="info">Informações</TabsTrigger>
         </TabsList>
@@ -247,6 +250,13 @@ export default async function CustomerPage({
                             </div>
                           </div>
                         </div>
+
+                        {/*
+                          Até aqui, confirmar pagamento (ou mudar status) só
+                          existia no clique direito neste card — igual ao
+                          calendário, antes de ganhar este mesmo botão.
+                        */}
+                        <AppointmentCardActions appointment={apt} />
                       </div>
 
                       {apt.appointment_logs && apt.appointment_logs.length > 0 && (

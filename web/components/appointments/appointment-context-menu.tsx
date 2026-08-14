@@ -52,6 +52,12 @@ export function AppointmentContextMenu({
         onStatusChange(appointment, status)
       }
 
+      // Mesmo evento que o menu de ações dispara — o visitante pode ter
+      // usado qualquer um dos dois caminhos, e o tour precisa reagir aos dois.
+      window.dispatchEvent(
+        new CustomEvent("eliza:appointment-status-changed", { detail: { status } })
+      )
+
       if (status === "completed") {
         const targetUrl = `/clientes/${appointment.customer_id}?return_check=${appointment.id}`
 
@@ -88,6 +94,8 @@ export function AppointmentContextMenu({
     const result = await updateAppointmentPayment(appointment.id, method)
 
     if (result.success) {
+      window.dispatchEvent(new CustomEvent("eliza:appointment-paid"))
+
       toast.success(messages.payment_success || "Pagamento confirmado!")
       router.refresh()
     } else {

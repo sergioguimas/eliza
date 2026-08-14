@@ -1,11 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { usePathname } from "next/navigation"
 import { driver, type Driver } from "driver.js"
 import "driver.js/dist/driver.css"
-import { buildDemoTour } from "@/lib/demo/tour"
+import { buildDemoTour, type DemoTourStep } from "@/lib/demo/tour"
 import { logDemoInteraction } from "@/app/actions/demo/log-demo-interaction"
+import { TimelineSimulation } from "@/components/demo/timeline-simulation"
+import { TourCta } from "@/components/demo/tour-cta"
 
 type TourGuideProps = {
   organizationId: string
@@ -104,11 +106,33 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
 
   const driverRef = useRef<Driver | null>(null)
   const activeStepRef = useRef<string | null>(null)
+  // Listener de `awaitsEvent` do passo ativo, se houver. Fica num ref, não
+  // numa variável local de `show()`, porque `destroyActive` é chamado de
+  // vários lugares — início de cada `show()`, unmount — e precisa conseguir
+  // desarmar um listener que nunca disparou. Sem isso, sair da rota antes de
+  // criar o agendamento deixava o listener pendurado no `window`; se disparasse
+  // depois, em outro passo, `advance()` usaria o `index` antigo e corrompia o
+  // progresso já salvo.
+  const eventCleanupRef = useRef<(() => void) | null>(null)
+
+  // Passo "custom" (hoje só a timeline) não usa driver.js — é um componente
+  // React de verdade, renderizado no JSX deste componente. `advance`/`abandon`
+  // ficam em refs pelo mesmo motivo do listener acima: são recriados a cada
+  // chamada de `show()`, mas o componente que os aciona vive fora daquele
+  // closure, então precisa sempre pegar a versão mais recente.
+  const [customStep, setCustomStep] = useState<DemoTourStep | null>(null)
+  const customAdvanceRef = useRef<(() => void) | null>(null)
+  const customAbandonRef = useRef<(() => void) | null>(null)
 
   const destroyActive = useCallback(() => {
+    eventCleanupRef.current?.()
+    eventCleanupRef.current = null
     driverRef.current?.destroy()
     driverRef.current = null
     activeStepRef.current = null
+    customAdvanceRef.current = null
+    customAbandonRef.current = null
+    setCustomStep(null)
   }, [])
 
   const persist = useCallback(
@@ -144,7 +168,49 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
         persist({ index, done: false })
       }
 
-      const element = await waitForElement(step.selector)
+      // Compartilhado pelos dois tipos de passo — popover (clique em
+      // "Entendi" ou evento) e custom (o próprio componente chama). Duplicar
+      // esta lógica em três lugares é como progresso e telemetria divergem.
+      function advance() {
+        const next = index + 1
+        const finished = next >= steps.length
+
+        persist({ index: next, done: finished })
+        void logDemoInteraction({
+          action: finished ? "tour_completed" : "step_completed",
+          stepNumber: index + 1,
+          metadata: { step: step.id },
+        })
+
+        destroyActive()
+
+        // Reavalia na mesma rota: o próximo passo pode morar aqui mesmo.
+        if (!finished) void show()
+      }
+
+      function abandonStep() {
+        persist({ index, done: true })
+        void logDemoInteraction({
+          action: "tour_abandoned",
+          stepNumber: index + 1,
+          metadata: { step: step.id },
+        })
+
+        destroyActive()
+      }
+
+      if (step.kind === "custom") {
+        destroyActive()
+
+        activeStepRef.current = step.id
+        customAdvanceRef.current = advance
+        customAbandonRef.current = abandonStep
+        setCustomStep(step)
+
+        return
+      }
+
+      const element = await waitForElement(step.selector!)
 
       if (cancelled) return
 
@@ -166,33 +232,18 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
         popoverClass: "eliza-demo-tour",
         nextBtnText: "Entendi",
         doneBtnText: "Entendi",
-        onNextClick: () => {
-          const next = index + 1
-          const finished = next >= steps.length
-
-          persist({ index: next, done: finished })
-          void logDemoInteraction({
-            action: finished ? "tour_completed" : "step_completed",
-            stepNumber: index + 1,
-            metadata: { step: step.id },
-          })
-
-          destroyActive()
-
-          // Reavalia na mesma rota: o próximo passo pode morar aqui mesmo.
-          if (!finished) void show()
-        },
-        onCloseClick: () => {
-          persist({ index, done: true })
-          void logDemoInteraction({
-            action: "tour_abandoned",
-            stepNumber: index + 1,
-            metadata: { step: step.id },
-          })
-
-          destroyActive()
-        },
+        onNextClick: advance,
+        onCloseClick: abandonStep,
       })
+
+      if (step.awaitsEvent) {
+        const eventName = step.awaitsEvent
+        const handler = () => advance()
+
+        window.addEventListener(eventName, handler, { once: true })
+        eventCleanupRef.current = () =>
+          window.removeEventListener(eventName, handler)
+      }
 
       driverRef.current = instance
       activeStepRef.current = step.id
@@ -211,7 +262,12 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
           // Sem "previous" de propósito: o tour acompanha o estado real do
           // sistema, e voltar um passo não desfaz o que já foi gravado. Botão
           // que promete voltar e não volta é pior do que botão nenhum.
-          showButtons: step.awaitsNavigation ? [] : ["next"],
+          //
+          // `awaitsEvent` também esconde o botão: mostrar "Entendi" ali
+          // deixaria o visitante pular o passo sem ter criado nada, e o tour
+          // seguiria como se tivesse.
+          showButtons:
+            step.awaitsNavigation || step.awaitsEvent ? [] : ["next"],
         },
       })
     }
@@ -225,5 +281,21 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
 
   useEffect(() => () => destroyActive(), [destroyActive])
 
-  return null
+  const onDone = () => customAdvanceRef.current?.()
+  const onSkip = () => customAbandonRef.current?.()
+
+  switch (customStep?.id) {
+    case "timeline":
+      return <TimelineSimulation onDone={onDone} onSkip={onSkip} />
+    case "cta":
+      return (
+        <TourCta
+          organizationId={organizationId}
+          onDone={onDone}
+          onSkip={onSkip}
+        />
+      )
+    default:
+      return null
+  }
 }

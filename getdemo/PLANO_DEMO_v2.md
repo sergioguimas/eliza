@@ -391,10 +391,64 @@ da sessão, nunca do cliente.
 
 # FASE 6 — Defaults de agendamento
 
-`hooks/use-demo-appointment-defaults.ts`: primeiro slot livre real (via `get-available-slots`),
-serviço e cliente do seed pré-selecionados, **todos os campos editáveis**.
+Implementado em [get-appointment-defaults.ts](../web/app/actions/demo/get-appointment-defaults.ts)
+(server action, reconfirma `is_demo` por service role) e
+[use-demo-appointment-defaults.ts](../web/hooks/use-demo-appointment-defaults.ts) (hook client
+que a chama ao montar `CalendarView`, antes de qualquer clique).
 
-Tour só avança quando o agendamento existe no banco.
+**O que entra pré-preenchido:** o primeiro profissional do seed, o primeiro serviço, o
+**segundo** cliente do seed — o "novo", que fica sem nenhum agendamento na semeadura, então
+marcá-lo fecha uma lacuna real da agenda em vez de empilhar mais um horário no mesmo nome — e
+o primeiro slot **livre de verdade**, calculado com `getAvailableSlots` andando dia a dia (até
+10) a partir de hoje. Todos os campos continuam editáveis; nada aqui é somente-leitura.
+
+**Três pontos de entrada, dois recebem os defaults:**
+- Botão "Novo horário" na barra da agenda → defaults completos
+- Atalho `?new=true` do dashboard (sem `customer_id`) → defaults completos, com a montagem do
+  formulário **esperando** o fetch resolver, porque é a única entrada onde vale a pena: o
+  fetch já está em voo desde que a página carregou
+- Clique direito num dia/horário específico, e `?new=true&customer_id=X` do fluxo de retorno →
+  **sem alteração**. O primeiro é escolha deliberada do visitante; o segundo já traz o cliente
+  certo e sobrepor um serviço ou horário genérico seria pior, não melhor
+
+**Tour só avança quando o agendamento existe no banco — implementado com um evento, não com
+o clique em "Entendi".** `create-appointment-dialog.tsx` dispara `window.dispatchEvent(new
+CustomEvent("eliza:appointment-created"))` no sucesso — genérico, não gated por demo, inofensivo
+para qualquer tenant porque só o tour escuta. `tour.ts` ganhou `awaitsEvent`, e o passo
+"novo-agendamento" o usa: sem botão de avançar, só o evento resolve o passo.
+
+⚠️ **Vazamento encontrado e corrigido durante a implementação.** A primeira versão guardava o
+listener numa variável local dentro de `show()`. Se o visitante saísse da rota sem criar o
+agendamento, o listener ficava pendurado no `window` — e se disparasse mais tarde, em outro
+passo, `advance()` usaria o `index` capturado no closure antigo e corrompia o progresso já
+salvo. Corrigido movendo a posse do listener para `destroyActive()`, a única função que já é
+chamada em todo lugar que precisa desmontar o passo atual (início de cada novo passo, abandono,
+unmount do componente) — verificado disparando o evento manualmente depois de fechar o tour sem
+criar nada: progresso não se alterou.
+
+### Descoberta fora do escopo
+
+O botão de criar agendamento (agenda e diálogo) mostra `"Novo {agendamento}"` sem concordar
+gênero — em `clinica`, onde a entidade é "Consulta" (feminino), o botão fica "Novo consulta".
+Pré-existente, independente da demo, e visível na primeira tela onde o tour manda clicar.
+Não corrigido aqui — mesma categoria do problema de concordância que apareceu no texto do
+tour na Fase 5, mas desta vez em UI do produto, não em copy que eu controlo.
+
+### Testes
+
+Verificado contra o banco de produção, em quatro nichos (clínica, tatuador, barbearia):
+- [x] Botão "Novo horário" abre com profissional, serviço, cliente e horário do seed
+- [x] Slot calculado não colide com o compromisso já semeado (mesmo profissional, horários
+      diferentes) — prova de que lê agenda real, não só disponibilidade estática
+- [x] Fora do expediente (21h), avança corretamente para o próximo dia útil às 09:00 (horário
+      da disponibilidade do profissional, mais restrito que o da organização)
+- [x] Atalho do dashboard (`?new=true` sem `customer_id`) espera os defaults e abre preenchido
+- [x] Fluxo de retorno (`?new=true&customer_id=X`) preserva o cliente da URL, sem serviço
+      injetado — não interferido pelos defaults da demo
+- [x] Criar o agendamento avança o tour sozinho, sem clique em "Entendi";
+      `demo_interactions` grava `step_completed` no passo certo
+- [x] Fechar o tour sem criar grava `tour_abandoned`; evento disparado depois não corrompe
+      o progresso salvo
 
 **Tempo:** 3–4h
 
@@ -403,15 +457,156 @@ Tour só avança quando o agendamento existe no banco.
 # FASE 7 — Timeline fast-forward
 
 ### 7.1 Backend
-Server action `createDemoTimeline(appointmentId)` — gera os 3 eventos (lembrete 1h antes,
-confirmação do cliente, hora do agendamento) com textos do dicionário do nicho e grava
-em `demo_timeline_events`. Não toca a Evolution API.
+[create-demo-timeline.ts](../web/app/actions/demo/create-demo-timeline.ts) — gera os 3 eventos
+(lembrete 1h antes, confirmação do cliente 15min depois, hora do compromisso) com textos
+parametrizados por nome do cliente, profissional e serviço, e grava em `demo_timeline_events`.
+Não toca a Evolution API — `delivered_for_real` fica `false` nas três linhas.
+
+**Mudança em relação ao desenho original: sem `appointmentId` como parâmetro.** A action deriva
+o compromisso sozinha — o **próximo agendamento `scheduled` da organização**, por
+`start_time ASC` — em vez de receber o id do agendamento que o visitante acabou de criar no
+passo "novo-agendamento". Evita ter que carregar esse id entre passos e rotas (criado em
+`/agendamentos`, usado em `/clientes/[id]`) só para uma feature que não precisa de precisão
+cirúrgica: o seed sempre garante pelo menos um `scheduled`, então a busca nunca fica sem
+resposta, mesmo se o visitante tivesse pulado a criação (o que hoje não é possível, já que o
+passo anterior exige `awaitsEvent`).
+
+Idempotente: reabrir o passo, ou refazer o tour, não duplica os três eventos — consultado antes
+de inserir, por `appointment_id`. Confirmado gerando o mesmo tenant duas vezes seguidas: 3
+linhas, não 6.
 
 ### 7.2 UI
-`components/demo/timeline-simulation.tsx` — cards em sequência com `framer-motion`
-(já é dependência), linha vertical conectando, timestamps, botão de avançar/pausar.
+[timeline-simulation.tsx](../web/components/demo/timeline-simulation.tsx) — modal com os cards
+em sequência via `framer-motion`, linha vertical conectando, timestamps reais (o "fast-forward"
+é só a apresentação; os horários simulados são os de verdade, podendo estar dias à frente),
+botão de avançar/pausar, e "Entendi" só depois do último card.
+
+**Não é um passo do tour comum — é a primeira coisa que não cabe num popover do driver.js.**
+`tour.ts` ganhou `kind?: "popover" | "custom"`; o passo "timeline" é o primeiro `"custom"`.
+[tour-guide.tsx](../web/components/demo/tour-guide.tsx) foi refeito para os dois tipos
+dividirem a mesma lógica de avanço/abandono (`advance`/`abandonStep`, definidas uma vez por
+passo e reusadas): para "popover" elas vão nos botões do driver.js, como antes; para "custom"
+elas ficam em refs e são chamadas pelos callbacks `onDone`/`onSkip` do componente React
+renderizado no lugar do popover.
+
+Colocado **depois** do "prontuario", não entre "novo-agendamento" e "concluir" como uma leitura
+mais literal do plano original sugeriria — fecha o arco da criação→conclusão→retorno→registro
+com o compromisso que ficou para trás, bem antes do próximo passo (Fase 8) mostrar o aviso
+saindo de verdade. Mesma rota do passo anterior (`/clientes/[id]`), sem navegação: é um modal
+por cima de tudo.
+
+### Testes
+
+Verificado contra produção em dois nichos (salão, advocacia):
+- [x] Compromisso, cliente, profissional e serviço corretos nas mensagens
+- [x] Matemática do horário: reminder −60min, confirmação −45min, ambos batendo com o horário
+      real do compromisso
+- [x] Sequência revela sozinha (auto-play), "Pausar" desabilita quando termina, "Entendi"
+      só aparece com os 3 cards visíveis
+- [x] Concluir avança o tour (`tour_completed`, passo 7 — hoje é o último passo)
+- [x] Fechar pelo X sem terminar grava `tour_abandoned` no passo certo, e os eventos já
+      gerados continuam salvos (não é desperdício: só a apresentação foi interrompida)
+- [x] Rodar duas vezes não duplica linhas em `demo_timeline_events`
+- [x] Zero erro de console em toda a sequência
 
 **Tempo:** 5–6h
+
+---
+
+# RODADA DE AJUSTES — Horário, "chegou/finalizado/pago" e visibilidade (2026-08-14)
+
+Pedido do Sérgio depois de usar o tour: três pontos de atrito, um dos quais revelou um
+problema de produto (não só de demo). Feita antes da Fase 8.
+
+**1. Dica de horário do profissional.** O formulário de agendamento deixava escolher
+qualquer data/hora, mas cada profissional só atende num recorte fixo (`professional_availability`).
+[create-appointment-dialog.tsx](../web/components/appointments/create-appointment-dialog.tsx)
+ganhou um resumo abaixo do seletor de profissional: *"Dra. Letícia Amaral atende Seg a Sex
+09:00–18:00 (pausa 12:00–13:00)."* — agrupa por horário idêntico antes de listar os dias, para
+não repetir a mesma faixa sete vezes quando a semana inteira é igual. Produto-wide, não
+gated por demo: todo tenant se beneficia.
+
+**2. Dica de usar o próprio contato — adiada.** A ideia (sugerir que o visitante use nome e
+telefone reais para receber o aviso de verdade) só faz sentido quando esse aviso existir.
+Decisão do Sérgio: esperar a Fase 8.
+
+**3. "Concluir" virou 3 passos — e expôs que a troca de status nunca teve botão visível, nem
+para tenant real.** Investigando o pedido, achamos que mudar status/pagamento vivia **só** no
+clique direito (ou toque longo no celular) — nenhum tenant, demo ou não, tinha um botão para
+isso. Mesma classe de problema do "novo agendamento" antes da Fase 5/6. Decisões do Sérgio:
+adicionar botão visível (produto-wide) e construir pagamento de verdade na ficha do cliente
+(não só voltar para a agenda).
+
+- **Visibilidade:** `AppointmentCardActions` (o dropdown que já existia só no dashboard)
+  ganhou um modo `compact` e passou a ser renderizado também no card do calendário
+  ([calendar-view.tsx](../web/components/appointments/calendar-view.tsx), com
+  `stopPropagation` para não abrir o diálogo de edição por cima) e no histórico de
+  agendamentos da [ficha do cliente](../web/app/(app)/clientes/[id]/page.tsx) — que antes só
+  tinha um badge de leitura. O clique direito continua funcionando, agora como atalho, não
+  como único caminho.
+- **Tour em 3 passos:** "chegou" (popover simples, sem trava — um profissional apressado pode
+  ir direto para "Finalizar", e isso é uso legítimo) → "finalizado" (continua `awaitsNavigation`,
+  mesmo mecanismo de antes) → "pago" (novo, `awaitsEvent: "eliza:appointment-paid"`).
+- **Evento genérico de status**, no mesmo espírito do de criação de agendamento:
+  `eliza:appointment-status-changed` e `eliza:appointment-paid`, disparados nos dois lugares
+  que já mudam status (`appointment-card-actions.tsx` e `appointment-context-menu.tsx`) —
+  duplicado porque a lógica de status já era duplicada nos dois arquivos antes disto.
+
+⚠️ **Armadilha real: abas do Radix desmontam o conteúdo inativo (`TabsContent` sem
+`forceMount`).** A aba "Ficha Técnica" precisa continuar sendo a padrão — é dela que depende
+`ReturnModalWrapper`, que mostra o prompt de retorno automático. Mudar o padrão para
+"Agendamentos" quebraria esse fluxo silenciosamente. Resolvido ancorando o passo "pago" no
+**gatilho da aba** (`TabsTrigger`, sempre montado), não no conteúdo — o popover aparece
+imediatamente, a copy instrui clicar na aba, e só então o conteúdo (com o botão de pagamento)
+monta de verdade.
+
+⚠️ **Descoberta arquitetural: passos `awaitsNavigation` nunca logam `step_completed`.**
+Pré-existente — o "concluir" original tinha a mesma lacuna. O mecanismo de reancoragem por
+rota persiste o índice quando a URL casa com um passo mais à frente, mas só `advance()` loga
+telemetria, e `awaitsNavigation` nunca chama `advance()` diretamente. Não corrigido agora
+(exigiria repensar o motor do tour) — só documentado, e o resumo da Fase 10
+([tour-cta.tsx](../web/components/demo/tour-cta.tsx)) foi ajustado para não esperar
+`step_completed` de "finalizado", usando "chegou" e "pago" (que logam de verdade) no lugar do
+antigo "concluir".
+
+⚠️ **Migration pendente:** [20260814120000_widen_demo_step_cap.sql](../supabase/migrations/20260814120000_widen_demo_step_cap.sql)
+sobe o teto de `demo_interactions_step_number_check` de 8 para 10 (o tour tem 2 passos a mais
+agora). Verificado contra o banco real: inserir `step_number=10` **falha** com a constraint
+atual — os passos "timeline" e "cta" não gravam telemetria até a migration rodar. O tour em
+si não quebra (a falha é engolida), só a telemetria desses dois passos fica muda.
+
+### Testes
+
+Verificado contra produção (advocacia, guiando o fluxo real do início ao fim):
+- [x] Dica de horário aparece corretamente ao trocar de profissional
+- [x] Botão de ações cabe no card do calendário nas visões Mês e Dia, sem overflow
+      (`scrollWidth === clientWidth`, confirmado via DOM)
+- [x] `stopPropagation` impede o diálogo de edição de abrir junto — confirmado com clique
+      real (via `computer`, não `.click()` programático — Radix precisa de eventos de ponteiro
+      de verdade, `.click()` sintético não abre o dropdown)
+- [x] "Chegada"/"Presença confirmada" lido do dicionário do nicho, não hardcoded — pego batendo
+      o texto do tour contra o rótulo real do menu em `advocacia` ("Presença confirmada", não
+      o fallback "Chegada confirmada")
+- [x] Sequência guiada completa: novo-agendamento → chegou (ungated, Entendi) → finalizado
+      (awaitsNavigation, redireciona) → pago (awaitsEvent, ancorado no gatilho da aba) →
+      retorno — progresso e telemetria corretos em cada passo
+- [x] Pagamento realmente gravado no banco (`payment_status: "paid"`), não só na UI
+- [x] Resumo da Fase 10 mostra os itens certos com os novos ids
+- [x] Console limpo — um erro "cn is not defined" apareceu numa aba antiga e não se repetiu
+      numa aba nova, nem depois de reload; artefato do buffer da ferramenta de teste, não bug
+      de código (confirmado por grep: todo uso de `cn(` tem import correspondente)
+
+⚠️ **Achado durante o teste, não um bug desta rodada:** testar "fora do roteiro" (mudar status
+de um agendamento do seed em vez do que a própria demo criou) faz o mecanismo de reancoragem
+por rota **pular** silenciosamente vários passos de uma vez, sem logar `step_completed` para
+nenhum deles — o mesmo redirecionamento que resolve "finalizado" também dispara a busca do
+próximo passo cuja rota bate, e se o progresso ainda estava em "novo-agendamento" (não
+concluído), a busca pula direto para o primeiro passo em `/clientes/...`. Pré-existente
+(mesmo risco já existia com o "concluir" original de um passo só), não introduzido agora.
+Visitantes seguindo o tour normalmente (interagindo com o que a própria demo manda criar) não
+encontram isso na prática.
+
+**Tempo:** ~3h
 
 ---
 
@@ -537,11 +732,51 @@ Linha na crontab da VPS, de hora em hora:
 
 ---
 
-# FASE 10 — CTA final e captura de lead
+# FASE 10 — CTA final, captura de lead e reset
 
-Passo 8 do tour: resumo do que o visitante fez (contado de `demo_interactions`),
-form curto (nome + email ou WhatsApp), grava em `demo_leads`, log `lead_captured`,
-notificação para você. Botão secundário: reiniciar tour.
+Implementada antes da Fase 8, por decisão do Sérgio — fecha o loop do reset (Fase 9), que
+estava sem quem o chamasse.
+
+Passo 8 do tour (`kind: "custom"`, o segundo depois da timeline — `stepNumber` bate exatamente
+com o teto de 8 que `demo_interactions_step_number_check` já previa).
+[tour-cta.tsx](../web/components/demo/tour-cta.tsx): resumo do que o visitante fez, form de
+nome + contato, e "Recomeçar a demonstração".
+
+**Sem notificação a você.** Decisão explícita: não há e-mail (nem Resend/SMTP) nem WhatsApp
+(a Fase 8 não existe ainda) configurado no projeto. O lead fica em `demo_leads`, consultável
+quando quiser. Plugar aviso automático fica para quando um dos dois canais existir.
+
+**O resumo lê `demo_interactions`, não conta linhas de `appointments`/`service_records`.**
+A organização já nasce com dados do seed — contar entidades misturaria o que veio pronto com
+o que o visitante realmente fez. [get-demo-recap.ts](../web/app/actions/demo/get-demo-recap.ts)
+extrai os `metadata->>step` distintos entre os `step_completed` daquela org.
+
+**Terminar aqui conta como tour concluído, com ou sem lead.** "Só terminar" chama a mesma
+`onDone` que o envio bem-sucedido — só o fechamento implícito (X, Esc, clique fora) é abandono.
+Chegar até o último passo já significa que o visitante viu tudo; declinar o contato não é a
+mesma coisa que sair no meio do caminho.
+
+**Reset ligado ao botão:** chama `resetDemo()` (Fase 9), limpa o progresso do tour no
+`localStorage` e navega para `/dashboard` — a reseed troca os ids de clientes/agendamentos, e
+a rota atual (`/clientes/[id]`) fica apontando para um registro que não existe mais.
+
+⚠️ **Bug de ordem encontrado e corrigido na verificação.** A primeira versão limpava o
+`localStorage` **antes** de chamar `onDone()` — mas `onDone()` (via `advance()`) persiste
+`{done:true}` na mesma chave, reescrevendo por cima do que acabara de ser removido. O reset em
+si funcionava (dados trocavam de id, corretamente), só o tour nunca voltava a aparecer depois.
+Corrigido invertendo a ordem: `onDone()` primeiro, `removeItem` depois.
+
+### Testes
+
+Verificado contra produção:
+- [x] Resumo mostra só os passos com `step_completed` real, na ordem narrativa certa —
+      confirmado com 4 de 5 itens presentes e "timeline" corretamente ausente
+- [x] Envio do lead grava em `demo_leads` com os campos certos, loga `lead_captured` (passo 8)
+      e `tour_completed` em seguida
+- [x] "Só terminar" não grava lead, mas loga `tour_completed` mesmo assim
+- [x] Reset: nova geração de clientes/agendamentos com ids diferentes dos anteriores,
+      `organization_settings` preservada, tour reaparece do passo 1 depois do reset
+- [x] Zero erro de console em toda a sequência
 
 **Tempo:** 3–4h
 
@@ -580,11 +815,11 @@ reverter é desligar a rota `/demo/start`, sem tocar em dados de produção.
 | 3. Seed por nicho | 4–5h | 🟢 **DONE** (7 nichos verificados) |
 | 4. Página `/demo/start` | 3h | 🟢 **DONE** (verificado no browser) |
 | 5. Tour guiado | 6–8h | 🟢 **DONE** (6 passos; 7–8 nas Fases 8 e 10) |
-| 6. Defaults de agendamento | 3–4h | 🔴 TODO |
-| 7. Timeline fast-forward | 5–6h | 🔴 TODO |
+| 6. Defaults de agendamento | 3–4h | 🟢 **DONE** (verificado em 4 nichos, sem colisão de horário) |
+| 7. Timeline fast-forward | 5–6h | 🟢 **DONE** (verificado em 2 nichos, idempotência confirmada) |
 | 8. WhatsApp real + controles de abuso | 6–7h | 🔴 TODO |
 | 9. Reset e cleanup | 4h | 🟢 **DONE** (cron verificado; reset sem caller até a Fase 10) |
-| 10. CTA e lead | 3–4h | 🔴 TODO |
+| 10. CTA, lead e reset | 3–4h | 🟢 **DONE** (feita antes da 8; fecha o loop do reset) |
 | 11. Testes | 5–6h | 🔴 TODO |
 | 12. Deploy | 1 dia | 🔴 TODO |
 

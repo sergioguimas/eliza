@@ -40,6 +40,7 @@ import { UpdateAppointmentDialog } from "@/components/appointments/update-appoin
 import { ReturnPromptDialog } from "@/components/appointments/return-prompt-dialog"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AppointmentContextMenu } from "@/components/appointments/appointment-context-menu"
+import { AppointmentCardActions } from "@/components/appointments/appointment-card-actions"
 import {
   Select,
   SelectContent,
@@ -54,6 +55,8 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import { useKeckleon } from "@/providers/keckleon-provider"
+import { useDemoAppointmentDefaults } from "@/hooks/use-demo-appointment-defaults"
+import type { DemoAppointmentDefaults } from "@/app/actions/demo/get-appointment-defaults"
 
 const PROFESSIONAL_COLORS = [
   { bg: "#e0f2fe", border: "#0ea5e9", text: "#0369a1" },
@@ -90,6 +93,16 @@ type Props = {
   currentUser?: any
   settings?: any
   initialParams?: any
+  isDemo?: boolean
+}
+
+function toPrefilledData(defaults: NonNullable<DemoAppointmentDefaults>) {
+  return {
+    date: new Date(`${defaults.date}T${defaults.time}:00`),
+    serviceId: defaults.serviceId,
+    customerId: defaults.customerId,
+    professionalId: defaults.professionalId,
+  }
 }
 
 const getRawHour = (dateString: string) => {
@@ -105,11 +118,14 @@ function CalendarContent({
   organization_id,
   currentUser,
   settings,
+  isDemo = false,
 }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
   const { dict } = useKeckleon()
+  const { defaults: demoDefaults, loading: demoDefaultsLoading } =
+    useDemoAppointmentDefaults(isDemo, organization_id)
 
   const entities = dict.entities || {}
   const actions = dict.actions || {}
@@ -149,11 +165,22 @@ function CalendarContent({
     const dateStr = searchParams.get("date")
     const returnCheckId = searchParams.get("return_check")
 
-    if (isNew) {
-      setPrefilledData({
-        customerId: customerId || undefined,
-        date: dateStr ? new Date(dateStr) : new Date(),
-      })
+    // "?new=true" sem cliente fixado é o atalho do dashboard, a única entrada
+    // que se beneficia dos defaults da demo. O fetch já está em voo desde que
+    // a página montou — vale esperar em vez de abrir o formulário em branco.
+    const waitingForDemoDefaults =
+      isNew && isDemo && !customerId && demoDefaultsLoading
+
+    if (isNew && !waitingForDemoDefaults) {
+      if (isDemo && !customerId && demoDefaults) {
+        setPrefilledData(toPrefilledData(demoDefaults))
+      } else {
+        setPrefilledData({
+          customerId: customerId || undefined,
+          date: dateStr ? new Date(dateStr) : new Date(),
+        })
+      }
+
       setIsCreateOpen(true)
 
       const params = new URLSearchParams(window.location.search)
@@ -172,7 +199,14 @@ function CalendarContent({
         })
       }
     }
-  }, [searchParams, appointments, router])
+  }, [
+    searchParams,
+    appointments,
+    router,
+    isDemo,
+    demoDefaultsLoading,
+    demoDefaults,
+  ])
 
   const getProfessionalColor = (profId?: string) => {
     if (!profId) return PROFESSIONAL_COLORS[0]
@@ -221,7 +255,15 @@ function CalendarContent({
     setIsUpdateOpen(true)
   }
 
-  function openCreateModal(targetDate: Date) {
+  function openCreateModal(targetDate: Date, useSmartDefaults = false) {
+    // Só o botão "Novo horário" da barra pede defaults inteligentes. Clique
+    // com o botão direito num dia ou horário específico é uma escolha
+    // deliberada do visitante — sobrepor com o slot calculado seria ignorar o
+    // que ele acabou de apontar.
+    if (useSmartDefaults && isDemo && demoDefaults) {
+      setPrefilledData(toPrefilledData(demoDefaults))
+    }
+
     setCreateDate(targetDate)
     setIsCreateOpen(true)
   }
@@ -373,7 +415,22 @@ function CalendarContent({
             >
               {appointment.customers?.name || "Sem nome"}
             </span>
-            <styles.icon className="h-3 w-3 shrink-0 opacity-70 mt-0.5" />
+
+            <div className="flex shrink-0 items-center gap-0.5">
+              <styles.icon className="h-3 w-3 opacity-70" />
+
+              {/*
+                Até aqui, mudar status/pagamento só existia no clique direito
+                (ou toque longo no celular) — o mesmo problema de descoberta
+                que o botão de criar agendamento tinha antes de ganhar um
+                botão visível. `stopPropagation` porque o card inteiro já tem
+                onClick próprio (abre o diálogo de edição); sem isso, clicar
+                no menu também abriria aquele diálogo por cima.
+              */}
+              <div onClick={(e) => e.stopPropagation()}>
+                <AppointmentCardActions appointment={appointment} compact />
+              </div>
+            </div>
           </div>
 
           <div className="flex justify-between items-center opacity-85 text-[10px] gap-2">
@@ -640,7 +697,7 @@ function CalendarContent({
           <Button
             size="sm"
             data-tour="novo-agendamento"
-            onClick={() => openCreateModal(date)}
+            onClick={() => openCreateModal(date, true)}
           >
             <Plus className="mr-2 h-4 w-4" />
             {actions.create_agendamento ||
