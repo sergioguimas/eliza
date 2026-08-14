@@ -19,15 +19,21 @@ const STORAGE_PREFIX = "eliza:demo-tour:"
 
 const RECAP_LABELS: Record<string, string> = {
   "novo-agendamento": "Criou um agendamento",
-  concluir: "Marcou um atendimento como concluído",
+  chegou: "Confirmou a chegada do paciente",
+  pago: "Confirmou o pagamento",
   retorno: "Viu como funciona agendar o retorno",
   prontuario: "Registrou o atendimento",
   timeline: "Acompanhou os avisos automáticos",
 }
 
+// "finalizado" fica de fora de propósito: é um passo `awaitsNavigation`, e
+// esses nunca geram `step_completed` — completam quando a rota muda, não por
+// um `advance()` explícito, e só `advance()` loga telemetria. Não é uma
+// lacuna nova: o "concluir" original tinha exatamente a mesma característica.
+//
 // Ordem de leitura do checklist — não é a ordem em que os passos completam
 // (a "steps" set não guarda isso), mas a ordem narrativa do tour.
-const RECAP_ORDER = ["novo-agendamento", "concluir", "retorno", "prontuario", "timeline"]
+const RECAP_ORDER = ["novo-agendamento", "chegou", "pago", "retorno", "prontuario", "timeline"]
 
 type TourCtaProps = {
   organizationId: string

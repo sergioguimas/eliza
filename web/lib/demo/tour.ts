@@ -56,6 +56,14 @@ export function buildDemoTour(niche: string): DemoTourStep[] {
   const clientes = entities.cliente_plural.toLowerCase()
   const prontuario = entities.prontuario.toLowerCase()
 
+  // "Chegada confirmada" tem rótulo próprio por nicho (advocacia usa "Presença
+  // confirmada", psicologia usa "Paciente chegou") — citar o nome errado no
+  // texto do tour, enquanto o menu real mostra outro, quebraria a confiança
+  // bem na hora em que o passo pede pra clicar em algo específico. "Finalizar"
+  // e "Confirmar pagamento" não têm essa variação (vêm do dicionário base,
+  // iguais em todo nicho), por isso ficam fixos no texto.
+  const arrivedLabel = dict.actions.arrived
+
   return [
     {
       id: "resumo",
@@ -81,12 +89,38 @@ export function buildDemoTour(niche: string): DemoTourStep[] {
       awaitsEvent: "eliza:appointment-created",
     },
     {
-      id: "concluir",
+      // Ungated de propósito: "chegada" é um checkpoint informativo, não uma
+      // ação que precise ser forçada — um profissional apressado pode ir
+      // direto para "Finalizar", e isso é uso legítimo, não erro.
+      id: "chegou",
+      match: /^\/agendamentos/,
+      selector: '[data-tour="agenda-lista"]',
+      title: "O paciente chegou?",
+      description: `Clique com o botão direito no agendamento (no celular, toque e segure) — ou use o novo botão de ações no card — e marque "${arrivedLabel}". É o primeiro checkpoint do atendimento.`,
+    },
+    {
+      // Continua exigindo navegação de verdade: só marcar "Finalizar" leva o
+      // Eliza a redirecionar para a ficha do cliente, e é essa navegação que
+      // resolve o passo — não dá pra fingir com um clique em "Entendi".
+      id: "finalizado",
       match: /^\/agendamentos/,
       selector: '[data-tour="agenda-lista"]',
       title: "Terminou o atendimento?",
-      description: `Abra o menu na agenda e marque como concluído. O Eliza leva você direto para a ficha do ${cliente}.`,
+      description: `Abra o mesmo menu — botão direito ou o botão de ações — e marque "Finalizar". O Eliza leva você direto para a ficha do ${cliente}.`,
       awaitsNavigation: true,
+    },
+    {
+      // Aponta para o GATILHO da aba, não para o conteúdo dela: a aba
+      // "Prontuário" é a que vem aberta por padrão (preserva o fluxo de
+      // retorno automático, que depende disso), então o conteúdo da aba
+      // "Agendamentos" não existe no DOM até o clique — só o gatilho já
+      // está lá para ser destacado.
+      id: "pago",
+      match: /^\/clientes\/[^/]+/,
+      selector: '[data-tour="tab-agendamentos"]',
+      title: "Confirme o pagamento",
+      description: `Clique aqui, encontre o atendimento que você acabou de finalizar e confirme a forma de pagamento — mesmo menu de antes.`,
+      awaitsEvent: "eliza:appointment-paid",
     },
     {
       id: "retorno",
@@ -116,7 +150,9 @@ export function buildDemoTour(niche: string): DemoTourStep[] {
     },
     {
       // Último passo — mesma rota, mesmo motivo do anterior. `stepNumber`
-      // aqui é 8, o teto que `demo_interactions_step_number_check` já previa.
+      // aqui é 10, depois que "chegou" e "pago" alargaram o tour de 8 para
+      // 10 passos — exige a migration que sobe o teto de
+      // `demo_interactions_step_number_check` junto.
       id: "cta",
       match: /^\/clientes\/[^/]+/,
       kind: "custom",

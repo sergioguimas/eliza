@@ -25,8 +25,16 @@ import { cancelAppointment } from "@/app/actions/delete-appointment"
 import { useRouter } from "next/navigation"
 import { updateAppointmentPayment } from "@/app/actions/update-appointment-payment"
 import { useKeckleon } from "@/providers/keckleon-provider"
+import { cn } from "@/lib/utils"
 
-export function AppointmentCardActions({ appointment }: { appointment: any }) {
+export function AppointmentCardActions({
+  appointment,
+  compact = false,
+}: {
+  appointment: any
+  /** Cabe num card apertado da agenda — trigger menor, mesmo menu. */
+  compact?: boolean
+}) {
   const router = useRouter()
   const { dict } = useKeckleon()
 
@@ -37,6 +45,13 @@ export function AppointmentCardActions({ appointment }: { appointment: any }) {
     const result = await updateAppointmentStatus(appointment.id, status)
 
     if (result.success) {
+      // Genérico, não específico de demo: barato para todo tenant (ninguém
+      // escuta fora do tour) e dá ao tour um sinal de que o status mudou de
+      // verdade, em vez de confiar num clique em "Entendi".
+      window.dispatchEvent(
+        new CustomEvent("eliza:appointment-status-changed", { detail: { status } })
+      )
+
       if (status === 'completed') {
         const targetUrl = `/clientes/${appointment.customer_id}?return_check=${appointment.id}`
 
@@ -74,6 +89,8 @@ export function AppointmentCardActions({ appointment }: { appointment: any }) {
     const result = await updateAppointmentPayment(appointment.id, method)
 
     if (result.success) {
+      window.dispatchEvent(new CustomEvent("eliza:appointment-paid"))
+
       toast.success(
         messages.payment_success || `Pagamento confirmado`
       )
@@ -89,9 +106,12 @@ export function AppointmentCardActions({ appointment }: { appointment: any }) {
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 p-0 hover:bg-slate-200/50 rounded-full"
+          className={cn(
+            "p-0 hover:bg-slate-200/50 rounded-full shrink-0",
+            compact ? "h-5 w-5" : "h-6 w-6"
+          )}
         >
-          <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+          <MoreHorizontal className={compact ? "h-3.5 w-3.5 text-muted-foreground" : "h-4 w-4 text-muted-foreground"} />
           <span className="sr-only">
             {labels.open_menu || "Abrir menu"}
           </span>

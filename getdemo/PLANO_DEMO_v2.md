@@ -513,6 +513,103 @@ Verificado contra produção em dois nichos (salão, advocacia):
 
 ---
 
+# RODADA DE AJUSTES — Horário, "chegou/finalizado/pago" e visibilidade (2026-08-14)
+
+Pedido do Sérgio depois de usar o tour: três pontos de atrito, um dos quais revelou um
+problema de produto (não só de demo). Feita antes da Fase 8.
+
+**1. Dica de horário do profissional.** O formulário de agendamento deixava escolher
+qualquer data/hora, mas cada profissional só atende num recorte fixo (`professional_availability`).
+[create-appointment-dialog.tsx](../web/components/appointments/create-appointment-dialog.tsx)
+ganhou um resumo abaixo do seletor de profissional: *"Dra. Letícia Amaral atende Seg a Sex
+09:00–18:00 (pausa 12:00–13:00)."* — agrupa por horário idêntico antes de listar os dias, para
+não repetir a mesma faixa sete vezes quando a semana inteira é igual. Produto-wide, não
+gated por demo: todo tenant se beneficia.
+
+**2. Dica de usar o próprio contato — adiada.** A ideia (sugerir que o visitante use nome e
+telefone reais para receber o aviso de verdade) só faz sentido quando esse aviso existir.
+Decisão do Sérgio: esperar a Fase 8.
+
+**3. "Concluir" virou 3 passos — e expôs que a troca de status nunca teve botão visível, nem
+para tenant real.** Investigando o pedido, achamos que mudar status/pagamento vivia **só** no
+clique direito (ou toque longo no celular) — nenhum tenant, demo ou não, tinha um botão para
+isso. Mesma classe de problema do "novo agendamento" antes da Fase 5/6. Decisões do Sérgio:
+adicionar botão visível (produto-wide) e construir pagamento de verdade na ficha do cliente
+(não só voltar para a agenda).
+
+- **Visibilidade:** `AppointmentCardActions` (o dropdown que já existia só no dashboard)
+  ganhou um modo `compact` e passou a ser renderizado também no card do calendário
+  ([calendar-view.tsx](../web/components/appointments/calendar-view.tsx), com
+  `stopPropagation` para não abrir o diálogo de edição por cima) e no histórico de
+  agendamentos da [ficha do cliente](../web/app/(app)/clientes/[id]/page.tsx) — que antes só
+  tinha um badge de leitura. O clique direito continua funcionando, agora como atalho, não
+  como único caminho.
+- **Tour em 3 passos:** "chegou" (popover simples, sem trava — um profissional apressado pode
+  ir direto para "Finalizar", e isso é uso legítimo) → "finalizado" (continua `awaitsNavigation`,
+  mesmo mecanismo de antes) → "pago" (novo, `awaitsEvent: "eliza:appointment-paid"`).
+- **Evento genérico de status**, no mesmo espírito do de criação de agendamento:
+  `eliza:appointment-status-changed` e `eliza:appointment-paid`, disparados nos dois lugares
+  que já mudam status (`appointment-card-actions.tsx` e `appointment-context-menu.tsx`) —
+  duplicado porque a lógica de status já era duplicada nos dois arquivos antes disto.
+
+⚠️ **Armadilha real: abas do Radix desmontam o conteúdo inativo (`TabsContent` sem
+`forceMount`).** A aba "Ficha Técnica" precisa continuar sendo a padrão — é dela que depende
+`ReturnModalWrapper`, que mostra o prompt de retorno automático. Mudar o padrão para
+"Agendamentos" quebraria esse fluxo silenciosamente. Resolvido ancorando o passo "pago" no
+**gatilho da aba** (`TabsTrigger`, sempre montado), não no conteúdo — o popover aparece
+imediatamente, a copy instrui clicar na aba, e só então o conteúdo (com o botão de pagamento)
+monta de verdade.
+
+⚠️ **Descoberta arquitetural: passos `awaitsNavigation` nunca logam `step_completed`.**
+Pré-existente — o "concluir" original tinha a mesma lacuna. O mecanismo de reancoragem por
+rota persiste o índice quando a URL casa com um passo mais à frente, mas só `advance()` loga
+telemetria, e `awaitsNavigation` nunca chama `advance()` diretamente. Não corrigido agora
+(exigiria repensar o motor do tour) — só documentado, e o resumo da Fase 10
+([tour-cta.tsx](../web/components/demo/tour-cta.tsx)) foi ajustado para não esperar
+`step_completed` de "finalizado", usando "chegou" e "pago" (que logam de verdade) no lugar do
+antigo "concluir".
+
+⚠️ **Migration pendente:** [20260814120000_widen_demo_step_cap.sql](../supabase/migrations/20260814120000_widen_demo_step_cap.sql)
+sobe o teto de `demo_interactions_step_number_check` de 8 para 10 (o tour tem 2 passos a mais
+agora). Verificado contra o banco real: inserir `step_number=10` **falha** com a constraint
+atual — os passos "timeline" e "cta" não gravam telemetria até a migration rodar. O tour em
+si não quebra (a falha é engolida), só a telemetria desses dois passos fica muda.
+
+### Testes
+
+Verificado contra produção (advocacia, guiando o fluxo real do início ao fim):
+- [x] Dica de horário aparece corretamente ao trocar de profissional
+- [x] Botão de ações cabe no card do calendário nas visões Mês e Dia, sem overflow
+      (`scrollWidth === clientWidth`, confirmado via DOM)
+- [x] `stopPropagation` impede o diálogo de edição de abrir junto — confirmado com clique
+      real (via `computer`, não `.click()` programático — Radix precisa de eventos de ponteiro
+      de verdade, `.click()` sintético não abre o dropdown)
+- [x] "Chegada"/"Presença confirmada" lido do dicionário do nicho, não hardcoded — pego batendo
+      o texto do tour contra o rótulo real do menu em `advocacia` ("Presença confirmada", não
+      o fallback "Chegada confirmada")
+- [x] Sequência guiada completa: novo-agendamento → chegou (ungated, Entendi) → finalizado
+      (awaitsNavigation, redireciona) → pago (awaitsEvent, ancorado no gatilho da aba) →
+      retorno — progresso e telemetria corretos em cada passo
+- [x] Pagamento realmente gravado no banco (`payment_status: "paid"`), não só na UI
+- [x] Resumo da Fase 10 mostra os itens certos com os novos ids
+- [x] Console limpo — um erro "cn is not defined" apareceu numa aba antiga e não se repetiu
+      numa aba nova, nem depois de reload; artefato do buffer da ferramenta de teste, não bug
+      de código (confirmado por grep: todo uso de `cn(` tem import correspondente)
+
+⚠️ **Achado durante o teste, não um bug desta rodada:** testar "fora do roteiro" (mudar status
+de um agendamento do seed em vez do que a própria demo criou) faz o mecanismo de reancoragem
+por rota **pular** silenciosamente vários passos de uma vez, sem logar `step_completed` para
+nenhum deles — o mesmo redirecionamento que resolve "finalizado" também dispara a busca do
+próximo passo cuja rota bate, e se o progresso ainda estava em "novo-agendamento" (não
+concluído), a busca pula direto para o primeiro passo em `/clientes/...`. Pré-existente
+(mesmo risco já existia com o "concluir" original de um passo só), não introduzido agora.
+Visitantes seguindo o tour normalmente (interagindo com o que a própria demo manda criar) não
+encontram isso na prática.
+
+**Tempo:** ~3h
+
+---
+
 # FASE 8 — WhatsApp real com chip dedicado
 
 Esta é a maior mudança em relação ao v1, que previa mock. O visitante informa o **próprio

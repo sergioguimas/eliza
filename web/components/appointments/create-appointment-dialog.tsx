@@ -14,6 +14,74 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { useKeckleon } from "@/providers/keckleon-provider"
 
+const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
+
+function formatAvailabilityTime(time: string) {
+  return time?.slice(0, 5) ?? ""
+}
+
+function compressDayRanges(sortedDays: number[]) {
+  const ranges: [number, number][] = []
+  let start = sortedDays[0]
+  let prev = sortedDays[0]
+
+  for (let i = 1; i <= sortedDays.length; i++) {
+    const current = sortedDays[i]
+
+    if (current === prev + 1) {
+      prev = current
+      continue
+    }
+
+    ranges.push([start, prev])
+    start = current
+    prev = current
+  }
+
+  return ranges
+    .map(([a, b]) => (a === b ? DAY_LABELS[a] : `${DAY_LABELS[a]} a ${DAY_LABELS[b]}`))
+    .join(", ")
+}
+
+/**
+ * Resume a disponibilidade cadastrada do profissional numa frase curta — o
+ * visitante escolhe qualquer data/hora no formulário, mas o profissional só
+ * atende num recorte fixo. Sem essa pista, a primeira tentativa fora do
+ * expediente só aparece como erro depois de preencher tudo.
+ *
+ * Agrupa por horário idêntico antes de listar os dias, pra não repetir
+ * "09:00–18:00" um por dia quando a semana inteira é igual.
+ */
+function summarizeAvailability(rows: any[] | undefined): string | null {
+  const active = (rows ?? []).filter((row) => row.is_active !== false)
+  if (active.length === 0) return null
+
+  const groups = new Map<string, number[]>()
+
+  for (const row of active) {
+    const key = `${row.start_time}|${row.end_time}|${row.break_start ?? ""}|${row.break_end ?? ""}`
+    const days = groups.get(key) ?? []
+    days.push(row.day_of_week)
+    groups.set(key, days)
+  }
+
+  const parts: string[] = []
+
+  for (const [key, days] of groups) {
+    const [start, end, breakStart, breakEnd] = key.split("|")
+    const dayLabel = compressDayRanges([...days].sort((a, b) => a - b))
+    const hours = `${formatAvailabilityTime(start)}–${formatAvailabilityTime(end)}`
+    const pause =
+      breakStart && breakEnd
+        ? ` (pausa ${formatAvailabilityTime(breakStart)}–${formatAvailabilityTime(breakEnd)})`
+        : ""
+
+    parts.push(`${dayLabel} ${hours}${pause}`)
+  }
+
+  return parts.join("; ")
+}
+
 interface CreateAppointmentDialogProps {
   customers?: any[] 
   services?: any[]  
@@ -88,6 +156,16 @@ export function CreateAppointmentDialog({
   const [time, setTime] = useState("")
   const [notes, setNotes] = useState("")
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<string>("")
+
+  const professionalScheduleHint = useMemo(() => {
+    const selected = team.find((prof: any) => prof.id === selectedProfessionalId)
+    if (!selected) return null
+
+    const summary = summarizeAvailability(selected.professional_availability)
+    if (!summary) return null
+
+    return `${selected.name} atende ${summary}.`
+  }, [team, selectedProfessionalId])
 
   // Preencher formulário ao abrir ou quando as props de pré-seleção mudarem
   useEffect(() => {
@@ -343,6 +421,12 @@ export function CreateAppointmentDialog({
                 ))}
               </SelectContent>
             </Select>
+
+            {professionalScheduleHint && (
+              <p className="text-xs text-muted-foreground">
+                {professionalScheduleHint}
+              </p>
+            )}
           </div>
 
           <div className="border-t my-2" />

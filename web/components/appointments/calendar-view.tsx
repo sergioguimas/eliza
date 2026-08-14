@@ -40,6 +40,7 @@ import { UpdateAppointmentDialog } from "@/components/appointments/update-appoin
 import { ReturnPromptDialog } from "@/components/appointments/return-prompt-dialog"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AppointmentContextMenu } from "@/components/appointments/appointment-context-menu"
+import { AppointmentCardActions } from "@/components/appointments/appointment-card-actions"
 import {
   Select,
   SelectContent,
@@ -414,7 +415,22 @@ function CalendarContent({
             >
               {appointment.customers?.name || "Sem nome"}
             </span>
-            <styles.icon className="h-3 w-3 shrink-0 opacity-70 mt-0.5" />
+
+            <div className="flex shrink-0 items-center gap-0.5">
+              <styles.icon className="h-3 w-3 opacity-70" />
+
+              {/*
+                Até aqui, mudar status/pagamento só existia no clique direito
+                (ou toque longo no celular) — o mesmo problema de descoberta
+                que o botão de criar agendamento tinha antes de ganhar um
+                botão visível. `stopPropagation` porque o card inteiro já tem
+                onClick próprio (abre o diálogo de edição); sem isso, clicar
+                no menu também abriria aquele diálogo por cima.
+              */}
+              <div onClick={(e) => e.stopPropagation()}>
+                <AppointmentCardActions appointment={appointment} compact />
+              </div>
+            </div>
           </div>
 
           <div className="flex justify-between items-center opacity-85 text-[10px] gap-2">
