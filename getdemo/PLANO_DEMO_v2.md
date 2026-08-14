@@ -457,13 +457,57 @@ Verificado contra o banco de produção, em quatro nichos (clínica, tatuador, b
 # FASE 7 — Timeline fast-forward
 
 ### 7.1 Backend
-Server action `createDemoTimeline(appointmentId)` — gera os 3 eventos (lembrete 1h antes,
-confirmação do cliente, hora do agendamento) com textos do dicionário do nicho e grava
-em `demo_timeline_events`. Não toca a Evolution API.
+[create-demo-timeline.ts](../web/app/actions/demo/create-demo-timeline.ts) — gera os 3 eventos
+(lembrete 1h antes, confirmação do cliente 15min depois, hora do compromisso) com textos
+parametrizados por nome do cliente, profissional e serviço, e grava em `demo_timeline_events`.
+Não toca a Evolution API — `delivered_for_real` fica `false` nas três linhas.
+
+**Mudança em relação ao desenho original: sem `appointmentId` como parâmetro.** A action deriva
+o compromisso sozinha — o **próximo agendamento `scheduled` da organização**, por
+`start_time ASC` — em vez de receber o id do agendamento que o visitante acabou de criar no
+passo "novo-agendamento". Evita ter que carregar esse id entre passos e rotas (criado em
+`/agendamentos`, usado em `/clientes/[id]`) só para uma feature que não precisa de precisão
+cirúrgica: o seed sempre garante pelo menos um `scheduled`, então a busca nunca fica sem
+resposta, mesmo se o visitante tivesse pulado a criação (o que hoje não é possível, já que o
+passo anterior exige `awaitsEvent`).
+
+Idempotente: reabrir o passo, ou refazer o tour, não duplica os três eventos — consultado antes
+de inserir, por `appointment_id`. Confirmado gerando o mesmo tenant duas vezes seguidas: 3
+linhas, não 6.
 
 ### 7.2 UI
-`components/demo/timeline-simulation.tsx` — cards em sequência com `framer-motion`
-(já é dependência), linha vertical conectando, timestamps, botão de avançar/pausar.
+[timeline-simulation.tsx](../web/components/demo/timeline-simulation.tsx) — modal com os cards
+em sequência via `framer-motion`, linha vertical conectando, timestamps reais (o "fast-forward"
+é só a apresentação; os horários simulados são os de verdade, podendo estar dias à frente),
+botão de avançar/pausar, e "Entendi" só depois do último card.
+
+**Não é um passo do tour comum — é a primeira coisa que não cabe num popover do driver.js.**
+`tour.ts` ganhou `kind?: "popover" | "custom"`; o passo "timeline" é o primeiro `"custom"`.
+[tour-guide.tsx](../web/components/demo/tour-guide.tsx) foi refeito para os dois tipos
+dividirem a mesma lógica de avanço/abandono (`advance`/`abandonStep`, definidas uma vez por
+passo e reusadas): para "popover" elas vão nos botões do driver.js, como antes; para "custom"
+elas ficam em refs e são chamadas pelos callbacks `onDone`/`onSkip` do componente React
+renderizado no lugar do popover.
+
+Colocado **depois** do "prontuario", não entre "novo-agendamento" e "concluir" como uma leitura
+mais literal do plano original sugeriria — fecha o arco da criação→conclusão→retorno→registro
+com o compromisso que ficou para trás, bem antes do próximo passo (Fase 8) mostrar o aviso
+saindo de verdade. Mesma rota do passo anterior (`/clientes/[id]`), sem navegação: é um modal
+por cima de tudo.
+
+### Testes
+
+Verificado contra produção em dois nichos (salão, advocacia):
+- [x] Compromisso, cliente, profissional e serviço corretos nas mensagens
+- [x] Matemática do horário: reminder −60min, confirmação −45min, ambos batendo com o horário
+      real do compromisso
+- [x] Sequência revela sozinha (auto-play), "Pausar" desabilita quando termina, "Entendi"
+      só aparece com os 3 cards visíveis
+- [x] Concluir avança o tour (`tour_completed`, passo 7 — hoje é o último passo)
+- [x] Fechar pelo X sem terminar grava `tour_abandoned` no passo certo, e os eventos já
+      gerados continuam salvos (não é desperdício: só a apresentação foi interrompida)
+- [x] Rodar duas vezes não duplica linhas em `demo_timeline_events`
+- [x] Zero erro de console em toda a sequência
 
 **Tempo:** 5–6h
 
@@ -635,7 +679,7 @@ reverter é desligar a rota `/demo/start`, sem tocar em dados de produção.
 | 4. Página `/demo/start` | 3h | 🟢 **DONE** (verificado no browser) |
 | 5. Tour guiado | 6–8h | 🟢 **DONE** (6 passos; 7–8 nas Fases 8 e 10) |
 | 6. Defaults de agendamento | 3–4h | 🟢 **DONE** (verificado em 4 nichos, sem colisão de horário) |
-| 7. Timeline fast-forward | 5–6h | 🔴 TODO |
+| 7. Timeline fast-forward | 5–6h | 🟢 **DONE** (verificado em 2 nichos, idempotência confirmada) |
 | 8. WhatsApp real + controles de abuso | 6–7h | 🔴 TODO |
 | 9. Reset e cleanup | 4h | 🟢 **DONE** (cron verificado; reset sem caller até a Fase 10) |
 | 10. CTA e lead | 3–4h | 🔴 TODO |

@@ -5,8 +5,15 @@ export type DemoTourStep = {
   id: string
   /** Rota onde o passo vive. O tour só aparece quando a URL casa. */
   match: RegExp
-  /** Alvo do destaque. Sempre um `data-tour`, nunca classe de estilo. */
-  selector: string
+  /**
+   * "popover" (padrão) destaca um elemento real com driver.js. "custom" cede
+   * a vez a um componente próprio — a timeline não cabe numa dica de tooltip,
+   * é uma sequência animada, e forçá-la ali seria brigar com a ferramenta em
+   * vez de usá-la.
+   */
+  kind?: "popover" | "custom"
+  /** Alvo do destaque. Só os passos "popover" precisam disto. */
+  selector?: string
   title: string
   description: string
   /**
@@ -94,6 +101,18 @@ export function buildDemoTour(niche: string): DemoTourStep[] {
       selector: '[data-tour="registro-form"]',
       title: "Registre o que foi feito",
       description: `Aqui isso se chama ${prontuario}. Fica no histórico do ${cliente} e você recupera na próxima visita, sem depender da memória.`,
+    },
+    {
+      // Continua na mesma rota da nota — não precisa de navegação nem de
+      // alvo na tela, é um modal por cima de tudo. Fica por último porque
+      // fecha o arco com o compromisso que o próprio visitante marcou, antes
+      // do próximo passo mostrar o aviso saindo de verdade.
+      id: "timeline",
+      match: /^\/clientes\/[^/]+/,
+      kind: "custom",
+      title: "Enquanto isso, nos bastidores",
+      description:
+        "Mostra os avisos automáticos que o Eliza dispara antes de um compromisso, sem esperar o relógio de verdade chegar lá.",
     },
   ]
 }
