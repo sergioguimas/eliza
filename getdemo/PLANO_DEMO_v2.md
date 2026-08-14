@@ -391,10 +391,64 @@ da sessão, nunca do cliente.
 
 # FASE 6 — Defaults de agendamento
 
-`hooks/use-demo-appointment-defaults.ts`: primeiro slot livre real (via `get-available-slots`),
-serviço e cliente do seed pré-selecionados, **todos os campos editáveis**.
+Implementado em [get-appointment-defaults.ts](../web/app/actions/demo/get-appointment-defaults.ts)
+(server action, reconfirma `is_demo` por service role) e
+[use-demo-appointment-defaults.ts](../web/hooks/use-demo-appointment-defaults.ts) (hook client
+que a chama ao montar `CalendarView`, antes de qualquer clique).
 
-Tour só avança quando o agendamento existe no banco.
+**O que entra pré-preenchido:** o primeiro profissional do seed, o primeiro serviço, o
+**segundo** cliente do seed — o "novo", que fica sem nenhum agendamento na semeadura, então
+marcá-lo fecha uma lacuna real da agenda em vez de empilhar mais um horário no mesmo nome — e
+o primeiro slot **livre de verdade**, calculado com `getAvailableSlots` andando dia a dia (até
+10) a partir de hoje. Todos os campos continuam editáveis; nada aqui é somente-leitura.
+
+**Três pontos de entrada, dois recebem os defaults:**
+- Botão "Novo horário" na barra da agenda → defaults completos
+- Atalho `?new=true` do dashboard (sem `customer_id`) → defaults completos, com a montagem do
+  formulário **esperando** o fetch resolver, porque é a única entrada onde vale a pena: o
+  fetch já está em voo desde que a página carregou
+- Clique direito num dia/horário específico, e `?new=true&customer_id=X` do fluxo de retorno →
+  **sem alteração**. O primeiro é escolha deliberada do visitante; o segundo já traz o cliente
+  certo e sobrepor um serviço ou horário genérico seria pior, não melhor
+
+**Tour só avança quando o agendamento existe no banco — implementado com um evento, não com
+o clique em "Entendi".** `create-appointment-dialog.tsx` dispara `window.dispatchEvent(new
+CustomEvent("eliza:appointment-created"))` no sucesso — genérico, não gated por demo, inofensivo
+para qualquer tenant porque só o tour escuta. `tour.ts` ganhou `awaitsEvent`, e o passo
+"novo-agendamento" o usa: sem botão de avançar, só o evento resolve o passo.
+
+⚠️ **Vazamento encontrado e corrigido durante a implementação.** A primeira versão guardava o
+listener numa variável local dentro de `show()`. Se o visitante saísse da rota sem criar o
+agendamento, o listener ficava pendurado no `window` — e se disparasse mais tarde, em outro
+passo, `advance()` usaria o `index` capturado no closure antigo e corrompia o progresso já
+salvo. Corrigido movendo a posse do listener para `destroyActive()`, a única função que já é
+chamada em todo lugar que precisa desmontar o passo atual (início de cada novo passo, abandono,
+unmount do componente) — verificado disparando o evento manualmente depois de fechar o tour sem
+criar nada: progresso não se alterou.
+
+### Descoberta fora do escopo
+
+O botão de criar agendamento (agenda e diálogo) mostra `"Novo {agendamento}"` sem concordar
+gênero — em `clinica`, onde a entidade é "Consulta" (feminino), o botão fica "Novo consulta".
+Pré-existente, independente da demo, e visível na primeira tela onde o tour manda clicar.
+Não corrigido aqui — mesma categoria do problema de concordância que apareceu no texto do
+tour na Fase 5, mas desta vez em UI do produto, não em copy que eu controlo.
+
+### Testes
+
+Verificado contra o banco de produção, em quatro nichos (clínica, tatuador, barbearia):
+- [x] Botão "Novo horário" abre com profissional, serviço, cliente e horário do seed
+- [x] Slot calculado não colide com o compromisso já semeado (mesmo profissional, horários
+      diferentes) — prova de que lê agenda real, não só disponibilidade estática
+- [x] Fora do expediente (21h), avança corretamente para o próximo dia útil às 09:00 (horário
+      da disponibilidade do profissional, mais restrito que o da organização)
+- [x] Atalho do dashboard (`?new=true` sem `customer_id`) espera os defaults e abre preenchido
+- [x] Fluxo de retorno (`?new=true&customer_id=X`) preserva o cliente da URL, sem serviço
+      injetado — não interferido pelos defaults da demo
+- [x] Criar o agendamento avança o tour sozinho, sem clique em "Entendi";
+      `demo_interactions` grava `step_completed` no passo certo
+- [x] Fechar o tour sem criar grava `tour_abandoned`; evento disparado depois não corrompe
+      o progresso salvo
 
 **Tempo:** 3–4h
 
@@ -580,7 +634,7 @@ reverter é desligar a rota `/demo/start`, sem tocar em dados de produção.
 | 3. Seed por nicho | 4–5h | 🟢 **DONE** (7 nichos verificados) |
 | 4. Página `/demo/start` | 3h | 🟢 **DONE** (verificado no browser) |
 | 5. Tour guiado | 6–8h | 🟢 **DONE** (6 passos; 7–8 nas Fases 8 e 10) |
-| 6. Defaults de agendamento | 3–4h | 🔴 TODO |
+| 6. Defaults de agendamento | 3–4h | 🟢 **DONE** (verificado em 4 nichos, sem colisão de horário) |
 | 7. Timeline fast-forward | 5–6h | 🔴 TODO |
 | 8. WhatsApp real + controles de abuso | 6–7h | 🔴 TODO |
 | 9. Reset e cleanup | 4h | 🟢 **DONE** (cron verificado; reset sem caller até a Fase 10) |

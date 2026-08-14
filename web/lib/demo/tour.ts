@@ -15,6 +15,13 @@ export type DemoTourStep = {
    * rota seguinte.
    */
   awaitsNavigation?: boolean
+  /**
+   * Passo que só avança quando um evento do produto dispara — não com um
+   * clique em "Entendi". Existe para o agendamento: sem isso, o visitante
+   * podia dispensar o balão sem ter salvo nada, e o tour seguiria como se
+   * tivesse.
+   */
+  awaitsEvent?: string
 }
 
 /**
@@ -63,7 +70,8 @@ export function buildDemoTour(niche: string): DemoTourStep[] {
       match: /^\/agendamentos/,
       selector: '[data-tour="novo-agendamento"]',
       title: "Marque na agenda",
-      description: `Clique aqui e preencha. ${entities.profissional_plural}, ${entities.servico_plural} e ${entities.cliente_plural} já estão cadastrados — é só escolher e salvar.`,
+      description: `Clique aqui. Já vem com um horário livre, ${entities.profissional_plural.toLowerCase()}, ${entities.servico_plural.toLowerCase()} e ${entities.cliente_plural.toLowerCase()} preenchidos — mude o que quiser e salve.`,
+      awaitsEvent: "eliza:appointment-created",
     },
     {
       id: "concluir",
