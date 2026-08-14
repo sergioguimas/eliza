@@ -114,5 +114,14 @@ export function buildDemoTour(niche: string): DemoTourStep[] {
       description:
         "Mostra os avisos automáticos que o Eliza dispara antes de um compromisso, sem esperar o relógio de verdade chegar lá.",
     },
+    {
+      // Último passo — mesma rota, mesmo motivo do anterior. `stepNumber`
+      // aqui é 8, o teto que `demo_interactions_step_number_check` já previa.
+      id: "cta",
+      match: /^\/clientes\/[^/]+/,
+      kind: "custom",
+      title: "Fim do tour",
+      description: "Resumo do que foi feito, contato e opção de recomeçar.",
+    },
   ]
 }

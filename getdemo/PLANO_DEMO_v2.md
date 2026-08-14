@@ -635,11 +635,51 @@ Linha na crontab da VPS, de hora em hora:
 
 ---
 
-# FASE 10 — CTA final e captura de lead
+# FASE 10 — CTA final, captura de lead e reset
 
-Passo 8 do tour: resumo do que o visitante fez (contado de `demo_interactions`),
-form curto (nome + email ou WhatsApp), grava em `demo_leads`, log `lead_captured`,
-notificação para você. Botão secundário: reiniciar tour.
+Implementada antes da Fase 8, por decisão do Sérgio — fecha o loop do reset (Fase 9), que
+estava sem quem o chamasse.
+
+Passo 8 do tour (`kind: "custom"`, o segundo depois da timeline — `stepNumber` bate exatamente
+com o teto de 8 que `demo_interactions_step_number_check` já previa).
+[tour-cta.tsx](../web/components/demo/tour-cta.tsx): resumo do que o visitante fez, form de
+nome + contato, e "Recomeçar a demonstração".
+
+**Sem notificação a você.** Decisão explícita: não há e-mail (nem Resend/SMTP) nem WhatsApp
+(a Fase 8 não existe ainda) configurado no projeto. O lead fica em `demo_leads`, consultável
+quando quiser. Plugar aviso automático fica para quando um dos dois canais existir.
+
+**O resumo lê `demo_interactions`, não conta linhas de `appointments`/`service_records`.**
+A organização já nasce com dados do seed — contar entidades misturaria o que veio pronto com
+o que o visitante realmente fez. [get-demo-recap.ts](../web/app/actions/demo/get-demo-recap.ts)
+extrai os `metadata->>step` distintos entre os `step_completed` daquela org.
+
+**Terminar aqui conta como tour concluído, com ou sem lead.** "Só terminar" chama a mesma
+`onDone` que o envio bem-sucedido — só o fechamento implícito (X, Esc, clique fora) é abandono.
+Chegar até o último passo já significa que o visitante viu tudo; declinar o contato não é a
+mesma coisa que sair no meio do caminho.
+
+**Reset ligado ao botão:** chama `resetDemo()` (Fase 9), limpa o progresso do tour no
+`localStorage` e navega para `/dashboard` — a reseed troca os ids de clientes/agendamentos, e
+a rota atual (`/clientes/[id]`) fica apontando para um registro que não existe mais.
+
+⚠️ **Bug de ordem encontrado e corrigido na verificação.** A primeira versão limpava o
+`localStorage` **antes** de chamar `onDone()` — mas `onDone()` (via `advance()`) persiste
+`{done:true}` na mesma chave, reescrevendo por cima do que acabara de ser removido. O reset em
+si funcionava (dados trocavam de id, corretamente), só o tour nunca voltava a aparecer depois.
+Corrigido invertendo a ordem: `onDone()` primeiro, `removeItem` depois.
+
+### Testes
+
+Verificado contra produção:
+- [x] Resumo mostra só os passos com `step_completed` real, na ordem narrativa certa —
+      confirmado com 4 de 5 itens presentes e "timeline" corretamente ausente
+- [x] Envio do lead grava em `demo_leads` com os campos certos, loga `lead_captured` (passo 8)
+      e `tour_completed` em seguida
+- [x] "Só terminar" não grava lead, mas loga `tour_completed` mesmo assim
+- [x] Reset: nova geração de clientes/agendamentos com ids diferentes dos anteriores,
+      `organization_settings` preservada, tour reaparece do passo 1 depois do reset
+- [x] Zero erro de console em toda a sequência
 
 **Tempo:** 3–4h
 
@@ -682,7 +722,7 @@ reverter é desligar a rota `/demo/start`, sem tocar em dados de produção.
 | 7. Timeline fast-forward | 5–6h | 🟢 **DONE** (verificado em 2 nichos, idempotência confirmada) |
 | 8. WhatsApp real + controles de abuso | 6–7h | 🔴 TODO |
 | 9. Reset e cleanup | 4h | 🟢 **DONE** (cron verificado; reset sem caller até a Fase 10) |
-| 10. CTA e lead | 3–4h | 🔴 TODO |
+| 10. CTA, lead e reset | 3–4h | 🟢 **DONE** (feita antes da 8; fecha o loop do reset) |
 | 11. Testes | 5–6h | 🔴 TODO |
 | 12. Deploy | 1 dia | 🔴 TODO |
 

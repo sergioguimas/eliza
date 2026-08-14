@@ -7,6 +7,7 @@ import "driver.js/dist/driver.css"
 import { buildDemoTour, type DemoTourStep } from "@/lib/demo/tour"
 import { logDemoInteraction } from "@/app/actions/demo/log-demo-interaction"
 import { TimelineSimulation } from "@/components/demo/timeline-simulation"
+import { TourCta } from "@/components/demo/tour-cta"
 
 type TourGuideProps = {
   organizationId: string
@@ -280,16 +281,21 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
 
   useEffect(() => () => destroyActive(), [destroyActive])
 
-  // Só existe um passo "custom" hoje (a timeline). Se um segundo aparecer, é
-  // aqui que vira um mapa de id → componente em vez de um if solto.
-  if (customStep?.id === "timeline") {
-    return (
-      <TimelineSimulation
-        onDone={() => customAdvanceRef.current?.()}
-        onSkip={() => customAbandonRef.current?.()}
-      />
-    )
-  }
+  const onDone = () => customAdvanceRef.current?.()
+  const onSkip = () => customAbandonRef.current?.()
 
-  return null
+  switch (customStep?.id) {
+    case "timeline":
+      return <TimelineSimulation onDone={onDone} onSkip={onSkip} />
+    case "cta":
+      return (
+        <TourCta
+          organizationId={organizationId}
+          onDone={onDone}
+          onSkip={onSkip}
+        />
+      )
+    default:
+      return null
+  }
 }
