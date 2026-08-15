@@ -284,7 +284,9 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
           // caminho assim que o passo aparece, disparada pelo passo
           // anterior. Não há clique pra escutar aqui: dá um instante pro
           // visitante ler o balão, depois libera a página por conta própria.
-          const timer = setTimeout(hidePopoverOnly, 1500)
+          // 4s, não 1.5s — o texto tem duas frases, e 1.5s não dava tempo
+          // de ler antes do balão sumir sozinho (relato do Sérgio).
+          const timer = setTimeout(hidePopoverOnly, 4000)
           eventCleanupRef.current = () => {
             window.removeEventListener(eventName, handler)
             clearTimeout(timer)

@@ -173,6 +173,21 @@ export function buildDemoTour(niche: string): DemoTourStep[] {
       autoRevealed: true,
     },
     {
+      // Continua na mesma rota da nota — não precisa de navegação nem de
+      // alvo na tela, é um modal por cima de tudo. Antes do pagamento, não
+      // depois: o aviso automático narra o que acontece ANTES do
+      // compromisso (lembrete, confirmação) — mostrar isso só depois de já
+      // ter marcado como pago inverte a ordem cronológica real e confunde
+      // (relato do Sérgio). Fecha o arco do compromisso que o visitante
+      // marcou, mas antes de fechar a conta.
+      id: "timeline",
+      match: /^\/clientes\/[^/]+/,
+      kind: "custom",
+      title: "Enquanto isso, nos bastidores",
+      description:
+        "Mostra os avisos automáticos que o Eliza dispara antes de um compromisso, sem esperar o relógio de verdade chegar lá.",
+    },
+    {
       // Aponta para o GATILHO da aba, não para o conteúdo dela: a aba
       // "Prontuário" é a que vem aberta por padrão (preserva o fluxo de
       // retorno automático, que depende disso), então o conteúdo da aba
@@ -184,18 +199,6 @@ export function buildDemoTour(niche: string): DemoTourStep[] {
       title: "Confirme o pagamento",
       description: `Clique aqui, encontre o atendimento que você acabou de finalizar e confirme a forma de pagamento — mesmo menu de antes.`,
       awaitsEvent: "eliza:appointment-paid",
-    },
-    {
-      // Continua na mesma rota da nota — não precisa de navegação nem de
-      // alvo na tela, é um modal por cima de tudo. Fica por último porque
-      // fecha o arco com o compromisso que o próprio visitante marcou, antes
-      // do próximo passo mostrar o aviso saindo de verdade.
-      id: "timeline",
-      match: /^\/clientes\/[^/]+/,
-      kind: "custom",
-      title: "Enquanto isso, nos bastidores",
-      description:
-        "Mostra os avisos automáticos que o Eliza dispara antes de um compromisso, sem esperar o relógio de verdade chegar lá.",
     },
     {
       // Último passo — mesma rota, mesmo motivo do anterior. `stepNumber`

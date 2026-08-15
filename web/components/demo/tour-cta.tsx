@@ -46,8 +46,8 @@ const RECAP_ORDER = [
   "prontuario",
   "retorno",
   "retorno-agendamento",
-  "pago",
   "timeline",
+  "pago",
 ]
 
 type TourCtaProps = {
