@@ -41,13 +41,27 @@ type ProfileWithOrg = Database["public"]["Tables"]["profiles"]["Row"] & {
   > | null
 }
 
-function getBrazilDayRange() {
-  const brazilDateStr = new Date().toLocaleDateString("en-CA", {
+function getBrazilDateStr(date: Date) {
+  return date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" })
+}
+
+function getBrazilDayBounds(dateStr: string) {
+  return {
+    start: `${dateStr}T00:00:00-03:00`,
+    end: `${dateStr}T23:59:59-03:00`,
+  }
+}
+
+// "seg., 17/08" — usado no badge de contagem quando o dia mais próximo com
+// compromissos não é hoje. Curto de propósito: é uma pill pequena, não cabe
+// "segunda-feira, 17 de agosto" sem quebrar layout.
+function formatShortDayLabel(dateStr: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
     timeZone: "America/Sao_Paulo",
-  })
-  const start = `${brazilDateStr}T00:00:00-03:00`
-  const end = `${brazilDateStr}T23:59:59-03:00`
-  return { start, end }
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+  }).format(new Date(`${dateStr}T12:00:00-03:00`))
 }
 
 export const dynamic = "force-dynamic"
@@ -91,10 +105,20 @@ export default async function DashboardPage() {
     dict.messages?.dashboard_description ||
     "Aqui está o resumo operacional de hoje."
 
-  const { start: todayStart, end: todayEnd } = getBrazilDayRange()
+  const todayDateStr = getBrazilDateStr(new Date())
+  const { start: todayStart } = getBrazilDayBounds(todayDateStr)
   const { start: monthStart, end: monthEnd } = getFinancialMonthRange()
 
-  const [resServices, resCustomers, resToday, resAll, resMonthRevenue] = await Promise.all([
+  // Janela de 14 dias, não só hoje: "Próximos compromissos" existe pra
+  // mostrar a agenda viva, e travar em "hoje" faz a lista ficar vazia sem
+  // motivo real num fim de semana ou início de semana devagar, mesmo com
+  // compromissos marcados pra daqui a dois dias. O card de KPI "Hoje" acima
+  // continua literal — aqui é só a lista.
+  const windowEndDate = new Date()
+  windowEndDate.setDate(windowEndDate.getDate() + 14)
+  const { end: windowEnd } = getBrazilDayBounds(getBrazilDateStr(windowEndDate))
+
+  const [resServices, resCustomers, resUpcoming, resAll, resMonthRevenue] = await Promise.all([
     supabase
       .from("services")
       .select("*", { count: "exact", head: true })
@@ -123,9 +147,10 @@ export default async function DashboardPage() {
       `)
       .eq("organization_id", orgId)
       .gte("start_time", todayStart)
-      .lte("start_time", todayEnd)
+      .lte("start_time", windowEnd)
       .neq("status", "canceled")
-      .order("start_time", { ascending: true }),
+      .order("start_time", { ascending: true })
+      .limit(50),
 
     supabase
       .from("appointments")
@@ -159,7 +184,7 @@ export default async function DashboardPage() {
     .eq("organization_id", orgId)
     .order("start_time", { ascending: true })
 
-  const todayAppointments = (resToday.data || []).map((app: any) => ({
+  const upcomingAppointments = (resUpcoming.data || []).map((app: any) => ({
     ...app,
     customers: { name: app.customers?.name || "Sem nome" },
     services: {
@@ -167,6 +192,30 @@ export default async function DashboardPage() {
       color: app.services?.color,
     },
   }))
+
+  // Card de KPI "Hoje" continua literal — conta certo é zero num dia sem
+  // nada marcado.
+  const todayAppointments = upcomingAppointments.filter(
+    (app) => getBrazilDateStr(new Date(app.start_time)) === todayDateStr
+  )
+
+  // A lista mostra o dia mais próximo que tem algo marcado, não trava em
+  // "hoje": como a janela buscada já vem ordenada por `start_time`, é só o
+  // dia do primeiro resultado. Sem resultado nenhum na janela, cai em hoje
+  // mesmo (lista vazia, com a mensagem de sempre).
+  const nextDayWithAppointments =
+    upcomingAppointments.length > 0
+      ? getBrazilDateStr(new Date(upcomingAppointments[0].start_time))
+      : todayDateStr
+
+  const displayAppointments = upcomingAppointments.filter(
+    (app) => getBrazilDateStr(new Date(app.start_time)) === nextDayWithAppointments
+  )
+
+  const displayDayLabel =
+    nextDayWithAppointments === todayDateStr
+      ? "hoje"
+      : formatShortDayLabel(nextDayWithAppointments)
 
   const totalCustomers = resCustomers.data?.length || 0
   const totalPendingRequests = pendingRequests?.length || 0
@@ -338,13 +387,13 @@ export default async function DashboardPage() {
             Próximos {agendamentoPlural.toLowerCase()}
           </h3>
           <span className="text-xs text-muted-foreground bg-card px-2 py-1 rounded-full border border-border">
-            {todayAppointments.length} hoje
+            {displayAppointments.length} {displayDayLabel}
           </span>
         </div>
 
         <div className="grid gap-3">
-          {todayAppointments.length > 0 ? (
-            todayAppointments.map((app: any) => (
+          {displayAppointments.length > 0 ? (
+            displayAppointments.map((app: any) => (
               <AppointmentContextMenu key={app.id} appointment={app}>
                 <Card
                   className="bg-card border-border p-4 border-l-10 cursor-context-menu hover:bg-accent/50 transition-all group relative overflow-hidden"
