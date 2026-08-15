@@ -24,6 +24,7 @@ export function ReturnModalWrapper({
 
       const query = params.toString()
       router.push(query ? `?${query}` : "?", { scroll: false })
+      window.dispatchEvent(new CustomEvent("eliza:return-resolved"))
     }
   }
 
@@ -38,6 +39,7 @@ export function ReturnModalWrapper({
       params.set("date", date.toISOString().split("T")[0])
     }
 
+    window.dispatchEvent(new CustomEvent("eliza:return-resolved"))
     router.push(`/agendamentos?${params.toString()}`)
   }
 

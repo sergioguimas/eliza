@@ -26,14 +26,16 @@ const RECAP_LABELS: Record<string, string> = {
   timeline: "Acompanhou os avisos automáticos",
 }
 
-// "finalizado" fica de fora de propósito: é um passo `awaitsNavigation`, e
-// esses nunca geram `step_completed` — completam quando a rota muda, não por
-// um `advance()` explícito, e só `advance()` loga telemetria. Não é uma
-// lacuna nova: o "concluir" original tinha exatamente a mesma característica.
+// "voltar-dashboard" e "finalizado" ficam de fora de propósito: são passos
+// `awaitsNavigation`, e esses nunca geram `step_completed` — completam quando
+// a rota muda, não por um `advance()` explícito, e só `advance()` loga
+// telemetria. Não é uma lacuna nova: o "concluir" original tinha exatamente a
+// mesma característica.
 //
 // Ordem de leitura do checklist — não é a ordem em que os passos completam
-// (a "steps" set não guarda isso), mas a ordem narrativa do tour.
-const RECAP_ORDER = ["novo-agendamento", "chegou", "pago", "retorno", "prontuario", "timeline"]
+// (a "steps" set não guarda isso), mas a ordem narrativa do tour (que agora é
+// prontuário → retorno → pago, não mais pago → retorno → prontuário).
+const RECAP_ORDER = ["novo-agendamento", "chegou", "prontuario", "retorno", "pago", "timeline"]
 
 type TourCtaProps = {
   organizationId: string

@@ -331,7 +331,7 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4" data-tour="dashboard-proximos">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-medium text-foreground flex items-center gap-2">
             <Clock className="h-5 w-5 text-blue-500" />

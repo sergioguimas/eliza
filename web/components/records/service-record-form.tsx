@@ -113,6 +113,7 @@ export function ServiceRecordForm({
         const url = new URL(window.location.href)
         url.searchParams.set("show_return_modal", "true")
         window.history.pushState({}, "", url)
+        window.dispatchEvent(new CustomEvent("eliza:record-saved"))
       }
 
       setAppointmentId(null)
@@ -202,6 +203,7 @@ export function ServiceRecordForm({
                 url.searchParams.set("show_return_modal", "true")
                 url.searchParams.delete("return_check")
                 window.history.pushState({}, "", url)
+                window.dispatchEvent(new CustomEvent("eliza:record-saved"))
                 setAppointmentId(null)
               }}
             >

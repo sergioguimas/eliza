@@ -65,11 +65,27 @@ export async function createServiceRecord(customerId: string, content: string, o
 
   if (!profile?.organization_id) return { error: 'Organização não encontrada' }
 
+  // `professional_id` referencia `professionals.id`, não o usuário logado —
+  // são tabelas distintas (multi-profissional). O profissional do
+  // atendimento vem do agendamento vinculado, quando houver.
+  let professionalId: string | null = null
+
+  if (appointmentId) {
+    const { data: appointment } = await supabase
+      .from('appointments')
+      .select('professional_id')
+      .eq('id', appointmentId)
+      .single()
+
+    professionalId = appointment?.professional_id ?? null
+  }
+
   const { error } = await (supabase.from('service_records'))
     .insert({
       organization_id: profile.organization_id,
       customer_id: customerId,
-      professional_id: user.id,
+      professional_id: professionalId,
+      created_by_profile_id: user.id,
       content,
       tags: selectedTags,
       appointment_id: appointmentId || null,

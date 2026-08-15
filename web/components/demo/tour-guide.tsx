@@ -135,6 +135,18 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
     setCustomStep(null)
   }, [])
 
+  // Derruba só a apresentação visual do driver.js (popover + overlay), sem
+  // tocar no listener do `awaitsEvent` nem no progresso salvo. O passo
+  // continua logicamente ativo — só a parte que bloqueava cliques na página
+  // some. Existe porque o overlay do driver.js captura todo clique fora do
+  // elemento destacado; quando o próprio clique nesse elemento revela uma UI
+  // nova maior que ele (um diálogo centralizado, o conteúdo de uma aba), o
+  // overlay continua de pé bloqueando essa UI nova.
+  const hidePopoverOnly = useCallback(() => {
+    driverRef.current?.destroy()
+    driverRef.current = null
+  }, [])
+
   const persist = useCallback(
     (progress: Progress) => writeProgress(storageKey, progress),
     [storageKey]
@@ -225,7 +237,14 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
       destroyActive()
 
       const instance = driver({
-        allowClose: true,
+        allowClose: false,
+        // Clique fora do elemento destacado não faz nada — nem fecha nem
+        // avança. Sem isso, o comportamento padrão do driver.js destrói o
+        // tour inteiro no primeiro clique acidental fora do balão. O botão
+        // "×" nunca fica visível (não entra em `showButtons`), então não
+        // existe hoje nenhuma saída deliberada pela UI — `onCloseClick` fica
+        // órfã na prática, mantida só para o tipo do driver.js.
+        overlayClickBehavior: () => {},
         overlayOpacity: 0.6,
         stagePadding: 8,
         stageRadius: 12,
@@ -236,13 +255,38 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
         onCloseClick: abandonStep,
       })
 
+      // O CSS do driver.js desativa pointer-events na página inteira
+      // enquanto o overlay está ativo (`.driver-active *{pointer-events:none}`),
+      // com exceção só do elemento destacado e do próprio popover. Qualquer
+      // UI que abra por portal — diálogo, dropdown, menu de contexto,
+      // conteúdo de aba — nasce FORA do elemento destacado e fica travada
+      // enquanto o overlay durar. Por isso todo passo derruba a
+      // apresentação assim que o visitante clica no alvo, não só os que
+      // esperam evento: o clique costuma ser exatamente o que abre a UI que
+      // precisa ficar clicável.
+      element.addEventListener("click", hidePopoverOnly, { once: true })
+
       if (step.awaitsEvent) {
         const eventName = step.awaitsEvent
         const handler = () => advance()
 
         window.addEventListener(eventName, handler, { once: true })
-        eventCleanupRef.current = () =>
-          window.removeEventListener(eventName, handler)
+
+        if (step.autoRevealed) {
+          // A UI que resolve este passo (o modal automático de retorno)
+          // não nasce de um clique no elemento destacado — já está a
+          // caminho assim que o passo aparece, disparada pelo passo
+          // anterior. Não há clique pra escutar aqui: dá um instante pro
+          // visitante ler o balão, depois libera a página por conta própria.
+          const timer = setTimeout(hidePopoverOnly, 1500)
+          eventCleanupRef.current = () => {
+            window.removeEventListener(eventName, handler)
+            clearTimeout(timer)
+          }
+        } else {
+          eventCleanupRef.current = () =>
+            window.removeEventListener(eventName, handler)
+        }
       }
 
       driverRef.current = instance
@@ -277,7 +321,7 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
     return () => {
       cancelled = true
     }
-  }, [pathname, steps, storageKey, destroyActive, persist])
+  }, [pathname, steps, storageKey, destroyActive, persist, hidePopoverOnly])
 
   useEffect(() => () => destroyActive(), [destroyActive])
 
