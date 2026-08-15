@@ -369,54 +369,67 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      <div className="space-y-4" data-tour="dashboard-proximos">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-foreground flex items-center gap-2">
-            <Clock className="h-5 w-5 text-blue-500" />
-            {agendamentoPlural} de hoje
-          </h3>
-          <span className="text-xs text-muted-foreground bg-card px-2 py-1 rounded-full border border-border">
-            {todayAppointments.length} hoje
-          </span>
-        </div>
-
-        <div className="grid gap-3">
-          {todayAppointments.length > 0 ? (
-            todayAppointments.map((app: any) => (
-              <AppointmentRow key={app.id} app={app} />
-            ))
-          ) : (
-            <div className="text-muted-foreground italic p-12 border border-dashed border-border rounded-xl text-center bg-card/50">
-              Nenhum {agendamentoSingular.toLowerCase()} para hoje.
-            </div>
-          )}
-        </div>
-      </div>
-
       {/*
-        Só aparece quando há algo além de hoje — sem isso, um dia comum (a
-        maioria) mostraria um bloco "Próximos dias" permanentemente vazio,
-        ocupando espaço por nada.
+        `data-tour="dashboard-proximos"` fica no container dos DOIS blocos,
+        não só no de hoje: o passo do tour que pede pra marcar
+        chegada/finalização não sabe de antemão se o compromisso vai cair
+        em "Hoje" ou em "Próximos dias" (depende só de o dia da demo cair
+        num dia útil, fora do controle do visitante). O overlay do driver.js
+        bloqueia pointer-events em tudo fora do elemento destacado — se o
+        anchor cobrisse só "Hoje", o card em "Próximos dias" ficaria
+        clicável na tela mas travado por baixo sempre que hoje estivesse
+        vazio.
       */}
-      {futureAppointments.length > 0 && (
+      <div className="space-y-8" data-tour="dashboard-proximos">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-medium text-foreground flex items-center gap-2">
-              <CalendarDays className="h-5 w-5 text-purple-500" />
-              Próximos dias
+              <Clock className="h-5 w-5 text-blue-500" />
+              {agendamentoPlural} de hoje
             </h3>
             <span className="text-xs text-muted-foreground bg-card px-2 py-1 rounded-full border border-border">
-              {futureAppointments.length}
+              {todayAppointments.length} hoje
             </span>
           </div>
 
           <div className="grid gap-3">
-            {futureAppointments.map((app: any) => (
-              <AppointmentRow key={app.id} app={app} showDayLabel />
-            ))}
+            {todayAppointments.length > 0 ? (
+              todayAppointments.map((app: any) => (
+                <AppointmentRow key={app.id} app={app} />
+              ))
+            ) : (
+              <div className="text-muted-foreground italic p-12 border border-dashed border-border rounded-xl text-center bg-card/50">
+                Nenhum {agendamentoSingular.toLowerCase()} para hoje.
+              </div>
+            )}
           </div>
         </div>
-      )}
+
+        {/*
+          Só aparece quando há algo além de hoje — sem isso, um dia comum (a
+          maioria) mostraria um bloco "Próximos dias" permanentemente vazio,
+          ocupando espaço por nada.
+        */}
+        {futureAppointments.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium text-foreground flex items-center gap-2">
+                <CalendarDays className="h-5 w-5 text-purple-500" />
+                Próximos dias
+              </h3>
+              <span className="text-xs text-muted-foreground bg-card px-2 py-1 rounded-full border border-border">
+                {futureAppointments.length}
+              </span>
+            </div>
+
+            <div className="grid gap-3">
+              {futureAppointments.map((app: any) => (
+                <AppointmentRow key={app.id} app={app} showDayLabel />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
