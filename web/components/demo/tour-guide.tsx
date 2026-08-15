@@ -222,14 +222,19 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
         return
       }
 
-      const element = await waitForElement(step.selector!)
+      // Passos sem `selector` (ex.: "retorno") não têm um alvo real na tela —
+      // a UI que respondem é um modal que abre sozinho, não um elemento pra
+      // destacar. `element` fica `null` de propósito, e o driver.js centraliza
+      // o popover sozinho (seu próprio elemento-fantasma interno) quando
+      // `highlight()` não recebe `element`.
+      const element = step.selector ? await waitForElement(step.selector) : null
 
       if (cancelled) return
 
       // Some com o balão anterior mesmo quando o próximo alvo não aparece.
       // Sem isto, sair de uma rota para outra onde o passo não existe deixava o
       // balão da tela antiga preso, falando de algo que não está mais ali.
-      if (!element) {
+      if (step.selector && !element) {
         destroyActive()
         return
       }
@@ -263,8 +268,9 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
       // enquanto o overlay durar. Por isso todo passo derruba a
       // apresentação assim que o visitante clica no alvo, não só os que
       // esperam evento: o clique costuma ser exatamente o que abre a UI que
-      // precisa ficar clicável.
-      element.addEventListener("click", hidePopoverOnly, { once: true })
+      // precisa ficar clicável. Sem elemento (passo autoRevealed), não há o
+      // que escutar — o timer abaixo cuida disso.
+      element?.addEventListener("click", hidePopoverOnly, { once: true })
 
       if (step.awaitsEvent) {
         const eventName = step.awaitsEvent
@@ -294,8 +300,9 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
 
       // Passa o elemento já resolvido, não o seletor: deixar o driver refazer a
       // busca reintroduziria o problema do alvo escondido do outro layout.
+      // Sem elemento, o driver.js centraliza o popover sozinho.
       instance.highlight({
-        element,
+        ...(element ? { element } : {}),
         popover: {
           title: step.title,
           description: step.description,

@@ -144,15 +144,32 @@ export function buildDemoTour(niche: string): DemoTourStep[] {
     },
     {
       // O modal de retorno abre sozinho, disparado pelo passo anterior
-      // (prontuário salvo) — não por um clique aqui. `autoRevealed` faz o
-      // motor do tour derrubar a apresentação num timer, em vez de esperar
-      // um clique no elemento destacado que nunca vai vir.
+      // (prontuário salvo) — não por um clique aqui. Sem `selector` de
+      // propósito: não há elemento real pra destacar (a UI é o modal, não a
+      // ficha por baixo dele), então o driver.js centraliza o popover
+      // sozinho. `autoRevealed` faz o motor do tour derrubar a apresentação
+      // num timer, em vez de esperar um clique que nunca vai vir.
       id: "retorno",
       match: /^\/clientes\/[^/]+/,
-      selector: '[data-tour="ficha-cliente"]',
       title: "Já deixe o retorno marcado",
       description: `Assim que o atendimento termina, o Eliza pergunta se você quer agendar o próximo. É o que faz ${clientes} voltarem sem você precisar correr atrás.`,
       awaitsEvent: "eliza:return-resolved",
+      autoRevealed: true,
+    },
+    {
+      // Só acontece num dos dois caminhos de saída do passo anterior: se o
+      // visitante escolher um preset de dias (ou "Escolher outra data"), o
+      // Eliza navega pra /agendamentos com o diálogo de criação já aberto
+      // (via `?customer_id=X&new=true`), cliente e data prontos. Se
+      // escolher "Agora não", a rota não muda — esse passo nunca chega a
+      // casar, e a reancoragem pula direto pra "pago". Mesmo mecanismo de
+      // "retorno": sem `selector`, autoRevealed, porque o diálogo também
+      // abre sozinho, não por clique num elemento destacado.
+      id: "retorno-agendamento",
+      match: /^\/agendamentos/,
+      title: "Finalize o retorno",
+      description: `Confirme os dados do retorno — já vem com ${cliente}, data e ${entities.servico.toLowerCase()} preenchidos — e salve. O Eliza leva você direto de volta.`,
+      awaitsEvent: "eliza:appointment-created",
       autoRevealed: true,
     },
     {
@@ -182,9 +199,10 @@ export function buildDemoTour(niche: string): DemoTourStep[] {
     },
     {
       // Último passo — mesma rota, mesmo motivo do anterior. `stepNumber`
-      // aqui é 11 (índice 10 + 1), depois que "voltar-dashboard" somou mais
-      // um passo ao tour — exige a migration que sobe o teto de
-      // `demo_interactions_step_number_check` junto.
+      // aqui é 12 (índice 11 + 1) — bate exatamente com o teto de
+      // `demo_interactions_step_number_check` (1..12), que já tinha folga
+      // pra este passo novo ("retorno-agendamento") sem precisar de outra
+      // migration.
       id: "cta",
       match: /^\/clientes\/[^/]+/,
       kind: "custom",

@@ -159,6 +159,16 @@ function CalendarContent({
     appointment: any | null
   }>({ open: false, appointment: null })
 
+  // Só a entrada por URL (`?customer_id=X&new=true`, vinda da ficha do
+  // cliente via return-modal-wrapper) marca isto — não o fluxo de retorno
+  // interno da própria agenda (`handleReturnConfirm`), que já fica na mesma
+  // página e não precisa de redirect nenhum ao salvar. É o sinal que
+  // `CreateAppointmentDialog` usa pra saber se deve voltar pra ficha do
+  // cliente depois de criar o agendamento de retorno.
+  const [returnFlowCustomerId, setReturnFlowCustomerId] = useState<
+    string | null
+  >(null)
+
   useEffect(() => {
     const isNew = searchParams.get("new") === "true"
     const customerId = searchParams.get("customer_id")
@@ -179,6 +189,7 @@ function CalendarContent({
           customerId: customerId || undefined,
           date: dateStr ? new Date(dateStr) : new Date(),
         })
+        if (customerId) setReturnFlowCustomerId(customerId)
       }
 
       setIsCreateOpen(true)
@@ -753,7 +764,10 @@ function CalendarContent({
         open={isCreateOpen}
         onOpenChange={(val) => {
           setIsCreateOpen(val)
-          if (!val) setPrefilledData(null)
+          if (!val) {
+            setPrefilledData(null)
+            setReturnFlowCustomerId(null)
+          }
         }}
         customers={customers}
         services={services}
@@ -765,6 +779,7 @@ function CalendarContent({
         preselectedProfessionalId={prefilledData?.professionalId || filterId}
         preselectedCustomerId={prefilledData?.customerId}
         preselectedServiceId={prefilledData?.serviceId}
+        returnToCustomerId={returnFlowCustomerId}
       />
 
       <ReturnPromptDialog
