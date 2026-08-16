@@ -42,11 +42,11 @@ const RECAP_LABELS: Record<string, string> = {
 // (a "steps" set não guarda isso), mas a ordem narrativa do tour.
 const RECAP_ORDER = [
   "novo-agendamento",
+  "timeline",
   "chegou",
   "prontuario",
   "retorno",
   "retorno-agendamento",
-  "timeline",
   "pago",
 ]
 

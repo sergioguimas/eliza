@@ -110,6 +110,20 @@ export function buildDemoTour(niche: string): DemoTourStep[] {
       awaitsNavigation: true,
     },
     {
+      // Mesma rota do passo anterior — chega no Dashboard e já mostra o
+      // aviso, antes de pedir pra confirmar chegada. Cronologicamente é
+      // aqui que o aviso automático faz sentido: ele narra o que acontece
+      // ANTES do compromisso (lembrete, confirmação do cliente) — mostrar
+      // isso só perto do fim, depois de já ter marcado como pago, inverte a
+      // ordem real e confunde (relato do Sérgio, duas rodadas seguidas).
+      id: "timeline",
+      match: /^\/dashboard/,
+      kind: "custom",
+      title: "Enquanto isso, nos bastidores",
+      description:
+        "Mostra os avisos automáticos que o Eliza dispara antes de um compromisso, sem esperar o relógio de verdade chegar lá.",
+    },
+    {
       // Ungated de propósito: "chegada" é um checkpoint informativo, não uma
       // ação que precise ser forçada — um profissional apressado pode ir
       // direto para "Finalizar", e isso é uso legítimo, não erro.
@@ -171,21 +185,6 @@ export function buildDemoTour(niche: string): DemoTourStep[] {
       description: `Confirme os dados do retorno — já vem com ${cliente}, data e ${entities.servico.toLowerCase()} preenchidos — e salve. O Eliza leva você direto de volta.`,
       awaitsEvent: "eliza:appointment-created",
       autoRevealed: true,
-    },
-    {
-      // Continua na mesma rota da nota — não precisa de navegação nem de
-      // alvo na tela, é um modal por cima de tudo. Antes do pagamento, não
-      // depois: o aviso automático narra o que acontece ANTES do
-      // compromisso (lembrete, confirmação) — mostrar isso só depois de já
-      // ter marcado como pago inverte a ordem cronológica real e confunde
-      // (relato do Sérgio). Fecha o arco do compromisso que o visitante
-      // marcou, mas antes de fechar a conta.
-      id: "timeline",
-      match: /^\/clientes\/[^/]+/,
-      kind: "custom",
-      title: "Enquanto isso, nos bastidores",
-      description:
-        "Mostra os avisos automáticos que o Eliza dispara antes de um compromisso, sem esperar o relógio de verdade chegar lá.",
     },
     {
       // Aponta para o GATILHO da aba, não para o conteúdo dela: a aba
