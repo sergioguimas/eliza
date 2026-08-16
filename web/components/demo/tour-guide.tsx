@@ -135,6 +135,18 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
     setCustomStep(null)
   }, [])
 
+  // Derruba só a apresentação visual do driver.js (popover + overlay), sem
+  // tocar no listener do `awaitsEvent` nem no progresso salvo. O passo
+  // continua logicamente ativo — só a parte que bloqueava cliques na página
+  // some. Existe porque o overlay do driver.js captura todo clique fora do
+  // elemento destacado; quando o próprio clique nesse elemento revela uma UI
+  // nova maior que ele (um diálogo centralizado, o conteúdo de uma aba), o
+  // overlay continua de pé bloqueando essa UI nova.
+  const hidePopoverOnly = useCallback(() => {
+    driverRef.current?.destroy()
+    driverRef.current = null
+  }, [])
+
   const persist = useCallback(
     (progress: Progress) => writeProgress(storageKey, progress),
     [storageKey]
@@ -210,14 +222,19 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
         return
       }
 
-      const element = await waitForElement(step.selector!)
+      // Passos sem `selector` (ex.: "retorno") não têm um alvo real na tela —
+      // a UI que respondem é um modal que abre sozinho, não um elemento pra
+      // destacar. `element` fica `null` de propósito, e o driver.js centraliza
+      // o popover sozinho (seu próprio elemento-fantasma interno) quando
+      // `highlight()` não recebe `element`.
+      const element = step.selector ? await waitForElement(step.selector) : null
 
       if (cancelled) return
 
       // Some com o balão anterior mesmo quando o próximo alvo não aparece.
       // Sem isto, sair de uma rota para outra onde o passo não existe deixava o
       // balão da tela antiga preso, falando de algo que não está mais ali.
-      if (!element) {
+      if (step.selector && !element) {
         destroyActive()
         return
       }
@@ -225,7 +242,14 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
       destroyActive()
 
       const instance = driver({
-        allowClose: true,
+        allowClose: false,
+        // Clique fora do elemento destacado não faz nada — nem fecha nem
+        // avança. Sem isso, o comportamento padrão do driver.js destrói o
+        // tour inteiro no primeiro clique acidental fora do balão. O botão
+        // "×" nunca fica visível (não entra em `showButtons`), então não
+        // existe hoje nenhuma saída deliberada pela UI — `onCloseClick` fica
+        // órfã na prática, mantida só para o tipo do driver.js.
+        overlayClickBehavior: () => {},
         overlayOpacity: 0.6,
         stagePadding: 8,
         stageRadius: 12,
@@ -236,13 +260,41 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
         onCloseClick: abandonStep,
       })
 
+      // O CSS do driver.js desativa pointer-events na página inteira
+      // enquanto o overlay está ativo (`.driver-active *{pointer-events:none}`),
+      // com exceção só do elemento destacado e do próprio popover. Qualquer
+      // UI que abra por portal — diálogo, dropdown, menu de contexto,
+      // conteúdo de aba — nasce FORA do elemento destacado e fica travada
+      // enquanto o overlay durar. Por isso todo passo derruba a
+      // apresentação assim que o visitante clica no alvo, não só os que
+      // esperam evento: o clique costuma ser exatamente o que abre a UI que
+      // precisa ficar clicável. Sem elemento (passo autoRevealed), não há o
+      // que escutar — o timer abaixo cuida disso.
+      element?.addEventListener("click", hidePopoverOnly, { once: true })
+
       if (step.awaitsEvent) {
         const eventName = step.awaitsEvent
         const handler = () => advance()
 
         window.addEventListener(eventName, handler, { once: true })
-        eventCleanupRef.current = () =>
-          window.removeEventListener(eventName, handler)
+
+        if (step.autoRevealed) {
+          // A UI que resolve este passo (o modal automático de retorno)
+          // não nasce de um clique no elemento destacado — já está a
+          // caminho assim que o passo aparece, disparada pelo passo
+          // anterior. Não há clique pra escutar aqui: dá um instante pro
+          // visitante ler o balão, depois libera a página por conta própria.
+          // 4s, não 1.5s — o texto tem duas frases, e 1.5s não dava tempo
+          // de ler antes do balão sumir sozinho (relato do Sérgio).
+          const timer = setTimeout(hidePopoverOnly, 4000)
+          eventCleanupRef.current = () => {
+            window.removeEventListener(eventName, handler)
+            clearTimeout(timer)
+          }
+        } else {
+          eventCleanupRef.current = () =>
+            window.removeEventListener(eventName, handler)
+        }
       }
 
       driverRef.current = instance
@@ -250,8 +302,9 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
 
       // Passa o elemento já resolvido, não o seletor: deixar o driver refazer a
       // busca reintroduziria o problema do alvo escondido do outro layout.
+      // Sem elemento, o driver.js centraliza o popover sozinho.
       instance.highlight({
-        element,
+        ...(element ? { element } : {}),
         popover: {
           title: step.title,
           description: step.description,
@@ -277,7 +330,7 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
     return () => {
       cancelled = true
     }
-  }, [pathname, steps, storageKey, destroyActive, persist])
+  }, [pathname, steps, storageKey, destroyActive, persist, hidePopoverOnly])
 
   useEffect(() => () => destroyActive(), [destroyActive])
 

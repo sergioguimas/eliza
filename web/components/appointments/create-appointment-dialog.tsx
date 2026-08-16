@@ -97,14 +97,20 @@ interface CreateAppointmentDialogProps {
   preselectedServiceId?: string | null
 
   settings?: any
-  
-  open?: boolean 
+
+  open?: boolean
   onOpenChange?: (open: boolean) => void
+
+  // Presente só quando o diálogo abriu pelo fluxo de retorno vindo da ficha
+  // do cliente (`?customer_id=X&new=true`). Ao salvar, o Eliza volta pra
+  // ficha em vez de deixar o visitante solto na agenda — mesmo padrão que
+  // "Finalizar" já usa pra levar direto ao prontuário.
+  returnToCustomerId?: string | null
 }
 
-export function CreateAppointmentDialog({ 
-  customers = [], 
-  services = [], 
+export function CreateAppointmentDialog({
+  customers = [],
+  services = [],
   professionals = [],
   staff = [],
   currentUser,
@@ -115,7 +121,8 @@ export function CreateAppointmentDialog({
   organization_id,
   settings,
   open: controlledOpen,
-  onOpenChange: setControlledOpen
+  onOpenChange: setControlledOpen,
+  returnToCustomerId,
 }: CreateAppointmentDialogProps) {
   
   const router = useRouter()
@@ -361,13 +368,22 @@ export function CreateAppointmentDialog({
         } else {
           toast.success("Agendamento criado com sucesso!")
           if (setOpen) setOpen(false)
-          router.refresh()
 
           // Evento genérico, não específico de demo: barato para todo tenant
           // (ninguém escuta fora do tour) e é o sinal que o tour usa para só
           // avançar quando o agendamento existe de verdade no banco, em vez
           // de confiar num clique em "Entendi".
           window.dispatchEvent(new CustomEvent("eliza:appointment-created"))
+
+          if (returnToCustomerId) {
+            // Fecha o loop do retorno: sem isto, o agendamento é criado e o
+            // visitante fica solto na agenda, sem indicação de que precisa
+            // voltar pra ficha do cliente pra confirmar o pagamento. Mesmo
+            // padrão que "Finalizar" já usa.
+            router.push(`/clientes/${returnToCustomerId}`)
+          } else {
+            router.refresh()
+          }
         }
     } catch (error) {
         toast.error("Erro inesperado ao criar agendamento.")

@@ -24,6 +24,7 @@ export function ReturnModalWrapper({
 
       const query = params.toString()
       router.push(query ? `?${query}` : "?", { scroll: false })
+      window.dispatchEvent(new CustomEvent("eliza:return-resolved"))
     }
   }
 
@@ -38,6 +39,12 @@ export function ReturnModalWrapper({
       params.set("date", date.toISOString().split("T")[0])
     }
 
+    // Sem disparo de `eliza:return-resolved` aqui, de propósito: os dois
+    // caminhos deste handler navegam pra /agendamentos, e disparar o evento
+    // antes do `router.push` corria contra a própria navegação — o tour
+    // chegava a piscar o passo "pago" ainda na ficha do cliente, um instante
+    // antes da rota trocar de verdade. O passo "retorno-agendamento" (em
+    // tour.ts) é quem resolve este trecho agora, ancorado na rota nova.
     router.push(`/agendamentos?${params.toString()}`)
   }
 

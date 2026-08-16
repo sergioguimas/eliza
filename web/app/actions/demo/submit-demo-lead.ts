@@ -77,7 +77,10 @@ export async function submitDemoLead(input: {
     return { ok: false, error: "Não foi possível enviar. Tente de novo." }
   }
 
-  await logDemoInteraction({ action: "lead_captured", stepNumber: 8 })
+  // stepNumber 12: índice do passo "cta" (o último) em `buildDemoTour` — ver
+  // lib/demo/tour.ts. Precisa ficar em sincronia manual porque este action
+  // não importa a lista de passos, só grava o número.
+  await logDemoInteraction({ action: "lead_captured", stepNumber: 12 })
 
   return { ok: true }
 }

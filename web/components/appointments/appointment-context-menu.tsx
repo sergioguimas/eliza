@@ -67,7 +67,6 @@ export function AppointmentContextMenu({
         )
 
         router.push(targetUrl)
-        router.refresh()
       } else {
         toast.success(
           messages.status_updated || `Status alterado para: ${status}`

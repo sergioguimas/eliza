@@ -29,6 +29,14 @@ export type DemoTourStep = {
    * tivesse.
    */
   awaitsEvent?: string
+  /**
+   * A UI que satisfaz o `awaitsEvent` não nasce de um clique no elemento
+   * destacado — já está a caminho assim que o passo aparece (disparada pelo
+   * passo anterior). Sem clique pra escutar, o motor do tour derruba a
+   * apresentação num timer curto em vez de esperar uma interação que não
+   * vai acontecer no alvo destacado.
+   */
+  autoRevealed?: boolean
 }
 
 /**
@@ -89,25 +97,94 @@ export function buildDemoTour(niche: string): DemoTourStep[] {
       awaitsEvent: "eliza:appointment-created",
     },
     {
+      // Passo de navegação puro, mesmo mecanismo de "abrir-agenda". Volta
+      // para o Dashboard porque "chegou"/"finalizado" moraram lá, não na
+      // agenda — o resumo diário mostra todos os agendamentos de hoje juntos,
+      // enquanto a lista da agenda esconde os demais quando há mais de um no
+      // dia (comportamento correto pro dia a dia, ruim pra demo).
+      id: "voltar-dashboard",
+      match: /^\/agendamentos/,
+      selector: '[data-tour="nav-dashboard"]',
+      title: "Volte para o painel",
+      description: "O resumo do dia mostra todos os horários de uma vez. Clique em Dashboard.",
+      awaitsNavigation: true,
+    },
+    {
+      // Mesma rota do passo anterior — chega no Dashboard e já mostra o
+      // aviso, antes de pedir pra confirmar chegada. Cronologicamente é
+      // aqui que o aviso automático faz sentido: ele narra o que acontece
+      // ANTES do compromisso (lembrete, confirmação do cliente) — mostrar
+      // isso só perto do fim, depois de já ter marcado como pago, inverte a
+      // ordem real e confunde (relato do Sérgio, duas rodadas seguidas).
+      id: "timeline",
+      match: /^\/dashboard/,
+      kind: "custom",
+      title: "Enquanto isso, nos bastidores",
+      description:
+        "Mostra os avisos automáticos que o Eliza dispara antes de um compromisso, sem esperar o relógio de verdade chegar lá.",
+    },
+    {
       // Ungated de propósito: "chegada" é um checkpoint informativo, não uma
       // ação que precise ser forçada — um profissional apressado pode ir
       // direto para "Finalizar", e isso é uso legítimo, não erro.
       id: "chegou",
-      match: /^\/agendamentos/,
-      selector: '[data-tour="agenda-lista"]',
+      match: /^\/dashboard/,
+      selector: '[data-tour="dashboard-proximos"]',
       title: "O paciente chegou?",
-      description: `Clique com o botão direito no agendamento (no celular, toque e segure) — ou use o novo botão de ações no card — e marque "${arrivedLabel}". É o primeiro checkpoint do atendimento.`,
+      description: `Clique com o botão direito no agendamento (no celular, toque e segure) — ou use o botão de ações no card — e marque "${arrivedLabel}". É o primeiro checkpoint do atendimento.`,
     },
     {
       // Continua exigindo navegação de verdade: só marcar "Finalizar" leva o
       // Eliza a redirecionar para a ficha do cliente, e é essa navegação que
       // resolve o passo — não dá pra fingir com um clique em "Entendi".
       id: "finalizado",
-      match: /^\/agendamentos/,
-      selector: '[data-tour="agenda-lista"]',
+      match: /^\/dashboard/,
+      selector: '[data-tour="dashboard-proximos"]',
       title: "Terminou o atendimento?",
       description: `Abra o mesmo menu — botão direito ou o botão de ações — e marque "Finalizar". O Eliza leva você direto para a ficha do ${cliente}.`,
       awaitsNavigation: true,
+    },
+    {
+      // Prontuário vem antes do retorno de propósito: o modal automático de
+      // retorno só dispara depois que o prontuário é salvo (ou do botão
+      // "Pular e agendar retorno") — pedir o retorno antes travaria
+      // esperando um modal que ainda não existe.
+      id: "prontuario",
+      match: /^\/clientes\/[^/]+/,
+      selector: '[data-tour="registro-form"]',
+      title: "Registre o que foi feito",
+      description: `Aqui isso se chama ${prontuario}. Fica no histórico do ${cliente} e você recupera na próxima visita, sem depender da memória.`,
+      awaitsEvent: "eliza:record-saved",
+    },
+    {
+      // O modal de retorno abre sozinho, disparado pelo passo anterior
+      // (prontuário salvo) — não por um clique aqui. Sem `selector` de
+      // propósito: não há elemento real pra destacar (a UI é o modal, não a
+      // ficha por baixo dele), então o driver.js centraliza o popover
+      // sozinho. `autoRevealed` faz o motor do tour derrubar a apresentação
+      // num timer, em vez de esperar um clique que nunca vai vir.
+      id: "retorno",
+      match: /^\/clientes\/[^/]+/,
+      title: "Já deixe o retorno marcado",
+      description: `Assim que o atendimento termina, o Eliza pergunta se você quer agendar o próximo. É o que faz ${clientes} voltarem sem você precisar correr atrás.`,
+      awaitsEvent: "eliza:return-resolved",
+      autoRevealed: true,
+    },
+    {
+      // Só acontece num dos dois caminhos de saída do passo anterior: se o
+      // visitante escolher um preset de dias (ou "Escolher outra data"), o
+      // Eliza navega pra /agendamentos com o diálogo de criação já aberto
+      // (via `?customer_id=X&new=true`), cliente e data prontos. Se
+      // escolher "Agora não", a rota não muda — esse passo nunca chega a
+      // casar, e a reancoragem pula direto pra "pago". Mesmo mecanismo de
+      // "retorno": sem `selector`, autoRevealed, porque o diálogo também
+      // abre sozinho, não por clique num elemento destacado.
+      id: "retorno-agendamento",
+      match: /^\/agendamentos/,
+      title: "Finalize o retorno",
+      description: `Confirme os dados do retorno — já vem com ${cliente}, data e ${entities.servico.toLowerCase()} preenchidos — e salve. O Eliza leva você direto de volta.`,
+      awaitsEvent: "eliza:appointment-created",
+      autoRevealed: true,
     },
     {
       // Aponta para o GATILHO da aba, não para o conteúdo dela: a aba
@@ -123,36 +200,11 @@ export function buildDemoTour(niche: string): DemoTourStep[] {
       awaitsEvent: "eliza:appointment-paid",
     },
     {
-      id: "retorno",
-      match: /^\/clientes\/[^/]+/,
-      selector: '[data-tour="ficha-cliente"]',
-      title: "Já deixe o retorno marcado",
-      description: `Assim que o atendimento termina, o Eliza pergunta se você quer agendar o próximo. É o que faz ${clientes} voltarem sem você precisar correr atrás.`,
-    },
-    {
-      id: "prontuario",
-      match: /^\/clientes\/[^/]+/,
-      selector: '[data-tour="registro-form"]',
-      title: "Registre o que foi feito",
-      description: `Aqui isso se chama ${prontuario}. Fica no histórico do ${cliente} e você recupera na próxima visita, sem depender da memória.`,
-    },
-    {
-      // Continua na mesma rota da nota — não precisa de navegação nem de
-      // alvo na tela, é um modal por cima de tudo. Fica por último porque
-      // fecha o arco com o compromisso que o próprio visitante marcou, antes
-      // do próximo passo mostrar o aviso saindo de verdade.
-      id: "timeline",
-      match: /^\/clientes\/[^/]+/,
-      kind: "custom",
-      title: "Enquanto isso, nos bastidores",
-      description:
-        "Mostra os avisos automáticos que o Eliza dispara antes de um compromisso, sem esperar o relógio de verdade chegar lá.",
-    },
-    {
       // Último passo — mesma rota, mesmo motivo do anterior. `stepNumber`
-      // aqui é 10, depois que "chegou" e "pago" alargaram o tour de 8 para
-      // 10 passos — exige a migration que sobe o teto de
-      // `demo_interactions_step_number_check` junto.
+      // aqui é 12 (índice 11 + 1) — bate exatamente com o teto de
+      // `demo_interactions_step_number_check` (1..12), que já tinha folga
+      // pra este passo novo ("retorno-agendamento") sem precisar de outra
+      // migration.
       id: "cta",
       match: /^\/clientes\/[^/]+/,
       kind: "custom",
