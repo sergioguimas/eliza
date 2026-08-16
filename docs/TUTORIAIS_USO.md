@@ -127,6 +127,27 @@
 4. Confirme a remoção.
 5. O sistema deve impedir remover `owner` ou remover a si mesmo.
 
+## Testar o Tour de Demonstração (regressão)
+
+1. Acesse `/demo/start` e escolha um nicho.
+2. Confirme criação do tenant e redirect para `/dashboard?tour=demo`.
+3. Siga o tour: resumo, abrir agenda, criar agendamento (evento `eliza:appointment-created`
+   avança sozinho ao salvar).
+4. Volte para o Dashboard e confirme que a simulação dos avisos automáticos ("Enquanto isso,
+   nos bastidores...") aparece **antes** do passo de confirmar chegada, mostrando o
+   agendamento recém-criado.
+5. Marque chegada e finalize o atendimento — confirme redirect para a ficha do cliente.
+6. Salve o registro/prontuário e confirme que o modal de sugestão de retorno abre sozinho.
+7. Teste os dois caminhos de saída do retorno:
+   - "Agora não" — deve ir direto para o passo de pagamento, na mesma página.
+   - Escolher um preset de dias — deve abrir o diálogo de criação em `/agendamentos` já
+     preenchido; ao salvar, confirme o redirect automático de volta para a ficha do cliente.
+8. Confirme o pagamento e chegue ao passo final (resumo + captura de lead).
+9. Envie o lead ou clique "Só terminar"; confirme que aparece em `demo_leads`.
+10. Clique "Recomeçar a demonstração" e confirme que o tour volta ao passo 1 com dados novos.
+11. Repita clicando fora dos balões em pontos diferentes do tour — nenhum deles deve
+    cancelar o tour ou travar a interação com o que abriu por cima.
+
 ## Recuperar Senha
 
 1. Acesse `/forgot-password` ou `/reset-password`.

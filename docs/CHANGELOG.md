@@ -1,5 +1,35 @@
 # Changelog
 
+## 2026-08-16
+
+### Demonstração
+
+- Adicionado tenant de demonstração self-service em `/demo/start`: cria organização isolada
+  (`is_demo`, expira em 24h) sem cadastro, com seed de dados por nicho (7 nichos) e tour
+  guiado (driver.js) narrando todo o fluxo — agendar, marcar chegada, finalizar, registrar
+  prontuário, agendar retorno, confirmar pagamento e ver os avisos automáticos simulados.
+- Isolamento: coluna `is_demo`/`expires_at` fora dos GRANTs de `authenticated`; cron de
+  lembretes reais ignora orgs demo; `organizations` restringiu SELECT de `authenticated` a
+  `id/name/slug/niche` (fechou um furo pré-existente que também afetava tenants reais —
+  qualquer usuário logado lia `stripe_customer_id`, `plan` e `whatsapp_instance_name` de
+  qualquer organização e podia reapontar o próprio número de WhatsApp).
+- Limpeza automática de tenants expirados via cron (`/api/cron/cleanup-demo`, hora em hora).
+- Corrigido o overlay do driver.js bloqueando cliques fora do elemento destacado — passos
+  agora derrubam a apresentação assim que a UI relevante abre, em vez de fechar o tour
+  inteiro no primeiro clique acidental.
+- Reordenados os passos do tour por duas vezes após teste real: prontuário passou a vir
+  antes do retorno e do pagamento (o modal automático de retorno depende do prontuário já
+  salvo); a simulação dos avisos automáticos saiu de perto do fim (depois do pagamento,
+  ordem cronológica invertida) para logo após criar o agendamento, ao chegar no Dashboard.
+- Estendido o fluxo de retorno: criar o agendamento de retorno agora redireciona
+  automaticamente de volta para a ficha do cliente (mesmo padrão que "Finalizar" já usava),
+  fechando um caminho que antes deixava o visitante solto na agenda sem saber que precisava
+  voltar para confirmar o pagamento.
+- Dashboard: "Próximos agendamentos" separado em blocos "Hoje" (sempre visível) e "Próximos
+  dias" (só quando há algo além de hoje) — produto-wide, não só para demo. Corrige a agenda
+  parecer vazia em fins de semana ou começo de semana devagar.
+- Documentado em [docs/DEMO.md](DEMO.md).
+
 ## 2026-06-23
 
 ### Autenticação e Primeiro Acesso
