@@ -817,11 +817,11 @@ reverter é desligar a rota `/demo/start`, sem tocar em dados de produção.
 | 5. Tour guiado | 6–8h | 🟢 **DONE** (6 passos; 7–8 nas Fases 8 e 10) |
 | 6. Defaults de agendamento | 3–4h | 🟢 **DONE** (verificado em 4 nichos, sem colisão de horário) |
 | 7. Timeline fast-forward | 5–6h | 🟢 **DONE** (verificado em 2 nichos, idempotência confirmada) |
-| 8. WhatsApp real + controles de abuso | 6–7h | 🔴 TODO |
+| 8. WhatsApp real + controles de abuso | 6–7h | 🔴 TODO (não implementado — ver `docs/DEMO.md`) |
 | 9. Reset e cleanup | 4h | 🟢 **DONE** (cron verificado; reset sem caller até a Fase 10) |
 | 10. CTA, lead e reset | 3–4h | 🟢 **DONE** (feita antes da 8; fecha o loop do reset) |
-| 11. Testes | 5–6h | 🔴 TODO |
-| 12. Deploy | 1 dia | 🔴 TODO |
+| 11. Testes | 5–6h | 🟡 **Coberto ad-hoc** — 6 rodadas de teste real em `PLANO_DEMO_v3.md` (não a checklist formal original: duas abas, refresh no meio do tour não foram testados à parte) |
+| 12. Deploy | 1 dia | 🟢 **DONE** — em produção desde 2026-08-16 |
 
 **Total:** ~50–60h de desenvolvimento + 1 dia de deploy.
 
@@ -839,10 +839,9 @@ público.
 - [ ] Definir `DEMO_WHATSAPP_INSTANCE` no `.env` da VPS
 - [ ] Considerar um segundo chip de reserva (troca por env var, sem deploy)
 - [x] ~~Executar `20260809143000_demo_tenant.sql` no Studio~~ — aplicada
-- [ ] **Executar `20260811120000_restrict_authenticated_select_on_organizations.sql` no
-      Studio** (Fase 1.4). Decidido: SELECT de `authenticated` restrito a colunas, como já é
-      feito para `anon`. Migration e ajustes de código prontos. Não bloqueia o
-      desenvolvimento; **bloqueia o deploy público da demo**.
+- [x] ~~Executar `20260811120000_restrict_authenticated_select_on_organizations.sql` no
+      Studio~~ — aplicada (confirmado no `schema_public.sql`: `authenticated` só tem
+      `GRANT SELECT` em `id/name/slug/niche` de `organizations`).
 
 **Fora de escopo (decidido):** signup self-serve, nichos novos (odontologia/personal/estética),
 dashboard de analytics. O logging entra desde a Fase 1 para o dashboard nascer com histórico.

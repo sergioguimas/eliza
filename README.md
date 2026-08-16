@@ -26,6 +26,7 @@ https://eliza.solasoftware.com.br
 - Painel financeiro e histórico/registros de atendimento.
 - Recuperação de senha e primeiro acesso por link de e-mail.
 - Keckleon para nichos como `generico`, `clinica`, `psicologia`, `barbearia`, `salao`, `advocacia`, `certificado` e `tatuador`.
+- Demonstração self-service em `/demo/start`: tenant isolado por 24h com dados de exemplo e tour guiado, sem cadastro.
 
 ## Estrutura
 
@@ -105,6 +106,7 @@ EVOLUTION_API_KEY=
 - [Cron e lembretes](docs/CRON.md)
 - [Agendamento](docs/AGENDAMENTO.md)
 - [Keckleon](docs/KECKLEON.md)
+- [Demonstração](docs/DEMO.md)
 - [Roles e permissões](docs/ROLES_E_PERMISSOES.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Tutoriais de uso](docs/TUTORIAIS_USO.md)
@@ -120,6 +122,7 @@ EVOLUTION_API_KEY=
 | `/auth/callback` | Validar link de autenticação ou recuperação |
 | `/update-password` | Definir e confirmar a nova senha |
 | `/setup` | Criar organização inicial |
+| `/demo/start` | Criar tenant de demonstração (24h, sem cadastro) |
 | `/dashboard` | Visão geral |
 | `/agendamentos` | Agenda interna |
 | `/clientes` | Clientes/pacientes |
@@ -131,6 +134,7 @@ EVOLUTION_API_KEY=
 | `/admin` | Super admin |
 | `/api/webhooks/whatsapp/[[...slug]]` | Webhook WhatsApp |
 | `/api/cron/send-reminders` | Cron protegido por `CRON_SECRET` |
+| `/api/cron/cleanup-demo` | Cron protegido por `CRON_SECRET`, limpa tenants demo expirados |
 
 ## Observações Técnicas
 

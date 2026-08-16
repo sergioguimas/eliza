@@ -84,6 +84,13 @@ Keckleon adapta linguagem e identidade por nicho. Dicionários ficam em `web/lib
 
 Evite textos fixos como `Paciente`, `Consulta`, `Procedimento`, `Doutor` e `Clínica` fora de dicionários, telas específicas de exemplo ou documentação.
 
+## Demonstração
+
+Tenant isolado (`organizations.is_demo`) criado sem cadastro em `/demo/start`, com seed por
+nicho e tour guiado (driver.js). `is_demo`/`expires_at` ficam fora dos GRANTs de coluna de
+`authenticated`; toda criação e limpeza passa por service role. Detalhes em
+[DEMO.md](DEMO.md).
+
 ## PWA
 
 O produto é tratado como PWA no escopo do projeto, mas nesta revisão não foi encontrado `manifest.ts`, `manifest.json` ou service worker no app. Isso deve ser confirmado antes de anunciar instalação offline como funcionalidade pronta.

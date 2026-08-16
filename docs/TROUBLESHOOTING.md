@@ -211,6 +211,19 @@ Decisão necessária:
 
 Não altere isso sem confirmar a regra de negócio de produção.
 
+## Tour da demonstração trava ou balão fica preso
+
+Sintoma: balão do tour (`/demo/start`) some clicando fora, bloqueia clique num diálogo/aba
+que abriu por cima, ou o passo simplesmente não avança.
+
+Causa comum: o CSS do driver.js desativa `pointer-events` na página inteira enquanto um
+passo está ativo, exceto no elemento destacado e no próprio popover. Qualquer UI que abra
+por portal fora do elemento destacado (diálogo, dropdown, aba, menu de contexto) fica
+travada até a apresentação ser derrubada.
+
+Ver mecanismos (`hidePopoverOnly`, `autoRevealed`) e a lista completa de passos em
+[DEMO.md](DEMO.md#tour-guiado).
+
 ## PWA não instala
 
 Nesta revisão não foi encontrado `manifest.ts`, `manifest.json` ou service worker. Confirmar se PWA está pendente, removido ou implementado fora do repositório.
