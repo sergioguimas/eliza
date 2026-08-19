@@ -19,6 +19,8 @@ import {
 import { createClient } from "@/utils/supabase/client"
 import { useKeckleon } from "@/providers/keckleon-provider"
 import { CategoryIcon } from "@/components/shared/category-icon"
+import { ElizaWordmark } from "@/components/shared/eliza-wordmark"
+import { SolaSeal } from "@/components/layout/sola-seal"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -204,7 +206,7 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
         </button>
 
         <div className="flex h-20 items-center gap-3 border-b border-sidebar-border px-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-brand">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-brand">
             <CategoryIcon name="logo" className="size-5" />
           </div>
 
@@ -248,7 +250,7 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
             <DropdownMenuTrigger asChild>
               <button
                 className={cn(
-                  "flex w-full items-center rounded-2xl border border-sidebar-border bg-background/60 px-2 py-2 text-left transition hover:bg-accent",
+                  "flex w-full items-center rounded-lg border border-sidebar-border bg-background/60 px-2 py-2 text-left transition hover:bg-accent",
                   collapsed ? "justify-center" : "gap-3"
                 )}
               >
@@ -310,6 +312,13 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+
+        {!collapsed && (
+          <div className="flex items-center justify-between gap-2 border-t border-sidebar-border px-3 py-3">
+            <ElizaWordmark className="text-[11px] text-muted-foreground" />
+            <SolaSeal />
+          </div>
+        )}
       </aside>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 backdrop-blur md:hidden">
@@ -325,7 +334,7 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
                 href={item.href}
                 data-tour={`nav-${item.href.replace(/^\//, "")}`}
                 className={cn(
-                  "flex min-h-16 flex-col items-center justify-center rounded-2xl px-2 py-2 text-[11px] font-medium transition-all duration-200",
+                  "flex min-h-16 flex-col items-center justify-center rounded-lg px-2 py-2 text-[11px] font-medium transition-all duration-200",
                   active ? "sidebar-item-active" : "sidebar-item-hover"
                 )}
               >
@@ -389,7 +398,7 @@ function SidebarSection({
               data-tour={`nav-${item.href.replace(/^\//, "")}`}
               title={collapsed ? item.label : undefined}
               className={cn(
-                "group relative flex items-center rounded-2xl transition-all duration-200",
+                "group relative flex items-center rounded-lg transition-all duration-200",
                 "hover:translate-x-1",
                 collapsed ? "justify-center px-2 py-3" : "gap-3 px-3 py-3",
                 active

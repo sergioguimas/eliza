@@ -70,19 +70,19 @@ export function DemoNichePicker() {
               disabled={pending !== null}
               aria-busy={isPending}
               className={cn(
-                "group relative overflow-hidden rounded-2xl border p-5 text-left transition-all duration-200",
+                `theme-${option.id}`,
+                "group relative overflow-hidden rounded-lg border p-5 text-left transition-all duration-200",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                 "disabled:cursor-not-allowed",
                 isPending
-                  ? cn("ring-2", option.selected)
+                  ? "ring-2 ring-brand border-brand bg-brand-soft"
                   : "border-zinc-200 bg-white hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md",
                 pending !== null && !isPending && "opacity-50"
               )}
             >
               <div
                 className={cn(
-                  "absolute inset-0 bg-gradient-to-br opacity-0 transition-opacity duration-200",
-                  option.soft,
+                  "absolute inset-0 bg-brand-soft opacity-0 transition-opacity duration-200",
                   isPending && "opacity-100",
                   pending === null && "group-hover:opacity-60"
                 )}
@@ -92,9 +92,8 @@ export function DemoNichePicker() {
                 <div className="flex items-start justify-between gap-3">
                   <div
                     className={cn(
-                      "flex h-11 w-11 items-center justify-center rounded-2xl border bg-white shadow-sm",
-                      isPending ? "border-white/60" : "border-zinc-200",
-                      option.color
+                      "flex h-11 w-11 items-center justify-center rounded-lg border bg-white shadow-sm text-brand",
+                      isPending ? "border-white/60" : "border-zinc-200"
                     )}
                   >
                     <Icon className="h-5 w-5" />

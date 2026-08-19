@@ -2,6 +2,31 @@ import { createClient } from "@/utils/supabase/server"
 import { notFound } from "next/navigation"
 import { PublicBookingForm } from "./public-booking-form"
 import { Database } from "@/utils/database.types"
+import { Metadata } from "next"
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string }> }
+): Promise<Metadata> {
+  const { slug } = await params
+  const supabase = await createClient<Database>()
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("name")
+    .eq("slug", slug)
+    .single()
+
+  if (!org) return { title: "Agendamento" }
+
+  return {
+    title: `Agendar — ${org.name}`,
+    description: `Reserve seu horário em ${org.name}.`,
+    openGraph: {
+      title: `Agendar — ${org.name}`,
+      description: `Reserve seu horário em ${org.name}.`,
+      type: "website",
+    },
+  }
+}
 
 export default async function PublicBookingPage({params}: {params: Promise<{ slug: string }>}) {
   const { slug } = await params;

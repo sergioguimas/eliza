@@ -637,7 +637,7 @@ export function ServiceRecordList({
             />
           ))
         ) : (
-          <div className="py-20 text-center border-2 border-dashed rounded-2xl bg-zinc-50/50">
+          <div className="py-20 text-center border-2 border-dashed rounded-lg bg-zinc-50/50">
             <p className="text-sm text-muted-foreground">
               {messages.no_records_found ||
                 "Nenhum registro encontrado para esses filtros."}

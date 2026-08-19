@@ -26,7 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) return { title: "Eliza" }
+  if (!user) return {}
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -41,7 +41,7 @@ export async function generateMetadata(): Promise<Metadata> {
     dict.nav?.clientes || "Clientes"
 
   return {
-    title: `${clientesTitle} | Eliza`,
+    title: clientesTitle,
   }
 }
 

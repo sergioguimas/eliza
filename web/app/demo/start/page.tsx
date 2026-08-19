@@ -3,7 +3,7 @@ import { Clock, ShieldCheck, Sparkles } from "lucide-react"
 import { DemoNichePicker } from "./demo-niche-picker"
 
 export const metadata: Metadata = {
-  title: "Testar o Eliza | Demonstração",
+  title: "Demonstração",
   description:
     "Experimente o Eliza com uma agenda já preenchida do seu segmento. Sem cadastro.",
 }

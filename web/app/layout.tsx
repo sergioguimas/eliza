@@ -13,8 +13,9 @@ const plex = IBM_Plex_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Eliza",
-  description: "Gestão Inteligente",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://eliza.solasoftware.com.br"),
+  title: { default: "Eliza", template: "%s | Eliza" },
+  description: "Sistema de agendamento e gestão para clínicas, consultórios e prestadores de serviço.",
 };
 
 export default function RootLayout({

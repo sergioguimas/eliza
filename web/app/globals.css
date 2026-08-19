@@ -80,6 +80,12 @@
   --brand-tint-soft: color-mix(in oklab, hsl(var(--brand-primary)) 10%, white);
   --brand-shadow-strength: 0.14;
   --brand-shadow-color: hsla(var(--brand-glow) / var(--brand-shadow-strength));
+
+  /* ---------- Status semântico (independe do nicho) ---------- */
+  --status-success: 125 50% 35%;
+  --status-warning: 45 50% 33%;
+  --status-danger:  14.8 58.8% 44.7%;
+  --status-info:    197 48% 41%;
 }
 
 .dark {
@@ -128,6 +134,11 @@
   --brand-tint-soft: color-mix(in oklab, hsl(var(--brand-primary)) 14%, black);
   --brand-shadow-strength: 0.22;
   --brand-shadow-color: hsla(var(--brand-glow) / var(--brand-shadow-strength));
+
+  --status-success: 125 45% 58%;
+  --status-warning: 45 45% 58%;
+  --status-danger:  14.8 45% 58%;
+  --status-info:    197 45% 58%;
 }
 
 /* =========================================================
@@ -280,6 +291,11 @@
   --color-surface-1: hsl(var(--surface-1));
   --color-surface-2: hsl(var(--surface-2));
   --color-surface-3: hsl(var(--surface-3));
+
+  --color-success: hsl(var(--status-success));
+  --color-warning: hsl(var(--status-warning));
+  --color-danger:  hsl(var(--status-danger));
+  --color-info:    hsl(var(--status-info));
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

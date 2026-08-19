@@ -3,7 +3,6 @@
 import { createContext, useContext } from 'react'
 import {
   getNicheMetadata,
-  type NicheBrandConfig,
   type NicheId,
   type NicheMetadata,
 } from '@/lib/niche-config'
@@ -14,7 +13,6 @@ type KeckleonContextType = {
   dict: NicheDictionary
   niche: NicheId
   meta: NicheMetadata
-  brand: NicheBrandConfig
 
   entities: NicheDictionary['entities']
   nav: NicheDictionary['nav']
@@ -45,7 +43,6 @@ export function KeckleonProvider({
         dict,
         niche: normalizedNiche,
         meta,
-        brand: meta.brand,
 
         entities: dict.entities,
         nav: dict.nav,
