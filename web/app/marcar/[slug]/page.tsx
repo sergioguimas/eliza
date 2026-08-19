@@ -25,7 +25,7 @@ export default async function PublicBookingPage({params}: {params: Promise<{ slu
   ])
 
   return (
-    <div className="min-h-screen bg-background py-10 px-4">
+    <div className={`theme-${organization.niche ?? "generico"} min-h-screen bg-background py-10 px-4`}>
       <div className="mx-auto w-full max-w-[1400px] space-y-8">
         <header className="text-center">
           <h1 className="text-3xl font-bold tracking-tight">{organization.name}</h1>

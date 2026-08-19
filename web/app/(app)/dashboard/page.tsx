@@ -296,12 +296,12 @@ export default async function DashboardPage() {
             </div>
           </DialogTrigger>
 
-          <DialogContent className="max-w-md border-zinc-800 bg-zinc-950">
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold tracking-tight">
                 Solicitações pendentes
               </DialogTitle>
-              <DialogDescription className="text-zinc-400">
+              <DialogDescription>
                 Analise os pedidos recebidos antes da aprovação final.
               </DialogDescription>
             </DialogHeader>

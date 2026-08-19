@@ -79,6 +79,7 @@
   --surface-3: 240 4.8% 95%;
   --brand-outline-soft: color-mix(in oklab, hsl(var(--brand-primary)) 18%, white);
   --brand-tint-soft: color-mix(in oklab, hsl(var(--brand-primary)) 10%, white);
+  --brand-shadow-strength: 0.14;
   --brand-shadow-color: hsla(var(--brand-glow) / var(--brand-shadow-strength));
 }
 
@@ -386,10 +387,10 @@
   .sidebar-item-active {
     position: relative;
     background: hsl(var(--brand-soft));
-    color: hsl(var(--brand));
+    color: hsl(var(--brand-primary));
 
     box-shadow:
-      inset 0 0 0 1px hsl(var(--brand) / 0.15),
+      inset 0 0 0 1px hsl(var(--brand-primary) / 0.15),
       0 10px 30px -12px var(--brand-shadow-color);
   }
 
@@ -401,7 +402,7 @@
     height: 60%;
     width: 3px;
     border-radius: 999px;
-    background: hsl(var(--brand));
+    background: hsl(var(--brand-primary));
   }
 
   /* ===== HOVER ===== */
@@ -435,6 +436,6 @@
   }
 
   .sidebar-scroll::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--brand));
+    background: hsl(var(--brand-primary));
   }
 }

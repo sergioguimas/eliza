@@ -473,7 +473,7 @@ export function PublicBookingForm({
                     "rounded-2xl border px-3 py-3 transition-all text-left",
                     active && "border-primary bg-primary/10 text-foreground",
                     done && "border-emerald-300 bg-emerald-50 text-emerald-900",
-                    !active && !done && "border-zinc-800 bg-background text-zinc-300"
+                    !active && !done && "border-border bg-background text-muted-foreground"
                   )}
                 >
                   <div className="flex items-center gap-2 sm:gap-3">
@@ -482,7 +482,7 @@ export function PublicBookingForm({
                         "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold border",
                         active && "border-primary bg-primary text-primary-foreground",
                         done && "border-emerald-600 bg-emerald-600 text-white",
-                        !active && !done && "border-zinc-500 text-zinc-300"
+                        !active && !done && "border-border text-muted-foreground"
                       )}
                     >
                       {done ? <CheckCircle2 className="h-4 w-4" /> : item.step}
