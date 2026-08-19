@@ -36,19 +36,19 @@
   --ring: 240 10% 3.9%;
 
   /* ---------- Branding default ---------- */
-  --brand-primary: 239 84% 67%;
+  --brand-primary: 240 5.9% 10%;
   --brand-primary-foreground: 0 0% 100%;
-  --brand-ring: 239 84% 67%;
-  --brand-soft: 239 100% 97%;
-  --brand-soft-foreground: 239 60% 36%;
-  --brand-border: 239 75% 88%;
-  --brand-glow: 239 84% 67%;
-  --brand-radius: 0.75rem;
+  --brand-ring: 240 5.9% 10%;
+  --brand-soft: 240 5% 96%;
+  --brand-soft-foreground: 240 5.9% 12%;
+  --brand-border: 240 5.9% 85%;
+  --brand-glow: 240 5.9% 10%;
+  --brand-radius: 0.5rem;
 
   /* Tokens legados/auxiliares */
   --brand-primary-soft: hsl(var(--brand-primary) / 0.1);
   --brand-primary-border: hsl(var(--brand-primary) / 0.25);
-  --brand-accent: 243 75% 59%;
+  --brand-accent: 240 5.9% 10%;
   --brand-accent-soft: hsl(var(--brand-accent) / 0.08);
   --brand-sidebar-gradient-from: hsl(var(--brand-primary) / 0.16);
   --brand-sidebar-gradient-to: hsl(var(--brand-accent) / 0.04);
@@ -59,7 +59,6 @@
   --primary-foreground: var(--brand-primary-foreground);
 
   /* ---------- Radius ---------- */
-  --brand-radius: 0.75rem;
   --radius: var(--brand-radius);
 
   /* ---------- Sidebar (LIGHT) ---------- */
@@ -138,90 +137,98 @@
 
 .theme-generico {
   --brand-primary: 240 5.9% 10%;
-  --brand-primary-foreground: 0 0% 98%;
-  --brand-ring: 240 10% 3.9%;
-  --brand-soft: 240 4.8% 95.9%;
-  --brand-soft-foreground: 240 5.9% 10%;
-  --brand-border: 240 5.9% 90%;
+  --brand-primary-foreground: 0 0% 100%;
+  --brand-ring: 240 5.9% 10%;
+  --brand-soft: 240 5% 96%;
+  --brand-soft-foreground: 240 5.9% 12%;
+  --brand-border: 240 5.9% 85%;
   --brand-glow: 240 5.9% 10%;
-  --brand-radius: 0.75rem;
+  --brand-radius: 0.5rem;
+  --radius: var(--brand-radius);
 }
 
 .theme-clinica {
-  --brand-primary: 217 91% 60%;
+  --brand-primary: 216.9 55.1% 48%;
   --brand-primary-foreground: 0 0% 100%;
-  --brand-ring: 217 91% 60%;
-  --brand-soft: 214 100% 97%;
-  --brand-soft-foreground: 217 70% 35%;
-  --brand-border: 214 85% 88%;
-  --brand-glow: 217 91% 60%;
-  --brand-radius: 0.9rem;
+  --brand-ring: 216.9 55.1% 48%;
+  --brand-soft: 216.9 50% 96%;
+  --brand-soft-foreground: 216.9 45% 26%;
+  --brand-border: 216.9 35% 85%;
+  --brand-glow: 216.9 55.1% 48%;
+  --brand-radius: 0.55rem;
+  --radius: var(--brand-radius);
 }
 
 .theme-psicologia {
-  --brand-primary: 262 83% 58%;
+  --brand-primary: 261.7 44.7% 46.1%;
   --brand-primary-foreground: 0 0% 100%;
-  --brand-ring: 262 83% 58%;
-  --brand-soft: 262 100% 97%;
-  --brand-soft-foreground: 262 65% 35%;
-  --brand-border: 262 70% 88%;
-  --brand-glow: 262 83% 58%;
-  --brand-radius: 0.9rem;
+  --brand-ring: 261.7 44.7% 46.1%;
+  --brand-soft: 261.7 44.7% 96%;
+  --brand-soft-foreground: 261.7 44.7% 26%;
+  --brand-border: 261.7 35% 85%;
+  --brand-glow: 261.7 44.7% 46.1%;
+  --brand-radius: 0.55rem;
+  --radius: var(--brand-radius);
 }
 
 .theme-barbearia {
-  --brand-primary: 28 95% 54%;
-  --brand-primary-foreground: 0 0% 100%;
-  --brand-ring: 28 95% 54%;
-  --brand-soft: 32 100% 96%;
-  --brand-soft-foreground: 25 80% 30%;
-  --brand-border: 30 80% 85%;
-  --brand-glow: 28 95% 54%;
-  --brand-radius: 0.45rem;
+  --brand-primary: 27.9 54.9% 46.1%;
+  --brand-primary-foreground: 240 6% 10%;
+  --brand-ring: 27.9 54.9% 46.1%;
+  --brand-soft: 27.9 50% 96%;
+  --brand-soft-foreground: 27.9 45% 26%;
+  --brand-border: 27.9 35% 85%;
+  --brand-glow: 27.9 54.9% 46.1%;
+  --brand-radius: 0.3rem;
+  --radius: var(--brand-radius);
 }
 
 .theme-salao {
-  --brand-primary: 330 82% 66%;
+  --brand-primary: 334.2 42.4% 46.3%;
   --brand-primary-foreground: 0 0% 100%;
-  --brand-ring: 330 82% 66%;
-  --brand-soft: 330 100% 97%;
-  --brand-soft-foreground: 330 55% 35%;
-  --brand-border: 330 70% 88%;
-  --brand-glow: 330 82% 66%;
-  --brand-radius: 1rem;
+  --brand-ring: 334.2 42.4% 46.3%;
+  --brand-soft: 334.2 42.4% 96%;
+  --brand-soft-foreground: 334.2 42.4% 26%;
+  --brand-border: 334.2 35% 85%;
+  --brand-glow: 334.2 42.4% 46.3%;
+  --brand-radius: 0.5rem;
+  --radius: var(--brand-radius);
 }
 
 .theme-advocacia {
-  --brand-primary: 214 30% 32%;
+  --brand-primary: 214.6 44.7% 31.2%;
   --brand-primary-foreground: 0 0% 100%;
-  --brand-ring: 214 30% 32%;
-  --brand-soft: 210 25% 95%;
-  --brand-soft-foreground: 214 30% 28%;
-  --brand-border: 214 20% 82%;
-  --brand-glow: 214 30% 32%;
-  --brand-radius: 0.65rem;
+  --brand-ring: 214.6 44.7% 31.2%;
+  --brand-soft: 214.6 44.7% 96%;
+  --brand-soft-foreground: 214.6 44.7% 26%;
+  --brand-border: 214.6 35% 85%;
+  --brand-glow: 214.6 44.7% 31.2%;
+  --brand-radius: 0.4rem;
+  --radius: var(--brand-radius);
 }
 
 .theme-certificado {
-  --brand-primary: 145 45% 32%;
+  --brand-primary: 134 28.9% 29.2%;
   --brand-primary-foreground: 0 0% 100%;
-  --brand-ring: 145 45% 32%;
-  --brand-soft: 145 42% 95%;
-  --brand-soft-foreground: 145 45% 24%;
-  --brand-border: 145 25% 84%;
-  --brand-glow: 145 45% 32%;
-  --brand-radius: 0.55rem;
+  --brand-ring: 134 28.9% 29.2%;
+  --brand-soft: 134 28.9% 96%;
+  --brand-soft-foreground: 134 28.9% 26%;
+  --brand-border: 134 28.9% 85%;
+  --brand-glow: 134 28.9% 29.2%;
+  --brand-radius: 0.4rem;
+  --radius: var(--brand-radius);
 }
 
 .theme-tatuador {
-  --brand-primary: 174 77% 26%;
+  --brand-primary: 173.7 54.5% 24.1%;
   --brand-primary-foreground: 0 0% 100%;
-  --brand-ring: 174 77% 26%;
-  --brand-soft: 174 55% 95%;
-  --brand-soft-foreground: 174 65% 22%;
-  --brand-border: 174 35% 82%;
-  --brand-glow: 174 77% 26%;
-  --brand-radius: 0.7rem;
+  --brand-ring: 173.7 54.5% 24.1%;
+  --brand-soft: 173.7 50% 96%;
+  --brand-soft-foreground: 173.7 45% 26%;
+  --brand-border: 173.7 35% 85%;
+  --brand-glow: 173.7 54.5% 24.1%;
+  --brand-radius: 0.45rem;
+  --radius: var(--brand-radius);
 }
 
 /* =========================================================
