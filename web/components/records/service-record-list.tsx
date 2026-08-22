@@ -554,7 +554,7 @@ export function ServiceRecordList({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 bg-zinc-900 p-4 rounded-xl border shadow-sm">
+      <div className="flex flex-col gap-4 bg-card p-4 rounded-xl border shadow-sm">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -637,7 +637,7 @@ export function ServiceRecordList({
             />
           ))
         ) : (
-          <div className="py-20 text-center border-2 border-dashed rounded-lg bg-zinc-50/50">
+          <div className="py-20 text-center border-2 border-dashed rounded-lg bg-muted/50">
             <p className="text-sm text-muted-foreground">
               {messages.no_records_found ||
                 "Nenhum registro encontrado para esses filtros."}

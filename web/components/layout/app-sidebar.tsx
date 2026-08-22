@@ -315,7 +315,7 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
 
         {!collapsed && (
           <div className="flex items-center justify-between gap-2 border-t border-sidebar-border px-3 py-3">
-            <ElizaWordmark className="text-[11px] text-muted-foreground" />
+            <ElizaWordmark className="text-xs text-muted-foreground" />
             <SolaSeal />
           </div>
         )}
@@ -378,7 +378,7 @@ function SidebarSection({
         <p
           className={cn(
             "mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.16em] transition-colors",
-            isSectionActive ? "text-brand" : "text-muted-foreground"
+            isSectionActive ? "text-foreground" : "text-muted-foreground"
           )}
         >
           {title}
@@ -402,7 +402,7 @@ function SidebarSection({
                 "hover:translate-x-1",
                 collapsed ? "justify-center px-2 py-3" : "gap-3 px-3 py-3",
                 active
-                  ? "bg-brand-soft text-brand shadow-brand"
+                  ? "bg-brand-soft shadow-brand"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               )}
             >
@@ -410,7 +410,7 @@ function SidebarSection({
                 className={cn(
                   "flex shrink-0 items-center justify-center rounded-xl transition-colors",
                   active
-                    ? "text-brand"
+                    ? ""
                     : "text-muted-foreground group-hover:text-foreground"
                 )}
               >

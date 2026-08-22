@@ -15,10 +15,12 @@ export async function generateMetadata(
     .eq("slug", slug)
     .single()
 
-  if (!org) return { title: "Agendamento" }
+  if (!org) return { title: { absolute: "Agendamento" } }
 
   return {
-    title: `Agendar — ${org.name}`,
+    // `absolute` evita o template "%s | Eliza" do layout raiz: esta página é da
+    // organização, não da Eliza — mesma razão pela qual o selo da Sola não entra aqui.
+    title: { absolute: `Agendar — ${org.name}` },
     description: `Reserve seu horário em ${org.name}.`,
     openGraph: {
       title: `Agendar — ${org.name}`,

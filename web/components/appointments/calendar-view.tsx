@@ -514,7 +514,7 @@ function CalendarContent({
                       <div
                         className={cn(
                           "h-full w-full border-r border-b border-border p-1 md:p-2 min-h-[80px] relative hover:bg-accent/50 transition-colors group flex flex-col gap-1",
-                          !isSameMonth(day, monthStart) && "bg-muted/30 opacity-40",
+                          !isSameMonth(day, monthStart) && "bg-muted/30",
                           isToday(day) && "bg-card"
                         )}
                       >

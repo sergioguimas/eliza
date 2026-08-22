@@ -155,7 +155,7 @@ export function ServiceRecordForm({
                     "inline-flex items-center gap-1 px-2 py-1 rounded text-xs border",
                     isSelected
                       ? cn(tag.color, "shadow-sm")
-                      : "bg-transparent text-muted-foreground border-border hover:bg-muted hover:text-foreground opacity-70 hover:opacity-100"
+                      : "bg-transparent text-muted-foreground border-border hover:bg-muted hover:text-foreground"
                   )}
                 >
                   {isSelected && <Check className="h-3 w-3 shrink-0" />}
