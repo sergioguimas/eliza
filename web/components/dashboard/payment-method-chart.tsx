@@ -3,7 +3,22 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import { useKeckleon } from '@/providers/keckleon-provider'
 
-const COLORS = ['#10b981', '#6366f1', '#f59e0b', '#3b82f6', '#94a3b8']
+// Paleta categórica: as fatias só precisam ser distinguíveis entre si — o rótulo
+// da legenda é que diz qual é a forma de pagamento. Vem dos tokens já aprovados
+// em vez de hex fixo; o segundo item era o indigo do template shadcn, o mesmo
+// que esta refatoracao removeu do resto do produto.
+//
+// As utilitárias `fill-*` vencem o atributo de apresentação que o recharts
+// escreve, então a fatia acompanha o tema sem resolver cor em JS.
+//
+// Stopgap: uma paleta categórica própria ainda não existe neste projeto.
+const SLICE_CLASSES = [
+  'fill-success',
+  'fill-info',
+  'fill-warning',
+  'fill-danger',
+  'fill-muted-foreground',
+]
 
 export function PaymentMethodChart({ data }: { data: Record<string, number> }) {
   const { dict } = useKeckleon()
@@ -48,7 +63,7 @@ export function PaymentMethodChart({ data }: { data: Record<string, number> }) {
             dataKey="value"
           >
             {chartData.map((_, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              <Cell key={`cell-${index}`} className={SLICE_CLASSES[index % SLICE_CLASSES.length]} />
             ))}
           </Pie>
 
@@ -71,7 +86,9 @@ export function PaymentMethodChart({ data }: { data: Record<string, number> }) {
             }}
           />
 
-          <Legend />
+          <Legend formatter={(value) => (
+            <span style={{ color: 'hsl(var(--foreground))' }}>{value}</span>
+          )} />
         </PieChart>
       </ResponsiveContainer>
     </div>

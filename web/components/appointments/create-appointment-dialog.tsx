@@ -372,8 +372,21 @@ export function CreateAppointmentDialog({
           // Evento genérico, não específico de demo: barato para todo tenant
           // (ninguém escuta fora do tour) e é o sinal que o tour usa para só
           // avançar quando o agendamento existe de verdade no banco, em vez
-          // de confiar num clique em "Entendi".
-          window.dispatchEvent(new CustomEvent("eliza:appointment-created"))
+          // de confiar num clique em "Entendi". Carrega o id no detail — a
+          // action já devolve `appointmentId` no sucesso — para o motor do
+          // tour poder, no futuro, saber qual agendamento é "o do tour" (ver
+          // nota A3 em `tour-guide.tsx`). Checagem via `in`, não
+          // `result.appointmentId` direto: o retorno da action é uma união
+          // (`{error}` ou `{success, appointmentId}`), e só o `in` estreita
+          // o tipo sem reclamação do compilador.
+          window.dispatchEvent(
+            new CustomEvent("eliza:appointment-created", {
+              detail: {
+                appointmentId:
+                  "appointmentId" in result ? result.appointmentId : undefined,
+              },
+            })
+          )
 
           if (returnToCustomerId) {
             // Fecha o loop do retorno: sem isto, o agendamento é criado e o

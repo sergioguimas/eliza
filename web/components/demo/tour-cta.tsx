@@ -20,6 +20,7 @@ const STORAGE_PREFIX = "eliza:demo-tour:"
 const RECAP_LABELS: Record<string, string> = {
   "novo-agendamento": "Criou um agendamento",
   chegou: "Confirmou a chegada do paciente",
+  finalizado: "Finalizou o atendimento",
   pago: "Confirmou o pagamento",
   retorno: "Viu como funciona agendar o retorno",
   "retorno-agendamento": "Já deixou o retorno marcado",
@@ -27,11 +28,18 @@ const RECAP_LABELS: Record<string, string> = {
   timeline: "Acompanhou os avisos automáticos",
 }
 
-// "voltar-dashboard" e "finalizado" ficam de fora de propósito: são passos
-// `awaitsNavigation`, e esses nunca geram `step_completed` — completam quando
-// a rota muda, não por um `advance()` explícito, e só `advance()` loga
-// telemetria. Não é uma lacuna nova: o "concluir" original tinha exatamente a
-// mesma característica.
+// "voltar-dashboard" fica de fora de propósito: é passo `awaitsNavigation`
+// puramente instrutivo (só "clique em Dashboard"), sem ação de negócio por
+// trás — não é o tipo de coisa que vale citar como conquista no resumo,
+// mesmo agora que passos assim já geram `step_completed` (fix C3, ver
+// `tour-guide.tsx`).
+//
+// "finalizado" ENTRA (diferente de antes): também é `awaitsNavigation` e
+// completa quando a rota muda, não por um `advance()` explícito — até o
+// fix C3 isso queria dizer nenhuma telemetria, então ficava de fora daqui
+// por não ter como confirmar que aconteceu. Agora `tour-guide.tsx` loga
+// esse tipo de passo também, e finalizar o atendimento é justamente a ação
+// que este resumo deveria mostrar (era o exemplo citado na spec do C3).
 //
 // "retorno-agendamento" só acontece num dos dois caminhos do passo
 // "retorno" (preset de dias, não "Agora não") — por isso os dois entram
@@ -44,6 +52,7 @@ const RECAP_ORDER = [
   "novo-agendamento",
   "timeline",
   "chegou",
+  "finalizado",
   "prontuario",
   "retorno",
   "retorno-agendamento",

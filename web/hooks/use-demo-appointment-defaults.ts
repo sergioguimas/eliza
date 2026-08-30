@@ -1,10 +1,15 @@
 'use client'
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import {
   getDemoAppointmentDefaults,
   type DemoAppointmentDefaults,
 } from "@/app/actions/demo/get-appointment-defaults"
+
+// Uma tentativa inicial + uma repetição. Falha isolada (rede, timeout,
+// service role fora do ar por um instante) não pode deixar o pré-preenchido
+// permanentemente ausente pro resto da sessão do visitante.
+const MAX_ATTEMPTS = 2
 
 /**
  * Busca os defaults de agendamento da demonstração assim que o componente
@@ -20,26 +25,46 @@ export function useDemoAppointmentDefaults(
 ) {
   const [defaults, setDefaults] = useState<DemoAppointmentDefaults>(null)
   const [loading, setLoading] = useState(isDemo)
-  const requested = useRef(false)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
-    if (!isDemo || requested.current) return
-    requested.current = true
+    if (!isDemo || attempt >= MAX_ATTEMPTS) return
 
-    let cancelled = false
+    // Sem uma flag "já disparei" permanente de propósito: era ela que travava
+    // o pré-preenchido pro resto da sessão quando a única tentativa falhava
+    // (ou era descartada pelo double-invoke do StrictMode em dev). O efeito só
+    // roda de novo quando `attempt` muda — e `attempt` só muda quando a
+    // tentativa anterior falhou/voltou vazia — então não há disparo em loop,
+    // só a repetição deliberada até `MAX_ATTEMPTS`.
+    let ignore = false
+
+    const retryOrGiveUp = () => {
+      if (ignore) return
+      if (attempt + 1 < MAX_ATTEMPTS) {
+        setAttempt((a) => a + 1)
+      } else {
+        setLoading(false)
+      }
+    }
 
     getDemoAppointmentDefaults(organizationId)
       .then((result) => {
-        if (!cancelled) setDefaults(result)
+        if (ignore) return
+        if (result) {
+          setDefaults(result)
+          setLoading(false)
+        } else {
+          retryOrGiveUp()
+        }
       })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
+      .catch(() => {
+        retryOrGiveUp()
       })
 
     return () => {
-      cancelled = true
+      ignore = true
     }
-  }, [isDemo, organizationId])
+  }, [isDemo, organizationId, attempt])
 
   return { defaults, loading }
 }

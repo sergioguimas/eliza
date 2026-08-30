@@ -44,7 +44,7 @@ export function BaixaPagamentoButton({
 
   if (paymentStatus === "paid") {
     return (
-      <div className="flex items-center gap-2 text-emerald-600 font-medium text-sm">
+      <div className="flex items-center gap-2 text-success font-medium text-sm">
         <CheckCircle2 className="h-4 w-4" />
         <span className="capitalize">{paymentMethod || messages.payment_done || "Pago"}</span>
       </div>
@@ -67,7 +67,7 @@ export function BaixaPagamentoButton({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 gap-2 border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
+          className="h-8 gap-2 border-warning/40 text-warning hover:bg-accent/50"
         >
           {actions.confirm_payment || "Confirmar pagamento"}
         </Button>

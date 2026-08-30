@@ -36,6 +36,7 @@ type OwnOrg = {
   id: string
   slug: string | null
   whatsapp_instance_name: string | null
+  is_demo: boolean | null
 }
 
 type LoadOwnOrgResult =
@@ -100,7 +101,7 @@ async function loadOwnOrgForWhatsapp(): Promise<LoadOwnOrgResult> {
 
   const { data: org, error } = await admin
     .from("organizations")
-    .select("id, slug, whatsapp_instance_name")
+    .select("id, slug, whatsapp_instance_name, is_demo")
     .eq("id", profile.organization_id)
     .single()
 
@@ -187,6 +188,17 @@ export async function createWhatsappInstance(): Promise<WhatsappResponse> {
   }
 
   const org = loaded.org
+
+  // B2: o visitante demo é um usuário `authenticated` real com papel owner —
+  // sem esta trava, "Conectar" criaria uma instância solta na Evolution
+  // compartilhada (via resolveInstanceName caindo no org.slug). A demo não
+  // tem WhatsApp próprio aqui; o envio do tour usa DEMO_WHATSAPP_INSTANCE,
+  // ver app/actions/demo/send-demo-whatsapp.ts.
+  if (org.is_demo) {
+    console.error("[DEBUG ERROR] Bloqueado: organização é demo")
+    return { error: "Indisponível na demonstração." }
+  }
+
   const organizationId = org.id
   const instanceName = resolveInstanceName(org)
 
@@ -360,6 +372,11 @@ export async function deleteWhatsappInstance() {
     if (!loaded.ok) return { error: loaded.error }
 
     const org = loaded.org
+
+    // B2: mesma trava de createWhatsappInstance — a demo não tem instância
+    // própria para desconectar, e nada deve tocar a Evolution por ela.
+    if (org.is_demo) return { error: "Indisponível na demonstração." }
+
     const instanceName = resolveInstanceName(org)
     if (!instanceName) return { error: "Org sem instância para desconectar" }
 
@@ -403,6 +420,12 @@ export async function getWhatsappStatus(): Promise<WhatsappResponse> {
   // conectado" em vez de estourar um erro — a aba nem aparece para esse perfil.
   if (!loaded.ok) {
     return { status: "unknown" }
+  }
+
+  // B2: status da demo é sempre "desconectado", sem consultar a Evolution —
+  // mesma trava de createWhatsappInstance/deleteWhatsappInstance.
+  if (loaded.org.is_demo) {
+    return { status: "disconnected" }
   }
 
   const instanceName = resolveInstanceName(loaded.org)

@@ -84,7 +84,7 @@ export default async function FinancasPage(props: FinancasPageProps) {
           <RankingList
             title={`Faturamento por ${servicoSingular}`}
             data={data.porProcedimento}
-            color="bg-indigo-500"
+            color="bg-primary"
           />
         </Card>
 
@@ -92,7 +92,7 @@ export default async function FinancasPage(props: FinancasPageProps) {
           <RankingList
             title={`Faturamento por ${profissionalSingular}`}
             data={data.porProfissional}
-            color="bg-emerald-500"
+            color="bg-primary"
           />
         </Card>
       </div>

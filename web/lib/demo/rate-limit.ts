@@ -53,80 +53,58 @@ export function getClientIp(request: Request) {
 /**
  * Consome uma unidade da janela e diz se a requisição passa.
  *
- * Leitura seguida de escrita, sem transação: duas requisições simultâneas com
- * a mesma chave podem contar como uma. O desvio é de poucas unidades e o pior
- * caso é um punhado de tenants demo a mais, que o cleanup recolhe em 24h. Se
- * algum dia isso precisar ser exato — o teto de mensagens da Fase 8 é o
- * candidato —, o caminho é uma função Postgres com `insert ... on conflict do
- * update` devolvendo o contador.
+ * Antes fazia leitura (`select`) seguida de escrita (`upsert`/`update`) em
+ * duas idas separadas ao banco, sem transação — uma rajada concorrente da
+ * mesma chave lia "abaixo do teto" em todas as requisições simultâneas antes
+ * de qualquer uma delas gravar (30 requisições do mesmo IP passaram todas
+ * com teto de 20/h). Agora o incremento e a decisão de janela acontecem numa
+ * única chamada RPC (`consume_demo_rate_limit`, ver
+ * `supabase/migrations/20260828120000_demo_rate_limit_atomic.sql`): a função
+ * faz tudo dentro de um `insert ... on conflict do update` atômico, cuja row
+ * lock serializa concorrência pela mesma chave. A política de limite (o que
+ * é "permitido") continua aqui — a função só garante que o incremento em si
+ * não perde contagem.
+ *
+ * A migration precisa ser aplicada ANTES deste código ir para produção — a
+ * função é dependência da RPC abaixo e o retorno é fail-closed, então sem ela
+ * no banco toda criação de demo passaria a ser recusada. Ver nota de ordem de
+ * deploy no topo do arquivo da migration.
  */
 export async function consumeRateLimit(
   supabaseAdmin: AdminClient,
   key: string,
   { windowMs, max }: RateLimitWindow
 ): Promise<{ allowed: boolean; retryAfterSeconds?: number }> {
-  const now = new Date()
+  const { data, error } = await supabaseAdmin.rpc("consume_demo_rate_limit", {
+    p_key: key,
+    p_window_ms: windowMs,
+    p_max: max,
+  })
 
-  const { data: existing, error: readError } = await supabaseAdmin
-    .from("demo_rate_limits")
-    .select("key, window_start, count")
-    .eq("key", key)
-    .maybeSingle()
-
-  if (readError) {
+  if (error) {
     // Falha do contador não pode virar porta aberta: nega e loga.
-    console.error("❌ [DemoRateLimit] Erro ao ler contador:", readError.message)
+    console.error(
+      "❌ [DemoRateLimit] Erro ao incrementar contador:",
+      error.message
+    )
     return { allowed: false }
   }
 
-  const windowStart = existing ? new Date(existing.window_start) : null
-  const windowExpired =
-    !windowStart || now.getTime() - windowStart.getTime() >= windowMs
+  const row = data?.[0]
 
-  if (!existing || windowExpired) {
-    const { error: upsertError } = await supabaseAdmin
-      .from("demo_rate_limits")
-      .upsert(
-        {
-          key,
-          window_start: now.toISOString(),
-          count: 1,
-          updated_at: now.toISOString(),
-        },
-        { onConflict: "key" }
-      )
-
-    if (upsertError) {
-      console.error(
-        "❌ [DemoRateLimit] Erro ao abrir janela:",
-        upsertError.message
-      )
-      return { allowed: false }
-    }
-
-    return { allowed: true }
+  if (!row) {
+    console.error("❌ [DemoRateLimit] RPC não devolveu contador.")
+    return { allowed: false }
   }
 
-  if (existing.count >= max) {
-    const elapsed = now.getTime() - windowStart!.getTime()
+  if (row.count > max) {
+    const windowStart = new Date(row.window_start)
+    const elapsed = Date.now() - windowStart.getTime()
 
     return {
       allowed: false,
       retryAfterSeconds: Math.max(1, Math.ceil((windowMs - elapsed) / 1000)),
     }
-  }
-
-  const { error: updateError } = await supabaseAdmin
-    .from("demo_rate_limits")
-    .update({ count: existing.count + 1, updated_at: now.toISOString() })
-    .eq("key", key)
-
-  if (updateError) {
-    console.error(
-      "❌ [DemoRateLimit] Erro ao incrementar contador:",
-      updateError.message
-    )
-    return { allowed: false }
   }
 
   return { allowed: true }

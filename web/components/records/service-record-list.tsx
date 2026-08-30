@@ -89,24 +89,10 @@ function ServiceRecordItem({
   const agendamento = entities.agendamento || "Atendimento"
   const profissional = entities.profissional || "Profissional"
 
-  const categories = useMemo(
-    () => [
-      messages.record_tag_progress || "Evolução",
-      messages.record_tag_guidance || "Orientações",
-      messages.record_tag_exam || "Exame",
-      messages.record_tag_assessment || "Avaliação",
-      messages.record_tag_referral || "Encaminhamento",
-    ],
-    [messages]
-  )
-
-  const tagColors: Record<string, string> = {
-    [categories[0]]: "bg-blue-100 text-blue-700 border-blue-200",
-    [categories[1]]: "bg-emerald-100 text-emerald-700 border-emerald-200",
-    [categories[2]]: "bg-purple-100 text-purple-700 border-purple-200",
-    [categories[3]]: "bg-amber-100 text-amber-700 border-amber-200",
-    [categories[4]]: "bg-slate-100 text-slate-700 border-slate-200",
-  }
+  // Categoria de registro não é status: "Exame" não é sucesso nem alerta. As
+  // cinco cores anteriores eram só para não serem cinza — o próprio rótulo já
+  // diz qual é a categoria. Tratamento único e neutro.
+  const tagClass = "bg-muted text-foreground border-border"
 
   const handleUpdate = async () => {
     setIsSaving(true)
@@ -243,18 +229,18 @@ function ServiceRecordItem({
       className={cn(
         "overflow-hidden border-l-16 transition-all",
         record.signature_hash
-          ? "border-l-green-500 bg-green-100"
-          : "border-l-amber-400 bg-amber-100"
+          ? "border-l-success"
+          : "border-l-warning"
       )}
     >
       <CardHeader className="pb-2 space-y-0">
         <div className="flex items-center gap-2">
           <Badge
-            variant={record.signature_hash ? "default" : "secondary"}
+            variant="outline"
             className={
               record.signature_hash
-                ? "bg-green-600 hover:bg-green-700"
-                : "bg-amber-100 text-amber-800 hover:bg-amber-100"
+                ? "text-success border-success/40"
+                : "text-warning border-warning/40"
             }
           >
             {record.signature_hash ? (
@@ -283,7 +269,7 @@ function ServiceRecordItem({
                 key={tag}
                 className={cn(
                   "text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-tight",
-                  tagColors[tag] || "bg-gray-100 text-gray-600 border-gray-200"
+                  tagClass
                 )}
               >
                 {tag}
@@ -317,17 +303,17 @@ function ServiceRecordItem({
             </div>
           </div>
         ) : (
-          <p className="text-sm text-zinc-700 whitespace-pre-wrap leading-relaxed">
+          <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
             {record.content}
           </p>
         )}
       </CardContent>
 
-      <CardFooter className="flex flex-col gap-3 pt-3 border-t bg-zinc-50/50">
+      <CardFooter className="flex flex-col gap-3 pt-3 border-t bg-muted/50">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2">
             {record.appointment_id ? (
-              <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 font-bold bg-emerald-100/50 px-2 py-1 rounded border border-emerald-200">
+              <div className="flex items-center gap-1.5 text-[10px] text-success font-bold px-2 py-1 rounded border border-success/40">
                 <CalendarIcon className="h-3 w-3" />
                 {agendamento.toUpperCase()}:{" "}
                 {format(
@@ -341,7 +327,7 @@ function ServiceRecordItem({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 text-[10px] gap-1 text-amber-700 hover:bg-amber-100 border border-dashed border-amber-300"
+                    className="h-7 text-[10px] gap-1 text-warning hover:bg-accent/50 border border-dashed border-warning/40"
                   >
                     <LinkIcon className="h-3 w-3" />
                     {actions.link || "Vincular"} {agendamento}
@@ -387,7 +373,7 @@ function ServiceRecordItem({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 gap-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                      className="h-8 gap-2 text-success hover:bg-accent/50"
                     >
                       <LockOpen className="h-4 w-4" />
                       <span className="hidden sm:inline">
@@ -413,7 +399,7 @@ function ServiceRecordItem({
                       </AlertDialogCancel>
                       <AlertDialogAction
                         onClick={handleSign}
-                        className="bg-emerald-600"
+
                       >
                         {actions.sign || "Assinar"}
                       </AlertDialogAction>
@@ -424,7 +410,7 @@ function ServiceRecordItem({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 gap-2 text-zinc-500"
+                  className="h-8 gap-2 text-muted-foreground"
                   onClick={() => setIsEditing(true)}
                 >
                   <Pencil className="h-4 w-4" />
@@ -434,7 +420,7 @@ function ServiceRecordItem({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 gap-2 text-red-500"
+                  className="h-8 gap-2 text-destructive"
                   onClick={() => deleteServiceRecord(record.id, customer.id)}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -446,7 +432,7 @@ function ServiceRecordItem({
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 gap-2 text-blue-600"
+              className="h-8 gap-2 text-muted-foreground"
               onClick={handleDownloadPDF}
             >
               <Download className="h-4 w-4" />
@@ -460,7 +446,7 @@ function ServiceRecordItem({
               disabled={!customer.phone || isSending}
               className={cn(
                 "h-8 gap-2 ml-auto",
-                isSending ? "opacity-70" : "bg-emerald-600 hover:bg-emerald-700"
+                isSending && "opacity-70"
               )}
               title={
                 customer.phone
@@ -481,7 +467,7 @@ function ServiceRecordItem({
         </div>
 
         {record.signature_hash && (
-          <div className="w-full flex items-center justify-between text-[9px] text-zinc-500 pt-2 border-t border-zinc-200/50 italic">
+          <div className="w-full flex items-center justify-between text-[9px] text-muted-foreground pt-2 border-t border-border italic">
             <span>
               {messages.signed_by_label || "Assinado por"}{" "}
               {record.professional?.name || profissional}

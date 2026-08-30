@@ -58,7 +58,7 @@ export function AddExpenseModal({ organizationId }: { organizationId: string }) 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-red-600 hover:bg-red-700 text-white">
+        <Button>
           <Plus className="mr-2 h-4 w-4" />
           {actions.create_expense || `Lançar ${expense}`}
         </Button>

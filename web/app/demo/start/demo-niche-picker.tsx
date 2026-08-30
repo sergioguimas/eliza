@@ -76,7 +76,7 @@ export function DemoNichePicker() {
                 "disabled:cursor-not-allowed",
                 isPending
                   ? "ring-2 ring-brand border-brand bg-brand-soft"
-                  : "border-zinc-200 bg-white hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md",
+                  : "border-border bg-card hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-md",
                 pending !== null && !isPending && "opacity-50"
               )}
             >
@@ -92,25 +92,25 @@ export function DemoNichePicker() {
                 <div className="flex items-start justify-between gap-3">
                   <div
                     className={cn(
-                      "flex h-11 w-11 items-center justify-center rounded-lg border bg-white shadow-sm text-brand",
-                      isPending ? "border-white/60" : "border-zinc-200"
+                      "flex h-11 w-11 items-center justify-center rounded-lg border bg-card shadow-sm text-brand",
+                      isPending ? "border-brand" : "border-border"
                     )}
                   >
                     <Icon className="h-5 w-5" />
                   </div>
 
                   {isPending ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-zinc-400" />
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   ) : (
-                    <ArrowRight className="h-5 w-5 text-zinc-300 transition-transform group-hover:translate-x-0.5 group-hover:text-zinc-500" />
+                    <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
                   )}
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-sm font-semibold text-zinc-950">
+                  <p className="text-sm font-semibold text-foreground">
                     {option.label}
                   </p>
-                  <p className="text-xs leading-relaxed text-zinc-500">
+                  <p className="text-xs leading-relaxed text-muted-foreground">
                     {isPending ? "Preparando seu ambiente..." : option.description}
                   </p>
                 </div>
@@ -123,7 +123,7 @@ export function DemoNichePicker() {
       {error && (
         <div
           role="alert"
-          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          className="rounded-xl border border-danger/40 px-4 py-3 text-sm text-danger"
         >
           {error}
         </div>

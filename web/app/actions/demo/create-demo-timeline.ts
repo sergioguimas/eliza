@@ -26,8 +26,21 @@ function formatTime(date: Date) {
   })
 }
 
+// Honoríficos comuns (com ou sem ponto, case-insensitive) que não devem
+// aparecer como "primeiro nome" na copy do lembrete — "Dra. Helena Prado"
+// deve virar "Helena", não "Dra.".
+const HONORIFIC_PATTERN = /^(dra?|sra?)\.?$/i
+
 function firstName(fullName: string) {
-  return fullName.trim().split(/\s+/)[0]
+  const tokens = fullName.trim().split(/\s+/)
+  // Descarta tokens iniciais que são honoríficos, mas nunca o último token —
+  // se sobrar só o honorífico (ex.: fullName === "Dra."), mantém o
+  // comportamento atual em vez de devolver uma string vazia.
+  let i = 0
+  while (i < tokens.length - 1 && HONORIFIC_PATTERN.test(tokens[i])) {
+    i++
+  }
+  return tokens[i]
 }
 
 /**

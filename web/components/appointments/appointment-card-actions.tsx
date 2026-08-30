@@ -52,6 +52,17 @@ export function AppointmentCardActions({
         new CustomEvent("eliza:appointment-status-changed", { detail: { status } })
       )
 
+      if (status === 'arrived') {
+        // Evento dedicado, à parte do genérico acima: o passo "chegou" do
+        // tour é popover simples (não navega), então precisa de um sinal só
+        // dele para saber que a chegada foi de fato confirmada — sem isso, o
+        // único jeito de avançar era o botão "Entendi", que some junto com o
+        // popover assim que este menu abre (`hidePopoverOnly`). Mesmo padrão
+        // de "appointment-created"/"appointment-paid": barato, ninguém
+        // escuta fora do tour.
+        window.dispatchEvent(new CustomEvent("eliza:appointment-arrived"))
+      }
+
       if (status === 'completed') {
         const targetUrl = `/clientes/${appointment.customer_id}?return_check=${appointment.id}`
 
@@ -106,7 +117,7 @@ export function AppointmentCardActions({
           variant="ghost"
           size="icon"
           className={cn(
-            "p-0 hover:bg-slate-200/50 rounded-full shrink-0",
+            "p-0 hover:bg-accent rounded-full shrink-0",
             compact ? "h-5 w-5" : "h-6 w-6"
           )}
         >
@@ -120,7 +131,7 @@ export function AppointmentCardActions({
       <DropdownMenuContent align="end" className="w-56">
         {appointment.status === 'canceled' ? (
           <DropdownMenuItem disabled>
-            <Ban className="mr-2 h-4 w-4 text-red-500" />
+            <Ban className="mr-2 h-4 w-4 text-destructive" />
             <span>
               {messages.canceled || "Cancelado"}
             </span>
@@ -135,26 +146,26 @@ export function AppointmentCardActions({
             <DropdownMenuSeparator />
 
             <DropdownMenuItem onClick={() => handlePayment('pix')}>
-              <QrCode className="mr-2 h-4 w-4 text-emerald-500" />
+              <QrCode className="mr-2 h-4 w-4 text-muted-foreground" />
               <span>Pix</span>
             </DropdownMenuItem>
 
             <DropdownMenuItem onClick={() => handlePayment('cartao_credito')}>
-              <CreditCard className="mr-2 h-4 w-4 text-blue-500" />
+              <CreditCard className="mr-2 h-4 w-4 text-muted-foreground" />
               <span>
                 {labels.credit_card || "Cartão de crédito"}
               </span>
             </DropdownMenuItem>
 
             <DropdownMenuItem onClick={() => handlePayment('cartao_debito')}>
-              <CreditCard className="mr-2 h-4 w-4 text-indigo-500" />
+              <CreditCard className="mr-2 h-4 w-4 text-muted-foreground" />
               <span>
                 {labels.debit_card || "Cartão de débito"}
               </span>
             </DropdownMenuItem>
 
             <DropdownMenuItem onClick={() => handlePayment('dinheiro')}>
-              <Banknote className="mr-2 h-4 w-4 text-amber-500" />
+              <Banknote className="mr-2 h-4 w-4 text-muted-foreground" />
               <span>
                 {labels.cash || "Dinheiro"}
               </span>
@@ -162,7 +173,7 @@ export function AppointmentCardActions({
           </>
         ) : appointment.payment_status === 'paid' ? (
           <DropdownMenuItem disabled>
-            <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
+            <CheckCircle2 className="mr-2 h-4 w-4 text-success" />
             <span>
               {messages.payment_done || "Pagamento concluído"}
             </span>
@@ -177,21 +188,21 @@ export function AppointmentCardActions({
             <DropdownMenuSeparator />
 
             <DropdownMenuItem onClick={() => handleStatusChange('confirmed')}>
-              <Check className="mr-2 h-4 w-4 text-blue-500" />
+              <Check className="mr-2 h-4 w-4 text-info" />
               <span>
                 {labels.confirm || "Confirmar"}
               </span>
             </DropdownMenuItem>
 
             <DropdownMenuItem onClick={() => handleStatusChange('arrived')}>
-              <UserCheck className="mr-2 h-4 w-4 text-amber-500" />
+              <UserCheck className="mr-2 h-4 w-4 text-warning" />
               <span>
                 {labels.arrived || "Chegada confirmada"}
               </span>
             </DropdownMenuItem>
 
             <DropdownMenuItem onClick={() => handleStatusChange('completed')}>
-              <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
+              <CheckCircle2 className="mr-2 h-4 w-4 text-success" />
               <span>
                 {labels.complete || "Finalizar"}
               </span>
@@ -201,7 +212,7 @@ export function AppointmentCardActions({
 
             <DropdownMenuItem
               onClick={handleCancel}
-              className="text-red-600"
+              className="text-destructive"
             >
               <Ban className="mr-2 h-4 w-4" />
               <span>

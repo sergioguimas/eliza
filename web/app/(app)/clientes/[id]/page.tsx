@@ -179,7 +179,7 @@ export default async function CustomerPage({
       </div>
 
       <Tabs defaultValue="records" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-12 p-1 bg-gray-100/80 dark:bg-gray-800/80 rounded-xl mb-6">
+        <TabsList className="grid w-full grid-cols-3 h-12 p-1 bg-muted rounded-xl mb-6">
           <TabsTrigger value="history" data-tour="tab-agendamentos">
             {agendamentoPlural}
           </TabsTrigger>
@@ -215,7 +215,7 @@ export default async function CustomerPage({
                               })}
                             </span>
 
-                            <Badge className={getStatusBadgeStyle(apt.status)}>
+                            <Badge variant="outline" className={getStatusBadgeStyle(apt.status)}>
                               {apt.status === "confirmed"
                                 ? "Confirmado"
                                 : apt.status === "canceled"
@@ -260,15 +260,15 @@ export default async function CustomerPage({
                       </div>
 
                       {apt.appointment_logs && apt.appointment_logs.length > 0 && (
-                        <div className="mt-4 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-700/50">
+                        <div className="mt-4 p-3 rounded-lg bg-muted/50 border border-border">
                           {apt.appointment_logs.map((log: any, idx: number) => (
                             <div key={idx} className="flex gap-3">
                               <div
                                 className={cn(
                                   "mt-1 p-1.5 rounded-full h-fit",
                                   log.action === "confirmed"
-                                    ? "bg-green-100 text-green-600"
-                                    : "bg-red-100 text-red-600"
+                                    ? "bg-success/10 text-success"
+                                    : "bg-danger/10 text-danger"
                                 )}
                               >
                                 <MessageCircle className="h-3.5 w-3.5" />
@@ -291,7 +291,7 @@ export default async function CustomerPage({
                                   </span>
                                 </div>
 
-                                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                                <p className="text-sm text-muted-foreground">
                                   <strong>{log.push_name}</strong> respondeu:{" "}
                                   <span className="italic">
                                     "{log.raw_message}"
@@ -405,7 +405,7 @@ export default async function CustomerPage({
             </CardHeader>
 
             <CardContent>
-              <div className="p-4 rounded-lg bg-zinc-50 dark:bg-zinc-800/40 border min-h-[120px]">
+              <div className="p-4 rounded-lg bg-muted/50 border min-h-[120px]">
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">
                   {customer.notes || "Nenhuma observação interna registrada."}
                 </p>
@@ -418,36 +418,42 @@ export default async function CustomerPage({
   )
 }
 
+// Vai para um style inline (borderLeftColor), então devolve a cor já resolvida
+// a partir do token — e não um hex fixo. O ramo "arrived" trazia exatamente o
+// indigo do template shadcn que esta refatoracao removeu do resto do produto.
 function getStatusColorHex(status: string | null) {
-  if (!status) return "#94a3b8"
+  if (!status) return "hsl(var(--border))"
 
   switch (status) {
     case "confirmed":
-      return "#22c55e"
+      return "hsl(var(--status-info))"
     case "canceled":
-      return "#ef4444"
+      return "hsl(var(--status-danger))"
     case "completed":
-      return "#3b82f6"
+      return "hsl(var(--status-success))"
     case "arrived":
-      return "#6366f1"
+      return "hsl(var(--status-warning))"
     default:
-      return "#eab308"
+      return "hsl(var(--border))"
   }
 }
 
+// Mesmo mapeamento usado no dashboard e nos cards financeiros. Chip vazado em
+// vez de tingido: text-<status> sobre bg-<status>/10 reprova AA no tema claro
+// (success 4,05:1, info 4,02:1), enquanto sobre o fundo do card passa nos dois.
 function getStatusBadgeStyle(status: string | null) {
-  if (!status) return "bg-slate-100 text-slate-700"
+  if (!status) return "text-muted-foreground border-border"
 
   switch (status) {
     case "confirmed":
-      return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+      return "text-info border-info/40"
     case "canceled":
-      return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+      return "text-danger border-danger/40"
     case "completed":
-      return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+      return "text-success border-success/40"
     case "arrived":
-      return "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+      return "text-warning border-warning/40"
     default:
-      return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+      return "text-muted-foreground border-border"
   }
 }

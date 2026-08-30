@@ -124,14 +124,26 @@ export function buildDemoTour(niche: string): DemoTourStep[] {
         "Mostra os avisos automáticos que o Eliza dispara antes de um compromisso, sem esperar o relógio de verdade chegar lá.",
     },
     {
-      // Ungated de propósito: "chegada" é um checkpoint informativo, não uma
-      // ação que precise ser forçada — um profissional apressado pode ir
-      // direto para "Finalizar", e isso é uso legítimo, não erro.
+      // Tem `awaitsEvent`, mas isso não é gate contra pular a chegada — é
+      // conserto do único jeito que este passo tinha de avançar. É popover
+      // simples, sem navegação: o botão "Entendi" era a única saída, só que
+      // clicar no card para abrir o menu de ações (como o texto pede) já
+      // derrubava o popover — e o botão junto — via `hidePopoverOnly`.
+      // Marcar a chegada virava beco sem saída. `appointment-card-actions` e
+      // `appointment-context-menu` já disparam `eliza:appointment-arrived`
+      // quando o status muda para "arrived" — este passo escuta esse evento
+      // real, em vez de depender de um botão que pode já não existir mais.
+      // "Chegada" continua um checkpoint informativo: um profissional
+      // apressado ainda pode ir direto para "Finalizar" sem passar por aqui
+      // — a reancoragem por rota do `tour-guide` deixa esse pulo passar
+      // (comentário em `tour-guide.tsx` sobre a trava do A3). Uso legítimo,
+      // não erro.
       id: "chegou",
       match: /^\/dashboard/,
       selector: '[data-tour="dashboard-proximos"]',
       title: "O paciente chegou?",
       description: `Clique com o botão direito no agendamento (no celular, toque e segure) — ou use o botão de ações no card — e marque "${arrivedLabel}". É o primeiro checkpoint do atendimento.`,
+      awaitsEvent: "eliza:appointment-arrived",
     },
     {
       // Continua exigindo navegação de verdade: só marcar "Finalizar" leva o

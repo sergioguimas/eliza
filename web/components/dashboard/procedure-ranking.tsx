@@ -33,7 +33,7 @@ export function ProcedureRanking({ data }: { data: Record<string, number> }) {
 
           <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
             <div
-              className="h-full bg-blue-500 transition-all"
+              className="h-full bg-primary transition-all"
               style={{ width: `${(value / maxVal) * 100}%` }}
             />
           </div>

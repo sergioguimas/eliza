@@ -41,6 +41,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Erro de configuração." }, { status: 500 })
   }
 
+  // C5 (auditoria adversarial 2026-08-28): corpo de 2 MB retornava 200 e
+  // criava tenant — sem limite de tamanho, `request.json()` engolia
+  // qualquer coisa. O único payload válido é `{ niche }`, então um corpo
+  // maior que uma folga generosa é abuso, não caso de uso real. Barrado
+  // antes de `request.json()` para não gastar CPU desserializando lixo
+  // grande, e antes de qualquer escrita no banco.
+  const contentLength = request.headers.get("content-length")
+
+  if (contentLength && Number(contentLength) > 4096) {
+    return NextResponse.json({ error: "Requisição inválida." }, { status: 413 })
+  }
+
+  const contentType = request.headers.get("content-type")
+
+  if (!contentType || !contentType.toLowerCase().includes("application/json")) {
+    return NextResponse.json({ error: "Requisição inválida." }, { status: 400 })
+  }
+
   let niche: unknown
 
   try {

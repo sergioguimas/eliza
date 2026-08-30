@@ -220,8 +220,8 @@ export function SetupForm() {
         : "Revise as informações antes de criar seu ambiente."
 
   return (
-    <Card className="mx-auto flex min-h-[620px] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-zinc-200/80 bg-white shadow-[0_20px_70px_-30px_rgba(0,0,0,0.25)]">
-      <div className="relative h-1.5 w-full bg-zinc-100">
+    <Card className="mx-auto flex min-h-[620px] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-border bg-card shadow-[0_20px_70px_-30px_rgba(0,0,0,0.25)]">
+      <div className="relative h-1.5 w-full bg-muted">
         <motion.div
           className="h-full rounded-full bg-primary"
           animate={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
@@ -229,29 +229,29 @@ export function SetupForm() {
         />
       </div>
 
-      <CardHeader className="space-y-6 border-b border-zinc-100 px-6 pb-6 pt-7 sm:px-8">
+      <CardHeader className="space-y-6 border-b border-border px-6 pb-6 pt-7 sm:px-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-medium text-zinc-600">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-medium text-muted-foreground">
               <Rocket className="h-3.5 w-3.5" />
               Setup inicial do sistema
             </div>
 
             <div className="space-y-1.5">
-              <CardTitle className="text-2xl font-semibold tracking-tight text-zinc-950 sm:text-3xl">
+              <CardTitle className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
                 {stepTitle}
               </CardTitle>
-              <CardDescription className="max-w-2xl text-sm leading-relaxed text-zinc-500 sm:text-[15px]">
+              <CardDescription className="max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
                 {stepDescription}
               </CardDescription>
             </div>
           </div>
 
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-right">
-            <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-500">
+          <div className="rounded-lg border border-border bg-muted/50 px-4 py-3 text-right">
+            <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
               Etapa atual
             </div>
-            <div className="mt-1 text-lg font-semibold text-zinc-900">
+            <div className="mt-1 text-lg font-semibold text-foreground">
               {step}/{TOTAL_STEPS}
             </div>
           </div>
@@ -269,8 +269,8 @@ export function SetupForm() {
                 className={cn(
                   "rounded-lg border px-3 py-3 transition-all",
                   isActive && "border-primary bg-primary/5",
-                  isDone && "border-emerald-200 bg-emerald-50",
-                  !isActive && !isDone && "border-zinc-200 bg-white"
+                  isDone && "border-success/40",
+                  !isActive && !isDone && "border-border bg-card"
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -278,20 +278,20 @@ export function SetupForm() {
                     className={cn(
                       "flex h-7 w-7 items-center justify-center rounded-full border text-xs font-semibold",
                       isActive && "border-primary bg-primary text-primary-foreground",
-                      isDone && "border-emerald-500 bg-emerald-500 text-white",
-                      !isActive && !isDone && "border-zinc-300 bg-zinc-50 text-zinc-600"
+                      isDone && "border-success bg-success text-background",
+                      !isActive && !isDone && "border-border bg-muted/50 text-muted-foreground"
                     )}
                   >
                     {isDone ? <CheckCircle2 className="h-4 w-4" /> : item}
                   </div>
 
                   <div className="min-w-0">
-                    <p className="truncate text-xs font-semibold text-zinc-900 sm:text-sm">
+                    <p className="truncate text-xs font-semibold text-foreground sm:text-sm">
                       {item === 1 && "Nicho"}
                       {item === 2 && "Identidade"}
                       {item === 3 && "Revisão"}
                     </p>
-                    <p className="hidden text-[11px] text-zinc-500 sm:block">
+                    <p className="hidden text-[11px] text-muted-foreground sm:block">
                       {item === 1 && "Seleção do ramo"}
                       {item === 2 && "Nome e link"}
                       {item === 3 && "Confirmação final"}
@@ -326,7 +326,7 @@ export function SetupForm() {
                           "hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                           isSelected
                             ? "ring-2 ring-brand border-brand bg-brand-soft"
-                            : "border-zinc-200 bg-white hover:border-zinc-300"
+                            : "border-border bg-card hover:border-border"
                         )}
                       >
                         <div
@@ -341,8 +341,8 @@ export function SetupForm() {
                           <div className="flex items-start justify-between gap-3">
                             <div
                               className={cn(
-                                "flex h-11 w-11 items-center justify-center rounded-lg border bg-white shadow-sm text-brand",
-                                isSelected ? "border-white/60" : "border-zinc-200"
+                                "flex h-11 w-11 items-center justify-center rounded-lg border bg-card shadow-sm text-brand",
+                                isSelected ? "border-brand" : "border-border"
                               )}
                             >
                               <Icon className="h-5 w-5" />
@@ -353,7 +353,7 @@ export function SetupForm() {
                                 "flex h-6 w-6 items-center justify-center rounded-full border transition-all",
                                 isSelected
                                   ? "border-primary bg-primary text-primary-foreground"
-                                  : "border-zinc-200 bg-white text-transparent"
+                                  : "border-border bg-card text-transparent"
                               )}
                             >
                               <CheckCircle2 className="h-4 w-4" />
@@ -361,10 +361,10 @@ export function SetupForm() {
                           </div>
 
                           <div className="space-y-1">
-                            <p className="text-sm font-semibold text-zinc-950">
+                            <p className="text-sm font-semibold text-foreground">
                               {option.label}
                             </p>
-                            <p className="text-xs leading-relaxed text-zinc-500">
+                            <p className="text-xs leading-relaxed text-muted-foreground">
                               {option.description}
                             </p>
                           </div>
@@ -375,7 +375,7 @@ export function SetupForm() {
                 </div>
 
                 {errors.niche && (
-                  <p className="text-sm text-red-500">
+                  <p className="text-sm text-danger">
                     {errors.niche}
                   </p>
                 )}
@@ -390,7 +390,7 @@ export function SetupForm() {
               >
                 <div className="space-y-6">
                   <div className="space-y-2.5">
-                    <Label htmlFor="name" className="text-sm font-semibold text-zinc-800">
+                    <Label htmlFor="name" className="text-sm font-semibold text-foreground">
                       Nome do Negócio
                     </Label>
                     <Input
@@ -400,30 +400,30 @@ export function SetupForm() {
                       onKeyDown={handleStep2KeyDown}
                       placeholder="Ex: Clínica Central, Studio Aurora..."
                       className={cn(
-                        "h-12 rounded-xl border-zinc-200 text-base shadow-none focus-visible:ring-2",
-                        errors.name && "border-red-500 focus-visible:ring-red-200"
+                        "h-12 rounded-xl border-border text-base shadow-none focus-visible:ring-2",
+                        errors.name && "border-danger focus-visible:ring-danger/30"
                       )}
                       autoFocus
                       maxLength={80}
                     />
-                    <p className={cn("text-xs", errors.name ? "text-red-500" : "text-zinc-500")}>
+                    <p className={cn("text-xs", errors.name ? "text-danger" : "text-muted-foreground")}>
                       {errors.name || "Esse nome será usado como identificação principal do ambiente."}
                     </p>
                   </div>
 
                   <div className="space-y-2.5">
-                    <Label htmlFor="slug" className="text-sm font-semibold text-zinc-800">
+                    <Label htmlFor="slug" className="text-sm font-semibold text-foreground">
                       Link do Sistema
                     </Label>
 
                     <div
                       className={cn(
-                        "flex h-12 items-center rounded-xl border border-zinc-200 bg-zinc-50 px-3 transition-all focus-within:border-primary focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/20",
-                        errors.slug && "border-red-500"
+                        "flex h-12 items-center rounded-xl border border-border bg-muted/50 px-3 transition-all focus-within:border-primary focus-within:bg-card focus-within:ring-2 focus-within:ring-primary/20",
+                        errors.slug && "border-danger"
                       )}
                     >
-                      <Globe className="mr-2 h-4 w-4 shrink-0 text-zinc-400" />
-                      <span className="mr-1 shrink-0 text-sm font-medium text-zinc-500">
+                      <Globe className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="mr-1 shrink-0 text-sm font-medium text-muted-foreground">
                         eliza.app/
                       </span>
 
@@ -433,7 +433,7 @@ export function SetupForm() {
                         onChange={(e) => handleSlugChange(e.target.value)}
                         onKeyDown={handleStep2KeyDown}
                         placeholder="minha-empresa"
-                        className="h-full min-w-0 flex-1 bg-transparent text-sm font-semibold text-zinc-900 outline-none placeholder:text-zinc-400"
+                        className="h-full min-w-0 flex-1 bg-transparent text-sm font-semibold text-foreground outline-none placeholder:text-muted-foreground"
                         autoCapitalize="none"
                         autoCorrect="off"
                         spellCheck={false}
@@ -441,7 +441,7 @@ export function SetupForm() {
                       />
                     </div>
 
-                    <p className={cn("text-xs leading-relaxed", errors.slug ? "text-red-500" : "text-zinc-500")}>
+                    <p className={cn("text-xs leading-relaxed", errors.slug ? "text-danger" : "text-muted-foreground")}>
                       {errors.slug || "Use apenas letras minúsculas, números e traços. Esse link será único para sua equipe."}
                     </p>
                   </div>
@@ -449,30 +449,30 @@ export function SetupForm() {
 
                 <motion.div
                   layout
-                  className="rounded-lg border border-zinc-200 bg-gradient-to-br from-zinc-50 to-white p-5 shadow-sm"
+                  className="rounded-lg border border-border bg-muted/30 p-5 shadow-sm"
                 >
-                  <div className="flex items-center gap-2 text-sm font-semibold text-zinc-800">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                     <Link2 className="h-4 w-4" />
                     Prévia do seu acesso
                   </div>
 
-                  <div className="mt-5 rounded-lg border border-zinc-200 bg-white p-4">
-                    <p className="text-xs font-medium uppercase tracking-[0.14em] text-zinc-400">
+                  <div className="mt-5 rounded-lg border border-border bg-card p-4">
+                    <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
                       Ambiente
                     </p>
 
-                    <p className="mt-2 break-words text-lg font-semibold text-zinc-950">
+                    <p className="mt-2 break-words text-lg font-semibold text-foreground">
                       {formData.name?.trim() || "Nome do seu negócio"}
                     </p>
 
                     <div className="mt-4 rounded-xl bg-primary/5 px-3 py-3 text-sm">
-                      <span className="text-zinc-500">eliza.app/</span>
+                      <span className="text-muted-foreground">eliza.app/</span>
                       <span className="break-all font-semibold text-primary">
                         {formData.slug || "minha-empresa"}
                       </span>
                     </div>
 
-                    <div className="mt-4 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-xs text-emerald-800">
+                    <div className="mt-4 flex items-start gap-2 rounded-xl border border-success/40 px-3 py-3 text-xs text-success">
                       <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
                       <span>
                         Endereço limpo, profissional e fácil de compartilhar com a equipe.
@@ -489,41 +489,41 @@ export function SetupForm() {
                 {...panelMotion}
                 className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]"
               >
-                <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
+                <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
                   <div className="mb-5 flex items-center gap-3">
                     <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
                       <NicheIcon className="h-6 w-6" />
                     </div>
 
                     <div>
-                      <p className="text-sm text-zinc-500">Resumo do ambiente</p>
-                      <p className="text-lg font-semibold text-zinc-950">
+                      <p className="text-sm text-muted-foreground">Resumo do ambiente</p>
+                      <p className="text-lg font-semibold text-foreground">
                         Pronto para criação
                       </p>
                     </div>
                   </div>
 
                   <div className="space-y-4">
-                    <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-4">
-                      <p className="text-xs font-medium uppercase tracking-[0.12em] text-zinc-400">
+                    <div className="rounded-lg border border-border bg-muted/50 px-4 py-4">
+                      <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
                         Nicho selecionado
                       </p>
-                      <p className="mt-1 text-sm font-semibold text-zinc-900">
+                      <p className="mt-1 text-sm font-semibold text-foreground">
                         {selectedNiche?.label}
                       </p>
                     </div>
 
-                    <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-4">
-                      <p className="text-xs font-medium uppercase tracking-[0.12em] text-zinc-400">
+                    <div className="rounded-lg border border-border bg-muted/50 px-4 py-4">
+                      <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
                         Nome do negócio
                       </p>
-                      <p className="mt-1 break-words text-sm font-semibold text-zinc-900">
+                      <p className="mt-1 break-words text-sm font-semibold text-foreground">
                         {formData.name}
                       </p>
                     </div>
 
-                    <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-4">
-                      <p className="text-xs font-medium uppercase tracking-[0.12em] text-zinc-400">
+                    <div className="rounded-lg border border-border bg-muted/50 px-4 py-4">
+                      <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
                         URL de acesso
                       </p>
                       <p className="mt-1 break-all text-sm font-semibold text-primary">
@@ -533,39 +533,39 @@ export function SetupForm() {
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-primary/20 bg-gradient-to-br from-primary/10 via-white to-white p-6">
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-6">
                   <div className="space-y-3">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white/80 px-3 py-1 text-xs font-medium text-primary">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-card/80 px-3 py-1 text-xs font-medium text-primary">
                       <CheckCircle2 className="h-3.5 w-3.5" />
                       Verificação final
                     </div>
 
-                    <h3 className="text-xl font-semibold tracking-tight text-zinc-950">
+                    <h3 className="text-xl font-semibold tracking-tight text-foreground">
                       Seu ambiente será criado com esses dados
                     </h3>
 
-                    <p className="text-sm leading-relaxed text-zinc-600">
+                    <p className="text-sm leading-relaxed text-muted-foreground">
                       Ao finalizar, sua organização será configurada e você seguirá para o próximo passo do sistema.
                     </p>
                   </div>
 
                   <div className="mt-6 space-y-3">
-                    <div className="rounded-lg border border-white/70 bg-white/80 px-4 py-3">
-                      <p className="text-xs text-zinc-500">Estrutura inicial</p>
-                      <p className="text-sm font-medium text-zinc-900">
+                    <div className="rounded-lg border border-border bg-card/80 px-4 py-3">
+                      <p className="text-xs text-muted-foreground">Estrutura inicial</p>
+                      <p className="text-sm font-medium text-foreground">
                         Ambiente preparado para começar
                       </p>
                     </div>
 
-                    <div className="rounded-lg border border-white/70 bg-white/80 px-4 py-3">
-                      <p className="text-xs text-zinc-500">Acesso principal</p>
-                      <p className="break-all text-sm font-medium text-zinc-900">
+                    <div className="rounded-lg border border-border bg-card/80 px-4 py-3">
+                      <p className="text-xs text-muted-foreground">Acesso principal</p>
+                      <p className="break-all text-sm font-medium text-foreground">
                         eliza.app/{formData.slug}
                       </p>
                     </div>
                   </div>
 
-                  <p className="mt-6 text-xs leading-relaxed text-zinc-500">
+                  <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
                     Revise os dados com atenção. Depois da criação, ainda será possível ajustar outras informações dentro do painel.
                   </p>
                 </div>
@@ -574,14 +574,14 @@ export function SetupForm() {
           </AnimatePresence>
         </CardContent>
 
-        <CardFooter className="flex items-center justify-between border-t border-zinc-100 px-6 py-5 sm:px-8">
+        <CardFooter className="flex items-center justify-between border-t border-border px-6 py-5 sm:px-8">
           {step > 1 ? (
             <Button
               type="button"
               variant="outline"
               onClick={handleBack}
               disabled={isLoading}
-              className="rounded-xl border-zinc-300 bg-white px-4 text-zinc-800 hover:bg-zinc-50 hover:text-zinc-950"
+              className="rounded-xl border-border bg-card px-4 text-foreground hover:bg-muted/50 hover:text-foreground"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Voltar

@@ -63,8 +63,8 @@ export function CancelAppointmentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
-          <div className="mx-auto bg-yellow-100 p-3 rounded-full w-fit mb-2">
-            <AlertTriangle className="h-6 w-6 text-yellow-600" />
+          <div className="mx-auto bg-warning/10 p-3 rounded-full w-fit mb-2">
+            <AlertTriangle className="h-6 w-6 text-warning" />
           </div>
 
           <DialogTitle className="text-center">
