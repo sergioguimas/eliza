@@ -169,6 +169,15 @@ function CalendarContent({
     string | null
   >(null)
 
+  // Guarda um pedido de abertura com defaults inteligentes feito enquanto
+  // `demoDefaultsLoading` ainda é true (botão "Novo agendamento" do
+  // cabeçalho, clicado rápido). Mesmo espírito do `waitingForDemoDefaults` do
+  // fluxo `?new=true` logo abaixo: não abre formulário em branco/com horário
+  // já passado enquanto os defaults ainda estão a caminho.
+  const [pendingSmartCreate, setPendingSmartCreate] = useState<Date | null>(
+    null
+  )
+
   useEffect(() => {
     const isNew = searchParams.get("new") === "true"
     const customerId = searchParams.get("customer_id")
@@ -218,6 +227,22 @@ function CalendarContent({
     demoDefaultsLoading,
     demoDefaults,
   ])
+
+  // Resolve o pedido guardado por `openCreateModal` assim que os defaults da
+  // demo terminam de carregar (com ou sem sucesso — se `demoDefaults` ainda
+  // vier null depois de esgotar as tentativas do hook, abre em branco, que já
+  // é o comportamento aceito pra esse caso extremo).
+  useEffect(() => {
+    if (!pendingSmartCreate || demoDefaultsLoading) return
+
+    if (demoDefaults) {
+      setPrefilledData(toPrefilledData(demoDefaults))
+    }
+
+    setCreateDate(pendingSmartCreate)
+    setIsCreateOpen(true)
+    setPendingSmartCreate(null)
+  }, [pendingSmartCreate, demoDefaultsLoading, demoDefaults])
 
   const getProfessionalColor = (profId?: string) => {
     if (!profId) return PROFESSIONAL_COLORS[0]
@@ -271,6 +296,14 @@ function CalendarContent({
     // com o botão direito num dia ou horário específico é uma escolha
     // deliberada do visitante — sobrepor com o slot calculado seria ignorar o
     // que ele acabou de apontar.
+    if (useSmartDefaults && isDemo && demoDefaultsLoading) {
+      // Busca ainda em voo (inclusive a repetição que o hook já faz sozinho
+      // em caso de falha) — espera em vez de abrir formulário em branco ou
+      // com hora já passada. O effect acima reabre assim que resolver.
+      setPendingSmartCreate(targetDate)
+      return
+    }
+
     if (useSmartDefaults && isDemo && demoDefaults) {
       setPrefilledData(toPrefilledData(demoDefaults))
     }
@@ -514,7 +547,7 @@ function CalendarContent({
                       <div
                         className={cn(
                           "h-full w-full border-r border-b border-border p-1 md:p-2 min-h-[80px] relative hover:bg-accent/50 transition-colors group flex flex-col gap-1",
-                          !isSameMonth(day, monthStart) && "bg-muted/30 opacity-40",
+                          !isSameMonth(day, monthStart) && "bg-muted/30",
                           isToday(day) && "bg-card"
                         )}
                       >

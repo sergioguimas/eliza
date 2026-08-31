@@ -58,6 +58,15 @@ export function AppointmentContextMenu({
         new CustomEvent("eliza:appointment-status-changed", { detail: { status } })
       )
 
+      if (status === "arrived") {
+        // Evento dedicado, mesmo padrão de `appointment-card-actions.tsx`
+        // (o outro caminho para a mesma ação): o passo "chegou" do tour é
+        // popover simples e precisa de um sinal só dele para avançar sem
+        // depender do botão "Entendi", que some junto com o popover assim
+        // que este menu abre.
+        window.dispatchEvent(new CustomEvent("eliza:appointment-arrived"))
+      }
+
       if (status === "completed") {
         const targetUrl = `/clientes/${appointment.customer_id}?return_check=${appointment.id}`
 
@@ -114,7 +123,7 @@ export function AppointmentContextMenu({
 
         {appointment.status === "canceled" ? (
           <ContextMenuItem disabled>
-            <Ban className="mr-2 h-4 w-4 text-red-500" />
+            <Ban className="mr-2 h-4 w-4 text-destructive" />
             <span>{messages.canceled || "Cancelado"}</span>
           </ContextMenuItem>
         ) : appointment.status === "completed" &&
@@ -125,50 +134,50 @@ export function AppointmentContextMenu({
             </ContextMenuLabel>
 
             <ContextMenuItem onClick={() => handlePayment("pix")}>
-              <QrCode className="mr-2 h-4 w-4 text-emerald-500" />
+              <QrCode className="mr-2 h-4 w-4 text-muted-foreground" />
               <span>Pix</span>
             </ContextMenuItem>
 
             <ContextMenuItem onClick={() => handlePayment("cartao_credito")}>
-              <CreditCard className="mr-2 h-4 w-4 text-blue-500" />
+              <CreditCard className="mr-2 h-4 w-4 text-muted-foreground" />
               <span>{actions.credit_card || "Cartão de crédito"}</span>
             </ContextMenuItem>
 
             <ContextMenuItem onClick={() => handlePayment("cartao_debito")}>
-              <CreditCard className="mr-2 h-4 w-4 text-indigo-500" />
+              <CreditCard className="mr-2 h-4 w-4 text-muted-foreground" />
               <span>{actions.debit_card || "Cartão de débito"}</span>
             </ContextMenuItem>
 
             <ContextMenuItem onClick={() => handlePayment("dinheiro")}>
-              <Banknote className="mr-2 h-4 w-4 text-amber-500" />
+              <Banknote className="mr-2 h-4 w-4 text-muted-foreground" />
               <span>{actions.cash || "Dinheiro"}</span>
             </ContextMenuItem>
           </>
         ) : appointment.payment_status === "paid" ? (
           <ContextMenuItem disabled>
-            <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
+            <CheckCircle2 className="mr-2 h-4 w-4 text-success" />
             <span>{messages.payment_done || "Pagamento confirmado"}</span>
           </ContextMenuItem>
         ) : (
           <>
             <ContextMenuItem onClick={() => handleStatusChange("confirmed")}>
-              <Check className="mr-2 h-4 w-4 text-blue-500" />
+              <Check className="mr-2 h-4 w-4 text-info" />
               <span>{actions.confirm || "Confirmar"}</span>
             </ContextMenuItem>
 
             <ContextMenuItem onClick={() => handleStatusChange("arrived")}>
-              <UserCheck className="mr-2 h-4 w-4 text-amber-500" />
+              <UserCheck className="mr-2 h-4 w-4 text-warning" />
               <span>{actions.arrived || "Chegada confirmada"}</span>
             </ContextMenuItem>
 
             <ContextMenuItem onClick={() => handleStatusChange("completed")}>
-              <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
+              <CheckCircle2 className="mr-2 h-4 w-4 text-success" />
               <span>{actions.complete || "Finalizar"}</span>
             </ContextMenuItem>
 
             <ContextMenuSeparator />
 
-            <ContextMenuItem onClick={handleCancel} className="text-red-600">
+            <ContextMenuItem onClick={handleCancel} className="text-destructive">
               <Ban className="mr-2 h-4 w-4" />
               <span>
                 {actions.cancel || `Cancelar ${agendamentoSingular.toLowerCase()}`}

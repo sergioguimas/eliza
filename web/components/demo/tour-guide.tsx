@@ -115,6 +115,18 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
   // progresso já salvo.
   const eventCleanupRef = useRef<(() => void) | null>(null)
 
+  // Guarda o id do agendamento criado no passo "novo-agendamento" — vem no
+  // `detail` de `eliza:appointment-created` (ver `create-appointment-dialog.tsx`).
+  // Não é lido em lugar nenhum ainda: é o alicerce do fix A3 (spec item 2 —
+  // reancorar `prontuario`/`retorno`/`pago` só quando o `[id]` da rota é o
+  // cliente deste agendamento), que fica de fora por depender de descobrir
+  // o cliente a partir do id — isso exigiria tocar `app/actions/create-appointment.ts`,
+  // fora da posse desta Lane. Por ora, quem impede o salto de passos é a
+  // trava mais simples logo abaixo, em `show()`. TODO: se um dia a
+  // derivação do cliente entrar em escopo, usar este ref para reancorar com
+  // precisão em vez da trava por distância.
+  const createdAppointmentIdRef = useRef<string | null>(null)
+
   // Passo "custom" (hoje só a timeline) não usa driver.js — é um componente
   // React de verdade, renderizado no JSX deste componente. `advance`/`abandon`
   // ficam em refs pelo mesmo motivo do listener acima: são recriados a cada
@@ -177,6 +189,55 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
       if (activeStepRef.current === step.id) return
 
       if (index > progress.index) {
+        // A3 — reancoragem por rota pode pular passos que o visitante nunca
+        // viu (ex.: finalizar um agendamento diferente do que o tour pediu
+        // leva a uma rota que já casa com um passo bem mais à frente).
+        //
+        // Trava conservadora: só deixa o avanço passar se nenhum dos passos
+        // pulados também pertencer a esta MESMA rota — esses são os únicos
+        // que "seriam mostrados aqui", e por isso os únicos que a
+        // reancoragem pode de fato estar escondendo. Passo de outra rota
+        // (ex.: "finalizado", só em /dashboard) não conta: ele nunca
+        // apareceria nesta página de qualquer jeito, então pular por cima
+        // dele não esconde nada — é o caso do profissional apressado que vai
+        // direto para "Finalizar" sem passar por "chegou" (comentário em
+        // `tour.ts`), uso legítimo que esta trava não pode quebrar.
+        //
+        // Não é a validação por `appointmentId`/cliente prevista na spec
+        // (guardada em `createdAppointmentIdRef` acima, mas ainda sem uso) —
+        // é a alternativa mínima aceitável enquanto essa derivação depender
+        // de arquivo fora da posse desta Lane. Estabilidade do tour antes de
+        // completude do fix.
+        const skipsVisibleStep = steps
+          .slice(progress.index, index)
+          .some((skipped) => skipped.match.test(pathname))
+
+        if (skipsVisibleStep) {
+          destroyActive()
+          return
+        }
+
+        // C3 — passo `awaitsNavigation` nunca chama `advance()` (quem chama
+        // é só o clique em "Entendi" ou o `awaitsEvent`): ele se resolve pela
+        // própria navegação, sem passar por nenhum lugar que logue telemetria.
+        // Sem isto, o recap final (`tour-cta.tsx`) nunca soube que esses
+        // passos aconteceram de verdade — "finalizado" é o exemplo citado na
+        // spec, mas qualquer `awaitsNavigation` pulado aqui tem o mesmo
+        // problema. Só loga quem de fato tem essa característica: um passo
+        // `awaitsEvent` pulado sem o evento ter disparado (ex.: "chegou" sem
+        // confirmar chegada, ou "retorno-agendamento" quando o visitante
+        // escolhe "Agora não") não foi completado — só ficou para trás — e
+        // não deve entrar no resumo como se tivesse sido feito.
+        steps.slice(progress.index, index).forEach((skipped, offset) => {
+          if (!skipped.awaitsNavigation) return
+
+          void logDemoInteraction({
+            action: "step_completed",
+            stepNumber: progress.index + offset + 1,
+            metadata: { step: skipped.id },
+          })
+        })
+
         persist({ index, done: false })
       }
 
@@ -274,7 +335,21 @@ export function TourGuide({ organizationId, niche }: TourGuideProps) {
 
       if (step.awaitsEvent) {
         const eventName = step.awaitsEvent
-        const handler = () => advance()
+        const handler = (event: Event) => {
+          // Guarda o id do agendamento criado por este passo específico —
+          // "retorno-agendamento" escuta o mesmo evento
+          // (`eliza:appointment-created`), mas não é o agendamento que o
+          // resto do tour segue, então só captura aqui.
+          if (step.id === "novo-agendamento") {
+            const detail = (event as CustomEvent<{ appointmentId?: string }>)
+              .detail
+            if (detail?.appointmentId) {
+              createdAppointmentIdRef.current = detail.appointmentId
+            }
+          }
+
+          advance()
+        }
 
         window.addEventListener(eventName, handler, { once: true })
 

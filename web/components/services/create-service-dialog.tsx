@@ -146,7 +146,7 @@ export function CreateServiceDialog({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border bg-muted/30 p-3">
+          <div className="rounded-lg border border-border bg-muted/30 p-3">
             <Label className="mb-3 flex items-center gap-2 text-foreground">
               <Palette className="h-4 w-4 text-muted-foreground" />
               {messages.service_color_label || "Cor na agenda"}

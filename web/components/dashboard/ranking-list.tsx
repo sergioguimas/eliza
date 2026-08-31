@@ -8,7 +8,7 @@ interface RankingListProps {
   color?: string
 }
 
-export function RankingList({ title, data, color = "bg-blue-500" }: RankingListProps) {
+export function RankingList({ title, data, color = "bg-primary" }: RankingListProps) {
   const { dict } = useKeckleon()
   const messages = dict.messages || {}
 

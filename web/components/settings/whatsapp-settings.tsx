@@ -11,17 +11,25 @@ import {
   Loader2,
   Smartphone,
   RefreshCw,
+  AlertTriangle,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
   createWhatsappInstance,
   deleteWhatsappInstance,
   getWhatsappStatus,
+  type WhatsappResponse,
 } from "@/app/actions/whatsapp-connect"
 import { useKeckleon } from "@/providers/keckleon-provider"
 
+// B3: se a Evolution estiver lenta/fora, `getWhatsappStatus()` pode nunca
+// resolver — sem um teto, o spinner de "Verificando status..." gira para
+// sempre. `Promise.race` com este timeout garante que o estado sempre sai do
+// "loading", mesmo sem resposta do servidor.
+const STATUS_CHECK_TIMEOUT_MS = 8000
+
 export function WhatsappSettings({ settings, organizationId }: any) {
-  const [status, setStatus] = useState<"connected" | "disconnected" | "loading">("loading")
+  const [status, setStatus] = useState<"connected" | "disconnected" | "loading" | "error">("loading")
   const [qrCode, setQrCode] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -37,11 +45,38 @@ export function WhatsappSettings({ settings, organizationId }: any) {
   async function checkStatus() {
     setStatus("loading")
 
-    const result = await getWhatsappStatus()
+    let timedOut = false
+
+    const timeout = new Promise<WhatsappResponse>((resolve) => {
+      setTimeout(() => {
+        timedOut = true
+        resolve({ status: "timeout" })
+      }, STATUS_CHECK_TIMEOUT_MS)
+    })
+
+    let result: WhatsappResponse
+    try {
+      result = await Promise.race([getWhatsappStatus(), timeout])
+    } catch (error) {
+      // getWhatsappStatus() é uma server action — erro de rede/serialização
+      // vira exceção, não um retorno com `status: "error"`. Trata igual a
+      // timeout: some estado de erro acionável, nunca spinner eterno.
+      result = { status: "error" }
+    }
+
+    if (timedOut) {
+      setStatus("error")
+      return
+    }
 
     if (result.connected || result.status === "connected") {
       setStatus("connected")
       setQrCode(null)
+      return
+    }
+
+    if (result.status === "error") {
+      setStatus("error")
       return
     }
 
@@ -139,6 +174,29 @@ export function WhatsappSettings({ settings, organizationId }: any) {
               <p className="text-sm">
                 {messages.checking_status || "Verificando status..."}
               </p>
+            </div>
+          )}
+
+          {status === "error" && (
+            <div className="text-center space-y-6 z-10">
+              <div className="h-20 w-20 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto">
+                <AlertTriangle className="h-10 w-10" />
+              </div>
+
+              <div>
+                <h3 className="font-bold text-lg">
+                  {messages.whatsapp_status_error_title || "Não foi possível verificar o status"}
+                </h3>
+                <p className="text-muted-foreground text-sm max-w-sm mx-auto mt-2">
+                  {messages.whatsapp_status_error_description ||
+                    "O servidor não respondeu a tempo. Tente novamente em instantes."}
+                </p>
+              </div>
+
+              <Button onClick={checkStatus} disabled={isLoading}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                {actions.try_again || "Tentar de novo"}
+              </Button>
             </div>
           )}
 

@@ -288,20 +288,20 @@ export default async function DashboardPage() {
                       Aguardando aprovação
                     </p>
                   </div>
-                  <div className="p-2 bg-amber-500/10 rounded-lg group-hover:bg-amber-500/20 transition-colors">
-                    <MessageCircleWarningIcon className="h-4 w-4 text-amber-500" />
+                  <div className="p-2 bg-muted rounded-lg group-hover:bg-accent transition-colors">
+                    <MessageCircleWarningIcon className="h-4 w-4 text-foreground" />
                   </div>
                 </CardContent>
               </Card>
             </div>
           </DialogTrigger>
 
-          <DialogContent className="max-w-md border-zinc-800 bg-zinc-950">
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold tracking-tight">
                 Solicitações pendentes
               </DialogTitle>
-              <DialogDescription className="text-zinc-400">
+              <DialogDescription>
                 Analise os pedidos recebidos antes da aprovação final.
               </DialogDescription>
             </DialogHeader>
@@ -324,8 +324,8 @@ export default async function DashboardPage() {
                 </h2>
                 <p className="text-xs text-muted-foreground">Hoje</p>
               </div>
-              <div className="p-2 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
-                <CalendarDays className="h-4 w-4 text-purple-500" />
+              <div className="p-2 bg-muted rounded-lg group-hover:bg-accent transition-colors">
+                <CalendarDays className="h-4 w-4 text-foreground" />
               </div>
             </CardContent>
           </Card>
@@ -342,8 +342,8 @@ export default async function DashboardPage() {
                   {totalCustomers}
                 </h2>
               </div>
-              <div className="p-2 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
-                <CategoryIcon name="clientes" className="h-4 w-4 text-green-500" />
+              <div className="p-2 bg-muted rounded-lg group-hover:bg-accent transition-colors">
+                <CategoryIcon name="clientes" className="h-4 w-4 text-foreground" />
               </div>
             </CardContent>
           </Card>
@@ -361,8 +361,8 @@ export default async function DashboardPage() {
                 </h2>
                 <p className="text-xs text-muted-foreground">Recebido no mês</p>
               </div>
-              <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
-                <Coins className="h-4 w-4 text-blue-500" />
+              <div className="p-2 bg-muted rounded-lg group-hover:bg-accent transition-colors">
+                <Coins className="h-4 w-4 text-foreground" />
               </div>
             </CardContent>
           </Card>
@@ -384,7 +384,7 @@ export default async function DashboardPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-medium text-foreground flex items-center gap-2">
-              <Clock className="h-5 w-5 text-blue-500" />
+              <Clock className="h-5 w-5 text-muted-foreground" />
               {agendamentoPlural} de hoje
             </h3>
             <span className="text-xs text-muted-foreground bg-card px-2 py-1 rounded-full border border-border">
@@ -414,7 +414,7 @@ export default async function DashboardPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-medium text-foreground flex items-center gap-2">
-                <CalendarDays className="h-5 w-5 text-purple-500" />
+                <CalendarDays className="h-5 w-5 text-muted-foreground" />
                 Próximos dias
               </h3>
               <span className="text-xs text-muted-foreground bg-card px-2 py-1 rounded-full border border-border">
@@ -445,7 +445,7 @@ function AppointmentRow({
     <AppointmentContextMenu appointment={app}>
       <Card
         className="bg-card border-border p-4 border-l-10 cursor-context-menu hover:bg-accent/50 transition-all group relative overflow-hidden"
-        style={{ borderLeftColor: app.services?.color || "#3b82f6" }}
+        style={{ borderLeftColor: app.services?.color || "hsl(var(--border))" }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -459,7 +459,7 @@ function AppointmentRow({
               </p>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span>{app.services?.title}</span>
-                <span className="text-border">•</span>
+                <span className="text-muted-foreground" aria-hidden="true">•</span>
                 <span className="text-primary font-medium">
                   {showDayLabel &&
                     `${formatShortDayLabel(getBrazilDateStr(new Date(app.start_time)))} · `}
@@ -474,15 +474,15 @@ function AppointmentRow({
               className={cn(
                 "px-2 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider",
                 app.status === "scheduled" &&
-                  "bg-blue-500/10 text-blue-500 border-blue-500/20",
+                  "text-muted-foreground border-border",
                 app.status === "arrived" &&
-                  "bg-amber-500/10 text-amber-500 border-amber-500/20",
+                  "text-warning border-warning/40",
                 app.status === "confirmed" &&
-                  "bg-green-500/10 text-green-500 border-green-500/20",
+                  "text-info border-info/40",
                 app.status === "completed" &&
                   (app.payment_status === "paid"
-                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                    : "bg-indigo-500/10 text-indigo-500 border-indigo-500/20")
+                    ? "text-success border-success/40"
+                    : "text-warning border-warning/40")
               )}
             >
               {app.status === "scheduled" && "Agendado"}

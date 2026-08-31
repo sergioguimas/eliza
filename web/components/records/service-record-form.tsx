@@ -17,10 +17,8 @@ interface ServiceRecordFormProps {
   defaultAppointmentId?: string | null
 }
 
-type TagOption = {
-  label: string
-  color: string
-}
+// Categoria não é status e não tem cor própria: o rótulo já diz qual é. O chip
+// selecionado usa o acento do nicho, que não significa status (decisão D4).
 
 export function ServiceRecordForm({
   customerId,
@@ -37,28 +35,13 @@ export function ServiceRecordForm({
   const prontuario = entities.prontuario || "Registro"
   const agendamento = entities.agendamento || "Agendamento"
 
-  const availableTags: TagOption[] = useMemo(
+  const availableTags: string[] = useMemo(
     () => [
-      {
-        label: messages.record_tag_progress || "Evolução",
-        color: "bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200",
-      },
-      {
-        label: messages.record_tag_guidance || "Orientações",
-        color: "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200",
-      },
-      {
-        label: messages.record_tag_exam || "Exame",
-        color: "bg-purple-100 text-purple-700 hover:bg-purple-200 border-purple-200",
-      },
-      {
-        label: messages.record_tag_assessment || "Avaliação",
-        color: "bg-amber-100 text-amber-700 hover:bg-amber-200 border-amber-200",
-      },
-      {
-        label: messages.record_tag_referral || "Encaminhamento",
-        color: "bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200",
-      },
+      messages.record_tag_progress || "Evolução",
+      messages.record_tag_guidance || "Orientações",
+      messages.record_tag_exam || "Exame",
+      messages.record_tag_assessment || "Avaliação",
+      messages.record_tag_referral || "Encaminhamento",
     ],
     [messages]
   )
@@ -127,10 +110,10 @@ export function ServiceRecordForm({
     <Card
       id="service-form"
       data-tour="registro-form"
-      className="border-l-6 border-l-blue-500 mb-8"
+      className="border-l-6 border-l-brand-border mb-8"
     >
-      <CardHeader className="pt-2 bg-gray-50/50">
-        <CardTitle className="text-base font-semibold text-gray-900">
+      <CardHeader className="pt-2 bg-muted/50">
+        <CardTitle className="text-base font-semibold text-foreground">
           {messages.new_record_title || `Novo ${prontuario}`}
         </CardTitle>
       </CardHeader>
@@ -144,22 +127,23 @@ export function ServiceRecordForm({
 
           <div className="flex flex-wrap gap-2">
             {availableTags.map((tag) => {
-              const isSelected = selectedTags.includes(tag.label)
+              const isSelected = selectedTags.includes(tag)
 
               return (
                 <button
-                  key={tag.label}
+                  key={tag}
                   type="button"
-                  onClick={() => handleToggleTag(tag.label)}
+                  aria-pressed={isSelected}
+                  onClick={() => handleToggleTag(tag)}
                   className={cn(
                     "inline-flex items-center gap-1 px-2 py-1 rounded text-xs border",
                     isSelected
-                      ? cn(tag.color, "shadow-sm")
-                      : "bg-transparent text-muted-foreground border-border hover:bg-muted hover:text-foreground opacity-70 hover:opacity-100"
+                      ? "bg-brand-soft border-brand shadow-sm"
+                      : "bg-transparent text-muted-foreground border-border hover:bg-muted hover:text-foreground"
                   )}
                 >
                   {isSelected && <Check className="h-3 w-3 shrink-0" />}
-                  {tag.label}
+                  {tag}
                 </button>
               )
             })}
@@ -170,10 +154,10 @@ export function ServiceRecordForm({
           <div
             className={cn(
               "space-y-4 border rounded-lg p-4 bg-card transition-all duration-1000",
-              "ring-2 ring-emerald-500 shadow-lg bg-emerald-50/10"
+              "ring-2 ring-success shadow-lg"
             )}
           >
-            <div className="text-[10px] text-emerald-600 font-bold uppercase flex items-center gap-1">
+            <div className="text-[10px] text-success font-bold uppercase flex items-center gap-1">
               <CheckCircle2 className="h-3 w-3" />
               {messages.record_linked_completed_appointment ||
                 `Vinculado a ${agendamento.toLowerCase()} finalizado`}
@@ -186,7 +170,7 @@ export function ServiceRecordForm({
             messages.record_placeholder ||
             `Descreva os detalhes do ${prontuario.toLowerCase()}, atendimento ou observações...`
           }
-          className="min-h-[120px] mb-4 resize-none bg-white"
+          className="min-h-[120px] mb-4 resize-none"
           value={content}
           onChange={(e) => setContent(e.target.value)}
           disabled={isSubmitting}
@@ -214,7 +198,6 @@ export function ServiceRecordForm({
           <Button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             {isSubmitting ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

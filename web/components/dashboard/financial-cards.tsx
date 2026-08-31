@@ -65,15 +65,15 @@ export function FinancialCards({ data }: { data: any }) {
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Dialog>
         <DialogTrigger asChild>
-          <Card className="border-emerald-500/20 bg-emerald-500/5 cursor-pointer hover:bg-emerald-500/10 transition-all">
+          <Card className="cursor-pointer hover:bg-accent/50 transition-all">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-emerald-500">
+              <CardTitle className="text-sm font-medium text-success">
                 {messages.received_cash_title || "Recebido (Caixa)"}
               </CardTitle>
-              <DollarSign className="h-4 w-4 text-emerald-500" />
+              <DollarSign className="h-4 w-4 text-success" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-emerald-600">
+              <div className="text-2xl font-bold text-success">
                 {formatCurrency(data.recebido)}
               </div>
               <p className="text-[10px] text-muted-foreground">
@@ -108,16 +108,16 @@ export function FinancialCards({ data }: { data: any }) {
 
                 <div className="flex items-center gap-3">
                   <div className="text-right">
-                    <p className="font-mono font-bold text-emerald-600">
+                    <p className="font-mono font-bold">
                       {formatCurrency(item.price)}
                     </p>
 
                     <Badge
-                      variant={item.payment_status === "paid" ? "default" : "outline"}
+                      variant="outline"
                       className={
                         item.payment_status === "paid"
-                          ? "bg-emerald-600"
-                          : "text-amber-500 border-amber-500"
+                          ? "text-success border-success/40"
+                          : "text-warning border-warning/40"
                       }
                     >
                       {item.payment_status === "paid"
@@ -134,15 +134,15 @@ export function FinancialCards({ data }: { data: any }) {
 
       <Dialog>
         <DialogTrigger asChild>
-          <Card className="border-red-500/20 bg-red-500/5 cursor-pointer hover:bg-red-500/10 transition-all">
+          <Card className="cursor-pointer hover:bg-accent/50 transition-all">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-red-500">
+              <CardTitle className="text-sm font-medium text-danger">
                 {messages.expenses_title || "Despesas"}
               </CardTitle>
-              <AlertCircle className="h-4 w-4 text-red-500" />
+              <AlertCircle className="h-4 w-4 text-danger" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">
+              <div className="text-2xl font-bold text-danger">
                 {formatCurrency(data.despesasTotal)}
               </div>
               <p className="text-[10px] text-muted-foreground">
@@ -163,13 +163,13 @@ export function FinancialCards({ data }: { data: any }) {
             {data.listaDespesas.map((expense: any) => (
               <div
                 key={expense.id}
-                className="flex justify-between items-center p-3 rounded-lg border bg-secondary/10 group transition-all hover:border-emerald-500/30"
+                className="flex justify-between items-center p-3 rounded-lg border bg-secondary/10 group transition-all hover:border-foreground/20"
               >
                 <div className="flex gap-3 items-center">
                   {expense.status === "paid" ? (
-                    <CheckCircle2 className="text-emerald-500 h-5 w-5" />
+                    <CheckCircle2 className="text-success h-5 w-5" />
                   ) : (
-                    <Calendar className="text-amber-500 h-5 w-5" />
+                    <Calendar className="text-warning h-5 w-5" />
                   )}
 
                   <div>
@@ -191,8 +191,8 @@ export function FinancialCards({ data }: { data: any }) {
                       variant="outline"
                       className={
                         expense.status === "paid"
-                          ? "text-emerald-500 border-emerald-500/30 bg-emerald-500/5"
-                          : "text-amber-500 border-amber-500/30"
+                          ? "text-success border-success/40"
+                          : "text-warning border-warning/40"
                       }
                     >
                       {expense.status === "paid"
@@ -205,7 +205,7 @@ export function FinancialCards({ data }: { data: any }) {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-8 px-3 text-xs hover:bg-emerald-500/10 hover:text-emerald-500 border border-emerald-500/20"
+                      className="h-8 px-3 text-xs text-success border border-success/40 hover:bg-accent/50"
                       onClick={async (e) => {
                         e.preventDefault()
                         const res = await updateExpenseStatus(expense.id, "paid")
@@ -229,18 +229,18 @@ export function FinancialCards({ data }: { data: any }) {
 
       <Dialog>
         <DialogTrigger asChild>
-          <Card className="border-amber-500/20 bg-amber-500/5 cursor-pointer hover:bg-amber-500/10 transition-all">
+          <Card className="cursor-pointer hover:bg-accent/50 transition-all">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-amber-500">
+              <CardTitle className="text-sm font-medium text-warning">
                 {messages.to_receive_title || "A receber"}
               </CardTitle>
-              <TrendingUp className="h-4 w-4 text-amber-500" />
+              <TrendingUp className="h-4 w-4 text-warning" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-amber-600">
+              <div className="text-2xl font-bold text-warning">
                 {formatCurrency(data.aPrazo)}
               </div>
-              <p className="text-[10px] text-muted-foreground text-amber-600/70">
+              <p className="text-[10px] text-muted-foreground">
                 {messages.future_cashflow || "Fluxo futuro estimado"}
               </p>
             </CardContent>
@@ -272,16 +272,16 @@ export function FinancialCards({ data }: { data: any }) {
 
                 <div className="flex items-center gap-3">
                   <div className="text-right">
-                    <p className="font-mono font-bold text-emerald-600">
+                    <p className="font-mono font-bold">
                       {formatCurrency(item.price)}
                     </p>
 
                     <Badge
-                      variant={item.payment_status === "paid" ? "default" : "outline"}
+                      variant="outline"
                       className={
                         item.payment_status === "paid"
-                          ? "bg-emerald-600"
-                          : "text-amber-500 border-amber-500"
+                          ? "text-success border-success/40"
+                          : "text-warning border-warning/40"
                       }
                     >
                       {item.payment_status === "paid"
@@ -296,7 +296,7 @@ export function FinancialCards({ data }: { data: any }) {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-8 gap-2 border-emerald-500/50 text-emerald-600 hover:bg-emerald-500/10"
+                          className="h-8 gap-2 border-success/40 text-success hover:bg-accent/50"
                         >
                           {actions.mark_paid || "Baixar"}{" "}
                           <MoreHorizontal className="h-3 w-3" />
@@ -359,15 +359,15 @@ export function FinancialCards({ data }: { data: any }) {
         </DialogContent>
       </Dialog>
 
-      <Card className="border-blue-500/20 bg-blue-500/5">
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-blue-500">
+          <CardTitle className="text-sm font-medium">
             {messages.real_balance_title || "Saldo real"}
           </CardTitle>
-          <Wallet className="h-4 w-4 text-blue-500" />
+          <Wallet className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-blue-600">
+          <div className="text-2xl font-bold">
             {formatCurrency(data.recebido - data.despesasTotal)}
           </div>
           <p className="text-[10px] text-muted-foreground">

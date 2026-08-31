@@ -52,6 +52,15 @@ export default async function SettingsPage() {
   const isAdminOrOwner = ["admin", "owner"].includes(typedProfile.role ?? "");
   const isProfessional = !!professional;
 
+  // B2: o papel `authenticated` não enxerga `organizations.is_demo` (grant de
+  // coluna, ver whatsapp-connect.ts), então a marca vem do metadata do
+  // usuário — mesmo sinal usado em app/(app)/layout.tsx. O visitante demo
+  // chega aqui com papel owner; sem esconder a aba, "Conectar" tentaria criar
+  // uma instância solta na Evolution compartilhada (o action já recusa, isto
+  // aqui é a camada de UI).
+  const isDemoVisitor = user.user_metadata?.is_demo === true;
+  const showWhatsappTab = isAdminOrOwner && !isDemoVisitor;
+
   let organization = null;
   let organizationSettings = null;
 
@@ -112,7 +121,7 @@ export default async function SettingsPage() {
             </TabsTrigger>
           )}
 
-          {isAdminOrOwner && (
+          {showWhatsappTab && (
             <TabsTrigger value="whatsapp" className="gap-2">
               <BotMessageSquare className="h-4 w-4" />
               WhatsApp
@@ -133,12 +142,14 @@ export default async function SettingsPage() {
               />
             </TabsContent>
 
-            <TabsContent value="whatsapp">
-              <WhatsappSettings
-                settings={organization}
-                organizationId={organization.id}
-              />
-            </TabsContent>
+            {showWhatsappTab && (
+              <TabsContent value="whatsapp">
+                <WhatsappSettings
+                  settings={organization}
+                  organizationId={organization.id}
+                />
+              </TabsContent>
+            )}
           </>
         )}
 

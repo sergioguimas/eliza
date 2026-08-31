@@ -7,7 +7,7 @@ import { getDictionary } from "@/lib/dictionaries/get-dictionary"
 import { Database } from "@/utils/database.types"
 
 export const metadata: Metadata = {
-  title: "Agenda | Eliza",
+  title: "Agenda",
 }
 
 export default async function AgendamentosPage({

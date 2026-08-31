@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -982,6 +982,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      consume_demo_rate_limit: {
+        Args: { p_key: string; p_max: number; p_window_ms: number }
+        Returns: {
+          count: number
+          window_start: string
+        }[]
+      }
       finalize_service_record: {
         Args: { p_service_record_id: string }
         Returns: {

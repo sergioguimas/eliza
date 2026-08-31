@@ -14,6 +14,31 @@ export type DemoAppointmentDefaults = {
 
 const MAX_DAYS_AHEAD = 10
 
+// Mesmo padrão de `getSaoPauloDateOnly`/hora em fuso fixo que
+// `app/actions/get-available-slots.ts` já usa para decidir em que dia um
+// horário cai. Precisa ser o mesmo cálculo aqui: `getAvailableSlots` decide o
+// dia a partir do fuso de São Paulo, então a `date` que devolvemos para o
+// formulário tem que representar o MESMO dia — usar `toISOString()` (UTC)
+// diverge depois das 21h SP e pode devolver um dia em que o profissional nem
+// atende (ex.: sexta 21h-24h SP cai em sábado em UTC).
+function getSaoPauloDateOnly(date: Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date)
+}
+
+function getSaoPauloTimeOnly(date: Date) {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(date)
+}
+
 /**
  * Calcula um horário plausível para pré-preencher o formulário de agendamento
  * do tour: um slot **real**, respeitando a disponibilidade que o próprio seed
@@ -76,6 +101,14 @@ export async function getDemoAppointmentDefaults(
 
   if (!professionalId || !serviceId || !customerId) return null
 
+  // Referência única de "agora" em São Paulo — usada para descartar, no dia
+  // de hoje, horários que já passaram (o pré-preenchido tem que ser sempre
+  // futuro; senão o visitante clica em "salvar" e cai num horário que já era
+  // no momento em que o formulário abriu).
+  const now = new Date()
+  const nowDateOnly = getSaoPauloDateOnly(now)
+  const nowTimeOnly = getSaoPauloTimeOnly(now)
+
   for (let offset = 0; offset <= MAX_DAYS_AHEAD; offset++) {
     const candidate = new Date()
     candidate.setDate(candidate.getDate() + offset)
@@ -86,11 +119,19 @@ export async function getDemoAppointmentDefaults(
       organizationId
     )
 
-    const time = result.slots[0]
+    // Mesmo dia que `getAvailableSlots` avaliou internamente (fuso SP) — não
+    // o dia UTC de `candidate`, que pode divergir à noite.
+    const dateOnly = getSaoPauloDateOnly(candidate)
+
+    const time =
+      dateOnly === nowDateOnly
+        ? result.slots.find((slot) => slot > nowTimeOnly)
+        : result.slots[0]
+
     if (!time) continue
 
     return {
-      date: candidate.toISOString().slice(0, 10),
+      date: dateOnly,
       time,
       professionalId,
       serviceId,

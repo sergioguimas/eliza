@@ -84,7 +84,7 @@ export function PendingRequestsList({
                 </span>
 
                 {isOpenRequest && (
-                  <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                  <span className="inline-flex items-center rounded-full border border-warning/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning">
                     A definir
                   </span>
                 )}
@@ -119,7 +119,7 @@ export function PendingRequestsList({
               <Button
                 size="sm"
                 variant="outline"
-                className="text-green-500 border-green-500/20 hover:bg-green-500/10"
+                className="text-success border-success/40 hover:bg-accent/50"
                 title={
                   isOpenRequest
                     ? `Assumir ${agendamento.toLowerCase()}`
@@ -133,7 +133,7 @@ export function PendingRequestsList({
               <Button
                 size="sm"
                 variant="outline"
-                className="text-red-500 border-red-500/20 hover:bg-red-500/10"
+                className="text-destructive border-destructive/40 hover:bg-accent/50"
                 title={actions.cancel || "Recusar"}
                 onClick={() => onHandle(req.id, "reject")}
               >

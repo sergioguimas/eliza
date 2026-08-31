@@ -61,22 +61,9 @@ export default async function AppLayout({
 
   const niche = organization?.niche || "generico"
   const meta = getNicheMetadata(niche)
-  const nicheMeta = getNicheMetadata(niche)
-  const brandVars = {
-    "--brand-primary": meta.brand.primary,
-    "--brand-primary-soft": meta.brand.primarySoft,
-    "--brand-primary-border": meta.brand.primaryBorder,
-    "--brand-primary-foreground": meta.brand.primaryForeground,
-    "--brand-accent": meta.brand.accent,
-    "--brand-accent-soft": meta.brand.accentSoft,
-    "--brand-ring": meta.brand.ring,
-    "--brand-sidebar-gradient-from": meta.brand.sidebarGradientFrom,
-    "--brand-sidebar-gradient-to": meta.brand.sidebarGradientTo,
-    "--brand-card-glow": meta.brand.cardGlow,
-  } as React.CSSProperties
 
   return (
-    <div className={`min-h-screen bg-background text-foreground`}>
+    <div className={`theme-${niche} min-h-screen bg-background text-foreground`}>
       <KeckleonProvider niche={niche}>
         {isDemoVisitor && organization && (
           <TourGuide organizationId={organization.id} niche={niche} />
@@ -89,10 +76,10 @@ export default async function AppLayout({
             <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b bg-background/90 px-4 backdrop-blur md:px-6">
               <div className="min-w-0">
                 <h1 className="truncate text-sm font-semibold md:text-base">
-                  {organization ? organization.name : nicheMeta.appTitle}
+                  {organization ? organization.name : meta.appTitle}
                 </h1>
                 <p className="truncate text-xs text-muted-foreground">
-                  {nicheMeta.label}
+                  {meta.label}
                 </p>
               </div>
               <ThemeToggle />
