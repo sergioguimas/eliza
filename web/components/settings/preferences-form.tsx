@@ -88,7 +88,7 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
         <Badge
           key={v}
           variant="outline"
-          className="cursor-pointer hover:bg-zinc-100 active:scale-95 transition-all"
+          className="cursor-pointer hover:bg-accent active:scale-95 transition-all"
           onClick={() => insertVariable(targetRef, v)}
         >
           {v}
@@ -131,9 +131,9 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
                 
                 <CardContent className="space-y-6">
                   <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-3 p-4 bg-zinc-50/10 rounded-lg border border-zinc-50">
+                    <div className="space-y-3 p-4 bg-muted/30 rounded-lg border border-border">
                         <Label>
-                          <Clock className="w-4 h-4 text-green-600" />
+                          <Clock className="w-4 h-4 text-muted-foreground" />
                           {messages.work_hours || "Expediente"}
                         </Label>
                         <div className="grid grid-cols-2 gap-2">
@@ -148,9 +148,9 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
                         </div>
                     </div>
 
-                    <div className="space-y-3 p-4 bg-zinc-50/10 rounded-lg border border-zinc-50">
+                    <div className="space-y-3 p-4 bg-muted/30 rounded-lg border border-border">
                         <Label>
-                          <Coffee className="w-4 h-4 text-orange-600"/>
+                          <Coffee className="w-4 h-4 text-muted-foreground" />
                             {messages.break_label || "Almoço / Pausa"}
                         </Label>
                         <div className="grid grid-cols-2 gap-2">
@@ -215,7 +215,7 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
                 <CardContent className="space-y-8">
                   <div className="space-y-2">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <Label className="text-base font-semibold text-amber-600">
+                      <Label className="text-base font-semibold text-warning">
                         {messages.msg_pending || "Ao receber pré-agendamento"}
                       </Label>
 
@@ -239,7 +239,7 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
 
                   <div className="space-y-2">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <Label className="text-base font-semibold text-green-600">
+                      <Label className="text-base font-semibold text-success">
                         {messages.msg_confirm || "Ao confirmar agendamento"}
                       </Label>
 
@@ -261,7 +261,7 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-base font-semibold text-blue-600 flex justify-between">
+                    <Label className="text-base font-semibold text-info flex justify-between">
                         {messages.msg_reminder || "Lembrete"}
                         <VariableBadges
                           targetRef={reminderMsgRef}
@@ -278,7 +278,7 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-base font-semibold text-violet-600 flex justify-between">
+                    <Label className="text-base font-semibold text-foreground flex justify-between">
                       {messages.msg_daily_summary || "Resumo Diário"}
                       <VariableBadges
                         targetRef={doctorSummaryMsgRef}
@@ -301,7 +301,7 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-base font-semibold text-red-600 flex justify-between">
+                    <Label className="text-base font-semibold text-danger flex justify-between">
                         {messages.msg_cancel || "Ao cancelar"}
                         <VariableBadges
                           targetRef={canceledMsgRef}

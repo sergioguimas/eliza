@@ -42,7 +42,7 @@ export function DeleteServiceButton({ serviceId }: DeleteServiceButtonProps) {
     <Button
       variant="ghost"
       size="icon"
-      className="h-8 w-8 text-zinc-500 hover:text-red-500 transition-colors"
+      className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
       onClick={handleDelete}
       title={actions.delete || "Excluir"}
     >

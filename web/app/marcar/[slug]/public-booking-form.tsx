@@ -359,10 +359,10 @@ export function PublicBookingForm({
 
   if (isSuccess) {
     return (
-      <Card className="mx-auto max-w-2xl border-emerald-500/20 bg-emerald-500/5 shadow-xl animate-in fade-in zoom-in">
+      <Card className="mx-auto max-w-2xl border-success/20 bg-success/5 shadow-xl animate-in fade-in zoom-in">
         <CardContent className="pt-10 pb-10 text-center space-y-5">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
-            <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10">
+            <CheckCircle2 className="h-10 w-10 text-success" />
           </div>
 
           <div className="space-y-2">
@@ -422,7 +422,7 @@ export function PublicBookingForm({
 
             <div className="flex flex-wrap justify-center xl:justify-start gap-3 text-sm text-muted-foreground">
               <span className="inline-flex items-center gap-2 rounded-xl border bg-background px-3 py-2">
-                <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                <ShieldCheck className="h-4 w-4 text-primary" />
                 Horários atualizados em tempo real
               </span>
 
@@ -432,12 +432,12 @@ export function PublicBookingForm({
               </span>
 
               <span className="inline-flex items-center gap-2 rounded-xl border bg-background px-3 py-2">
-                <Clock className="h-4 w-4 text-amber-500" />
+                <Clock className="h-4 w-4 text-primary" />
                 Processo simples e rápido
               </span>
 
               <span className="inline-flex items-center gap-2 rounded-xl border bg-background px-3 py-2">
-                <FileText className="h-4 w-4 text-sky-500" />
+                <FileText className="h-4 w-4 text-primary" />
                 Envio de documentos facilitado
               </span>
             </div>
@@ -472,7 +472,7 @@ export function PublicBookingForm({
                   className={cn(
                     "rounded-2xl border px-3 py-3 transition-all text-left",
                     active && "border-primary bg-primary/10 text-foreground",
-                    done && "border-emerald-300 bg-emerald-50 text-emerald-900",
+                    done && "border-success/40 bg-success/10 text-foreground",
                     !active && !done && "border-border bg-background text-muted-foreground"
                   )}
                 >
@@ -481,7 +481,7 @@ export function PublicBookingForm({
                       className={cn(
                         "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold border",
                         active && "border-primary bg-primary text-primary-foreground",
-                        done && "border-emerald-600 bg-emerald-600 text-white",
+                        done && "border-success bg-success text-white",
                         !active && !done && "border-border text-muted-foreground"
                       )}
                     >
@@ -701,7 +701,7 @@ export function PublicBookingForm({
                               </Select>
 
                               {slots.length === 0 && selectedDate && selectedProf && !loadingSlots && (
-                                <p className="text-[11px] text-amber-500 mt-1 flex items-center gap-1">
+                                <p className="text-xs text-warning mt-1 flex items-center gap-1">
                                   <AlertCircle className="h-3.5 w-3.5" />
                                   {slotMessage || "Não encontramos horários disponíveis para este dia."}
                                 </p>
@@ -879,7 +879,7 @@ export function PublicBookingForm({
                                   </div>
 
                                   {doc.required && (
-                                    <span className="text-xs px-2 py-1 rounded bg-red-500/10 text-red-400">
+                                    <span className="text-xs px-2 py-1 rounded border border-danger/40 text-danger">
                                       obrigatório
                                     </span>
                                   )}
@@ -925,8 +925,8 @@ export function PublicBookingForm({
                                       "relative rounded-2xl border border-dashed transition-all bg-background",
                                       dragActiveId === doc.id
                                         ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                                        : "border-zinc-300 hover:border-primary/60 hover:bg-primary/5",
-                                      selectedFile && "border-emerald-400 bg-emerald-500/5"
+                                        : "border-input hover:border-primary/60 hover:bg-primary/5",
+                                      selectedFile && "border-success/60 bg-success/5"
                                     )}
                                   >
                                     {/* INPUT invisível cobre só a área de drop */}
@@ -975,7 +975,7 @@ export function PublicBookingForm({
                                                 />
                                               </div>
                                             ) : (
-                                              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
+                                              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-success/10 text-success">
                                                 <FileText className="h-6 w-6" />
                                               </div>
                                             )}
@@ -1148,7 +1148,7 @@ export function PublicBookingForm({
                               </div>
 
                               {doc.required && (
-                                <span className="text-xs px-2 py-1 rounded bg-red-500/10 text-red-400">
+                                <span className="text-xs px-2 py-1 rounded border border-danger/40 text-danger">
                                   obrigatório
                                 </span>
                               )}
@@ -1200,7 +1200,7 @@ export function PublicBookingForm({
 
                 <div className="space-y-3 text-sm text-muted-foreground">
                   <div className="flex items-start gap-2">
-                    <ShieldCheck className="mt-0.5 h-4 w-4 text-emerald-400 shrink-0" />
+                    <ShieldCheck className="mt-0.5 h-4 w-4 text-primary shrink-0" />
                     <span>
                       Seus dados são usados apenas para registrar e confirmar seu atendimento.
                     </span>
@@ -1214,7 +1214,7 @@ export function PublicBookingForm({
                   </div>
 
                   <div className="flex items-start gap-2">
-                    <Clock className="mt-0.5 h-4 w-4 text-amber-400 shrink-0" />
+                    <Clock className="mt-0.5 h-4 w-4 text-primary shrink-0" />
                     <span>
                       Normalmente respondemos em poucos minutos.
                     </span>

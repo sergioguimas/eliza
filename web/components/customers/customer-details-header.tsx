@@ -72,7 +72,7 @@ export function CustomerDetailsHeader({
           variant="outline"
           size="icon"
           onClick={() => router.back()}
-          className="border-border text-zinc-400 hover:text-foreground hover:bg-background shrink-0"
+          className="shrink-0 text-muted-foreground hover:text-foreground"
           title={actions.back || "Voltar"}
         >
           <ArrowLeft className="h-4 w-4" />
@@ -83,7 +83,7 @@ export function CustomerDetailsHeader({
             {customer.name}
           </h1>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-400 mt-1">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
             <span className="capitalize px-2 py-0.5 rounded-full bg-background border border-border text-xs">
               {customer.gender || messages.gender_not_informed || "Não informado"}
             </span>
@@ -107,7 +107,7 @@ export function CustomerDetailsHeader({
         <Button
           variant="outline"
           onClick={() => window.open(`/print/history/${customer.id}`, "_blank")}
-          className="border-border text-zinc-300 hover:bg-background gap-2 hidden md:flex"
+          className="gap-2 hidden md:flex"
           title={messages.print_history_title || `Imprimir ${prontuario}`}
         >
           <Printer className="h-4 w-4" />
@@ -119,7 +119,7 @@ export function CustomerDetailsHeader({
         <UpdateCustomerDialog customer={customer}>
           <Button
             variant="outline"
-            className="border-border text-zinc-300 hover:bg-background gap-2"
+            className="gap-2"
           >
             <Pencil className="h-4 w-4" />
             {actions.edit || "Editar"}
@@ -130,7 +130,7 @@ export function CustomerDetailsHeader({
           variant="destructive"
           onClick={handleDelete}
           disabled={loading}
-          className="bg-red-950/30 hover:bg-red-900/50 text-red-500 border border-red-900/30 gap-2"
+          className="gap-2"
         >
           {loading ? (
             <Loader2 className="h-4 w-4 animate-spin" />

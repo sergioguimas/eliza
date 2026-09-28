@@ -12,10 +12,7 @@ export function PrintButton() {
   const documento = entities.documento || "documento"
 
   return (
-    <Button 
-      onClick={() => window.print()} 
-      className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg gap-2"
-    >
+    <Button onClick={() => window.print()} className="gap-2 shadow-md">
       <Printer className="h-4 w-4" />
       {actions.print || `Imprimir ${documento}`}
     </Button>

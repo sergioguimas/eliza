@@ -77,6 +77,16 @@ export const nicheDocuments: Record<string, NicheDocumentItem[]> = {
     },
   ],
 
+  manicure: [
+    {
+      id: "referencia_nail_art",
+      label: "Referência de nail art",
+      description: "Foto ou inspiração do formato, cor e decoração desejados",
+      required: false,
+      accept: DEFAULT_DOCUMENT_ACCEPT,
+    },
+  ],
+
   generico: [],
 }
 

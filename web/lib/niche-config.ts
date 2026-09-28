@@ -7,6 +7,7 @@ import {
   Scale,
   FileBadge,
   Paintbrush,
+  Hand,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
@@ -99,6 +100,15 @@ export const nicheConfig: Record<string, NicheMetadata> = {
     icon: Paintbrush,
     appTitle: "Eliza",
     sidebarLabel: "Gestão Tattoo",
+  },
+
+  manicure: {
+    id: "manicure",
+    label: "Manicure / Nail Designer",
+    description: "Para manicures, nail designers e estúdios de unhas.",
+    icon: Hand,
+    appTitle: "Eliza",
+    sidebarLabel: "Gestão Nails",
   },
 
   generico: {

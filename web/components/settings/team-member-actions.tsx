@@ -121,7 +121,7 @@ export function TeamMemberActions({
           size="sm"
           disabled={isPending}
           onClick={handleRemove}
-          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          className="text-destructive hover:text-destructive hover:bg-destructive/10"
           title="Remover membro"
         >
           <Trash2 className="h-4 w-4" />

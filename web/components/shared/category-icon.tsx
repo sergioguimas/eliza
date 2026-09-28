@@ -8,8 +8,10 @@ import {
   FileBadge,
   FolderOpen,
   Gavel,
+  Hand,
   HeartPulse,
   Paintbrush,
+  Palette,
   PenTool,
   Scissors,
   ShieldCheck,
@@ -104,6 +106,15 @@ const tatuadorIcons: IconMap = {
   documentos: FolderOpen,
 }
 
+const manicureIcons: IconMap = {
+  logo: Hand,
+  clientes: Users,
+  servicos: Palette,
+  agenda: CalendarDays,
+  dashboard: Hand,
+  documentos: FolderOpen,
+}
+
 const iconRegistry: Record<string, IconMap> = {
   generico: genericoIcons,
   clinica: clinicaIcons,
@@ -113,6 +124,7 @@ const iconRegistry: Record<string, IconMap> = {
   advocacia: advocaciaIcons,
   certificado: certificadoIcons,
   tatuador: tatuadorIcons,
+  manicure: manicureIcons,
 }
 
 type CategoryIconProps = LucideProps & {

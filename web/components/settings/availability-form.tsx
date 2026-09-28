@@ -153,7 +153,7 @@ export function AvailabilityForm({
 
         <div className="space-y-3">
           <Label className="text-xs font-semibold uppercase text-muted-foreground flex items-center gap-2">
-            <Coffee className="h-4 w-4 text-orange-500" />
+            <Coffee className="h-4 w-4" />
             {messages.break_label || "Intervalo / almoço"}
           </Label>
 

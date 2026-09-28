@@ -902,7 +902,7 @@ CREATE TABLE public.organizations (
     is_demo boolean DEFAULT false NOT NULL,
     expires_at timestamp with time zone,
     CONSTRAINT organizations_demo_requires_expiry CHECK (((is_demo = false) OR (expires_at IS NOT NULL))),
-    CONSTRAINT organizations_niche_check CHECK ((niche = ANY (ARRAY['clinica'::text, 'psicologia'::text, 'barbearia'::text, 'salao'::text, 'generico'::text, 'advocacia'::text, 'oficina'::text, 'certificado'::text, 'tatuador'::text])))
+    CONSTRAINT organizations_niche_check CHECK ((niche = ANY (ARRAY['clinica'::text, 'psicologia'::text, 'barbearia'::text, 'salao'::text, 'generico'::text, 'advocacia'::text, 'oficina'::text, 'certificado'::text, 'tatuador'::text, 'manicure'::text])))
 );
 
 
