@@ -22,6 +22,7 @@ export const DEMO_NICHES = [
   "salao",
   "advocacia",
   "tatuador",
+  "manicure",
   "generico",
 ] as const satisfies readonly NicheId[]
 

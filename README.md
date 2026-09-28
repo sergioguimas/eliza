@@ -25,7 +25,7 @@ https://eliza.solasoftware.com.br
 - Configuração de expediente da organização e disponibilidade por profissional.
 - Painel financeiro e histórico/registros de atendimento.
 - Recuperação de senha e primeiro acesso por link de e-mail.
-- Keckleon para nichos como `generico`, `clinica`, `psicologia`, `barbearia`, `salao`, `advocacia`, `certificado` e `tatuador`.
+- Keckleon para nichos como `generico`, `clinica`, `psicologia`, `barbearia`, `salao`, `advocacia`, `certificado`, `tatuador` e `manicure`.
 - Demonstração self-service em `/demo/start`: tenant isolado por 24h com dados de exemplo e tour guiado, sem cadastro.
 
 ## Estrutura

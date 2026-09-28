@@ -99,7 +99,7 @@ export function CustomerRowActions({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-zinc-400 hover:text-foreground focus-visible:ring-0"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
           >
             <span className="sr-only">{actions.open_menu || "Abrir menu"}</span>
             {loading ? (
@@ -110,10 +110,7 @@ export function CustomerRowActions({
           </Button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent
-          align="end"
-          className="bg-background border-border text-zinc-300"
-        >
+        <DropdownMenuContent align="end">
           <DropdownMenuLabel>
             {actions.quick_actions || "Ações"}
           </DropdownMenuLabel>
@@ -142,17 +139,18 @@ export function CustomerRowActions({
 
           <DropdownMenuItem
             onClick={handleCopyId}
-            className="cursor-pointer focus:bg-zinc-800"
+            className="cursor-pointer"
           >
             <Copy className="mr-2 h-4 w-4" />
             {actions.copy_id || "Copiar ID"}
           </DropdownMenuItem>
 
-          <DropdownMenuSeparator className="bg-zinc-800" />
+          <DropdownMenuSeparator />
 
           <DropdownMenuItem
+            variant="destructive"
             onClick={handleDelete}
-            className="text-red-500 focus:bg-red-950/30 focus:text-red-400 cursor-pointer"
+            className="cursor-pointer"
           >
             <Trash2 className="mr-2 h-4 w-4" />
             {actions.delete || "Excluir"}

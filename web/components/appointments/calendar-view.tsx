@@ -58,14 +58,41 @@ import { useKeckleon } from "@/providers/keckleon-provider"
 import { useDemoAppointmentDefaults } from "@/hooks/use-demo-appointment-defaults"
 import type { DemoAppointmentDefaults } from "@/app/actions/demo/get-appointment-defaults"
 
-const PROFESSIONAL_COLORS = [
-  { bg: "#e0f2fe", border: "#0ea5e9", text: "#0369a1" },
-  { bg: "#f1f5f9", border: "#64748b", text: "#334155" },
-  { bg: "#fae8ff", border: "#d946ef", text: "#86198f" },
-  { bg: "#ede9fe", border: "#8b5cf6", text: "#5b21b6" },
-  { bg: "#ffedd5", border: "#f97316", text: "#9a3412" },
-  { bg: "#ccfbf1", border: "#14b8a6", text: "#0f766e" },
-]
+/*
+  Cores vêm dos tokens de `globals.css`, então acompanham o tema claro/escuro.
+  O texto do card é sempre `--foreground` sobre um tinte leve: a cor só entra
+  na borda e no ícone, onde o critério é 3:1 (não-textual), e o nome do
+  cliente lê com o contraste total do tema.
+*/
+const PROFESSIONAL_COLORS = [1, 2, 3, 4, 5, 6].map((n) => ({
+  bg: `hsl(var(--cat-${n}) / 0.14)`,
+  border: `hsl(var(--cat-${n}))`,
+  text: "hsl(var(--foreground))",
+}))
+
+type StatusStyle = { bg: string; border: string }
+
+const STATUS_STYLES: Record<
+  "scheduled" | "confirmed" | "pending" | "canceled",
+  StatusStyle
+> = {
+  scheduled: {
+    bg: "hsl(var(--status-info) / 0.12)",
+    border: "hsl(var(--status-info))",
+  },
+  confirmed: {
+    bg: "hsl(var(--status-success) / 0.12)",
+    border: "hsl(var(--status-success))",
+  },
+  pending: {
+    bg: "hsl(var(--status-warning) / 0.12)",
+    border: "hsl(var(--status-warning))",
+  },
+  canceled: {
+    bg: "hsl(var(--status-danger) / 0.12)",
+    border: "hsl(var(--status-danger))",
+  },
+}
 
 type Appointment = {
   id: string
@@ -398,31 +425,27 @@ function CalendarContent({
     const isPanorama = filterId === "all"
 
     let styles = {
-      bg: "#e0f2fe",
-      border: "#0ea5e9",
-      text: "#0369a1",
+      ...STATUS_STYLES.scheduled,
+      text: "hsl(var(--foreground))",
       icon: CalendarIcon,
     }
 
     if (status === "confirmed") {
       styles = {
-        bg: "#dcfce7",
-        border: "#16a34a",
-        text: "#14532d",
+        ...STATUS_STYLES.confirmed,
+        text: "hsl(var(--foreground))",
         icon: CheckCircle2,
       }
     } else if (status === "pending") {
       styles = {
-        bg: "#fef9c3",
-        border: "#ca8a04",
-        text: "#713f12",
+        ...STATUS_STYLES.pending,
+        text: "hsl(var(--foreground))",
         icon: Clock,
       }
     } else if (status === "canceled") {
       styles = {
-        bg: "#fee2e2",
-        border: "#ef4444",
-        text: "#7f1d1d",
+        ...STATUS_STYLES.canceled,
+        text: "hsl(var(--foreground))",
         icon: XCircle,
       }
     } else if (isPanorama && appointment.professional_id) {
@@ -461,7 +484,7 @@ function CalendarContent({
             </span>
 
             <div className="flex shrink-0 items-center gap-0.5">
-              <styles.icon className="h-3 w-3 opacity-70" />
+              <styles.icon className="h-3 w-3" style={{ color: styles.border }} />
 
               {/*
                 Até aqui, mudar status/pagamento só existia no clique direito
@@ -731,7 +754,7 @@ function CalendarContent({
             </TabsList>
           </Tabs>
 
-          <div className="h-6 w-px bg-zinc-800 mx-2 hidden md:block" />
+          <div className="h-6 w-px bg-border mx-2 hidden md:block" />
 
           {/*
             Até aqui, criar só existia no menu de contexto do calendário — clique
@@ -760,13 +783,8 @@ function CalendarContent({
 
         {["pending", "confirmed", "scheduled", "canceled"].map((status) => {
           const config =
-            status === "pending"
-              ? { bg: "#fef9c3", border: "#ca8a04" }
-              : status === "confirmed"
-              ? { bg: "#dcfce7", border: "#16a34a" }
-              : status === "scheduled"
-              ? { bg: "#e0f2fe", border: "#0ea5e9" }
-              : { bg: "#fee2e2", border: "#ef4444" }
+            STATUS_STYLES[status as keyof typeof STATUS_STYLES] ??
+            STATUS_STYLES.scheduled
 
           return (
             <div key={status} className="flex items-center gap-2">

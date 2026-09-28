@@ -11,7 +11,7 @@ tenant expira em 24h.
 ## Nichos disponíveis
 
 `web/lib/demo/config.ts` — `DEMO_NICHES`: `clinica`, `psicologia`, `barbearia`, `salao`,
-`advocacia`, `tatuador`, `generico`. Fica de fora `certificado` (não promovido
+`advocacia`, `tatuador`, `manicure`, `generico`. Fica de fora `certificado` (não promovido
 comercialmente). Todo valor precisa existir no CHECK `organizations_niche_check`.
 
 ## Criação do tenant

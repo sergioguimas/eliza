@@ -148,7 +148,7 @@ export function WhatsappSettings({ settings, organizationId }: any) {
           </div>
 
           {status === "connected" && (
-            <Badge className="bg-green-600 hover:bg-green-700">
+            <Badge variant="outline" className="border-success/40 text-success">
               {messages.status_online || "Online"}
             </Badge>
           )}
@@ -202,7 +202,7 @@ export function WhatsappSettings({ settings, organizationId }: any) {
 
           {status === "connected" && (
             <div className="text-center space-y-6 animate-in fade-in zoom-in duration-300 z-10">
-              <div className="h-24 w-24 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto shadow-sm ring-1 ring-green-500/20">
+              <div className="h-24 w-24 bg-success/10 text-success rounded-full flex items-center justify-center mx-auto shadow-sm ring-1 ring-success/20">
                 <Link className="h-10 w-10" />
               </div>
 
@@ -225,6 +225,7 @@ export function WhatsappSettings({ settings, organizationId }: any) {
 
           {status === "disconnected" && qrCode && (
             <div className="flex flex-col items-center gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 w-full max-w-md">
+              {/* Fundo branco fixo de propósito: o QR Code precisa de contraste máximo para ser lido pela câmera, nos dois temas. */}
               <div className="bg-white p-4 rounded-xl shadow-lg border-4 border-white">
                 <img src={qrCode} alt="QR Code" className="h-64 w-64 object-contain" />
               </div>

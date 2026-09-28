@@ -282,7 +282,7 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
                   <DropdownMenuItem asChild>
                     <Link
                       href="/admin"
-                      className="flex items-center cursor-pointer font-medium text-purple-600"
+                      className="flex items-center cursor-pointer font-medium"
                     >
                       <ShieldAlert className="mr-2 h-4 w-4" />
                       {messages.super_admin_panel || "Painel Super Admin"}

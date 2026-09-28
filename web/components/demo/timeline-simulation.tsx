@@ -171,7 +171,7 @@ export function TimelineSimulation({ onDone, onSkip }: TimelineSimulationProps) 
                         className={
                           isReply
                             ? "mt-1 inline-block rounded-lg rounded-tl-sm bg-muted px-3 py-1.5 text-sm"
-                            : "mt-1 inline-block rounded-lg rounded-tl-sm bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-700 dark:text-emerald-400"
+                            : "mt-1 inline-block rounded-lg rounded-tl-sm bg-success/10 px-3 py-1.5 text-sm text-foreground"
                         }
                       >
                         {text}

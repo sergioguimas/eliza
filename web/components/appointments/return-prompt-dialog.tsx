@@ -39,7 +39,7 @@ export function ReturnPromptDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="sm:max-w-[450px]">
         <AlertDialogHeader>
-          <div className="flex items-center gap-2 text-emerald-600 mb-2">
+          <div className="flex items-center gap-2 text-primary mb-2">
             <Clock className="h-5 w-5" />
             <span className="text-xs font-bold uppercase tracking-wider">
               {messages.return_suggestion_label || "Sugestão de retorno"}
@@ -66,7 +66,7 @@ export function ReturnPromptDialog({
             <Button
               key={days}
               variant="outline"
-              className="flex flex-col h-auto py-3 gap-1 hover:border-emerald-500 hover:bg-emerald-50 transition-colors"
+              className="flex flex-col h-auto py-3 gap-1 hover:border-primary hover:bg-primary/5 transition-colors"
               onClick={() => onConfirm(days)}
             >
               <span className="font-bold text-lg">{days}</span>
@@ -86,7 +86,7 @@ export function ReturnPromptDialog({
 
           <Button
             onClick={() => onConfirm(null)}
-            className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700"
+            className="w-full sm:w-auto"
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {actions.pick_another_date || "Escolher outra data"}

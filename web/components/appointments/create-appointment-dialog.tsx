@@ -589,7 +589,7 @@ export function CreateAppointmentDialog({
     <AlertDialog open={showOutsideHoursAlert} onOpenChange={setShowOutsideHoursAlert}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+          <AlertDialogTitle className="flex items-center gap-2 text-warning">
             <AlertTriangle className="h-5 w-5" />
             {messages.outside_hours_title || "Fora do horário"}
           </AlertDialogTitle>
@@ -609,7 +609,7 @@ export function CreateAppointmentDialog({
 
           <AlertDialogAction
             onClick={() => performSubmit()}
-            className="bg-amber-600 hover:bg-amber-700"
+            className="bg-warning text-white hover:bg-warning/90"
           >
             {actions.confirm || "Confirmar"}
           </AlertDialogAction>

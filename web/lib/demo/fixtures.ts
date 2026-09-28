@@ -150,6 +150,24 @@ export const DEMO_FIXTURES: Record<DemoNiche, DemoNicheFixture> = {
       "Segunda etapa do projeto: contorno concluído no antebraço. Cicatrização da etapa anterior sem intercorrências. Próxima sessão para sombreamento.",
   },
 
+  manicure: {
+    professionals: [
+      { name: "Camila Rocha", specialty: "Alongamento em gel", phone: "11900000001" },
+      { name: "Letícia Amaral", specialty: "Nail art", phone: "11900000002" },
+    ],
+    services: [
+      { title: "Manicure tradicional", description: "Cutilagem e esmaltação", durationMinutes: 45, price: 45 },
+      { title: "Esmaltação em gel", description: "Preparo e esmaltação em gel", durationMinutes: 60, price: 90 },
+      { title: "Alongamento em gel", description: "Aplicação completa com acabamento", durationMinutes: 120, price: 180 },
+    ],
+    customers: [
+      { name: "Juliana Prado", phone: "11900000101", notes: "Manutenção do alongamento a cada 3 semanas." },
+      { name: "Fernanda Lopes", phone: "11900000102", notes: "Primeira visita." },
+    ],
+    recordContent:
+      "Manutenção do alongamento em gel: reposição da área de crescimento e troca de cor para nude rosado. Sem descolamento desde a última visita. Próxima manutenção em 3 semanas.",
+  },
+
   generico: {
     professionals: [
       { name: "Ana Martins", specialty: "Atendimento", phone: "11900000001" },

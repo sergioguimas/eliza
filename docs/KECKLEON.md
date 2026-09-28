@@ -14,6 +14,7 @@ Nichos conhecidos:
 - `advocacia`
 - `certificado`
 - `tatuador`
+- `manicure`
 
 O schema também cita `oficina`, mas o app atual não expõe esse nicho na enum de criação.
 
@@ -38,6 +39,7 @@ Exemplos:
 | Salão | Cliente | Serviço | Agendamento |
 | Advocacia | Cliente | Serviço | Compromisso |
 | Tatuador | Cliente | Arte | Sessão |
+| Manicure / Nail Designer | Cliente | Serviço | Horário |
 | Genérico | Cliente | Serviço | Agendamento |
 
 ## Como Usar em Componentes
@@ -74,11 +76,17 @@ Prefira:
 2. Adicionar dicionário em `web/lib/dictionaries/niches.ts`.
 3. Atualizar enum em actions que validam nicho, como `web/app/actions/organization.ts`.
 4. Atualizar check constraint no Supabase se necessário.
-5. Testar `/setup`, sidebar, `/servicos`, `/agendamentos`, `/clientes`, `/marcar/[slug]`.
+5. Adicionar o bloco `.theme-<nicho>` em `web/app/globals.css`.
+6. Adicionar o mapa de ícones em `web/components/shared/category-icon.tsx`.
+7. Adicionar a lista de documentos em `web/lib/niche-documents.ts` (pode ser vazia).
+8. Atualizar o tipo `Organization.niche` em `web/app/(app)/layout.tsx`.
+9. Se o nicho for promovido comercialmente, incluir em `DEMO_NICHES` e criar o fixture em
+   `web/lib/demo/fixtures.ts`.
+10. Testar `/setup`, sidebar, `/servicos`, `/agendamentos`, `/clientes`, `/marcar/[slug]`.
 
 ## Tokens de Tema
 
-Tema por nicho fica em `web/lib/niche-config.ts` e é aplicado no layout autenticado por CSS variables:
+Tema por nicho fica nos blocos `.theme-<nicho>` de `web/app/globals.css` (fonte única, decisão D1 de `docs/CONTRATO_REFATORACAO_VISUAL.md`) e é aplicado no layout autenticado e em `/marcar/[slug]` por CSS variables:
 
 - `--brand-primary`
 - `--brand-primary-soft`
@@ -90,6 +98,21 @@ Tema por nicho fica em `web/lib/niche-config.ts` e é aplicado no layout autenti
 - `--brand-sidebar-gradient-from`
 - `--brand-sidebar-gradient-to`
 - `--brand-card-glow`
+
+Cada bloco `.theme-<nicho>` em `web/app/globals.css` define esses valores. Ao criar um
+nicho novo, a cor precisa passar 4,5:1 sobre branco, o `--brand-soft-foreground` precisa
+passar 4,5:1 sobre `--brand-soft`, e a distância perceptual (ΔE76) para os outros nichos
+e para os quatro tokens `--status-*` deve ficar acima de 19, como registrado em
+`docs/PESQUISA_NICHOS_VISUAL.md`. O nicho `manicure` (orquídea `296 30% 42%`) foi
+escolhido assim: 6,16:1 sobre branco e ΔE76 ≥ 23 de salão e psicologia.
+
+Tokens que não dependem do nicho, também em `globals.css`:
+
+- `--status-success`, `--status-warning`, `--status-danger`, `--status-info`: estado
+  (pago, pendente, cancelado, informação). Texto nessas cores só sobre fundo neutro:
+  sobre um tinte `bg-success/10` o contraste cai abaixo de 4,5:1.
+- `--cat-1` a `--cat-6`: categóricas, usadas para distinguir profissionais na agenda.
+  Não significam status nem marca.
 
 O setup usa tema genérico para garantir contraste antes da organização existir.
 

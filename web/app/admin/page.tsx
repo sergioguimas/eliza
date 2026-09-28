@@ -138,9 +138,9 @@ export default async function AdminDashboard() {
                     <TableCell className="py-3">
                       <Badge 
                         variant="outline" 
-                        className={isActive 
-                            ? "border-green-200 text-green-700 bg-green-50" 
-                            : "border-red-200 text-red-700 bg-red-50"
+                        className={isActive
+                            ? "border-success/40 text-success"
+                            : "border-danger/40 text-danger"
                         }
                       >
                         {isActive ? 'Ativo' : 'Suspenso'}
@@ -158,9 +158,9 @@ export default async function AdminDashboard() {
                         <Button 
                             variant={isActive ? "ghost" : "outline"} 
                             size="sm"
-                            className={isActive 
-                                ? "text-red-600 hover:bg-red-600 hover:text-white transition-colors h-8 px-3" 
-                                : "text-green-600 border-green-200 hover:bg-green-600 hover:text-white transition-colors h-8 px-3"
+                            className={isActive
+                                ? "text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors h-8 px-3"
+                                : "text-success border-success/40 hover:bg-accent/50 hover:text-success transition-colors h-8 px-3"
                             }
                         >
                             {isActive ? (

@@ -315,6 +315,34 @@ export const nicheDictionaries = {
     },
   }),
 
+  manicure: buildNiche({
+    niche_label: "Manicure / Nail Designer",
+    icon_set: "nails",
+    boas_vindas: "Bem-vinda ao estúdio de unhas",
+    dashboard_title: "Visão geral do estúdio",
+    appointment_redirect_target: "a ficha de unhas",
+    notes_placeholder:
+      "Ex: esmaltação em gel, alongamento, nail art, cor escolhida, alergias...",
+    return_prompt_title: "Agendar manutenção?",
+    return_prompt_description_suffix:
+      "foi registrado. Deseja deixar a próxima manutenção preparada?",
+    estimate_notes_placeholder:
+      "Técnica, formato, tamanho, decoração ou condições de pagamento...",
+    arrived_label: "Cliente chegou",
+    entities: {
+      cliente: "Cliente",
+      cliente_plural: "Clientes",
+      profissional: "Nail Designer",
+      profissional_plural: "Nail Designers",
+      prontuario: "Ficha de Unhas",
+      prontuario_plural: "Fichas de Unhas",
+      servico: "Serviço",
+      servico_plural: "Serviços",
+      agendamento: "Horário",
+      agendamento_plural: "Horários",
+    },
+  }),
+
   generico: buildNiche({
     niche_label: "Outro Negócio",
     icon_set: "generic",

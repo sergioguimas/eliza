@@ -265,7 +265,7 @@ export function EstimateModal({
             {fields.map((field, index) => (
               <div
                 key={field.id}
-                className="flex justify-around items-start gap-4 rounded-lg border bg-zinc-50 p-4 dark:bg-zinc-900/50 md:flex-row md:items-end"
+                className="flex justify-around items-start gap-4 rounded-lg border bg-muted/40 p-4 md:flex-row md:items-end"
               >
                 <div className="grid grid-cols-2 gap-4">
                   <div>

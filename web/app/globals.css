@@ -23,17 +23,23 @@
   --secondary-foreground: 240 5.9% 10%;
 
   --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 3.8% 46.1%;
+  /* 42% em vez de 46,1%: 5,6:1 sobre branco e 5,1:1 sobre --muted
+     (o valor antigo dava 4,39:1 sobre --muted e reprovava AA em texto pequeno). */
+  --muted-foreground: 240 4% 42%;
 
   --accent: 240 4.8% 95.9%;
   --accent-foreground: 240 5.9% 10%;
 
-  --destructive: 0 84.2% 60.2%;
+  /* Vermelho de ação (excluir/remover). 6,25:1 com texto branco;
+     o antigo 0 84% 60% (#EF4444) dava 3,76:1 e reprovava em botão. */
+  --destructive: 0 62% 44%;
   --destructive-foreground: 0 0% 98%;
 
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
-  --ring: 240 10% 3.9%;
+  --border: 240 5.9% 88%;
+  /* Campos de formulário precisam se destacar do fundo branco:
+     80% (1,64:1) em vez de 90% (1,27:1), ainda suave. */
+  --input: 240 5% 80%;
+  /* --ring é derivado de --brand-ring no bloco "derivados" abaixo. */
 
   /* ---------- Branding default ---------- */
   --brand-primary: 240 5.9% 10%;
@@ -45,18 +51,7 @@
   --brand-glow: 240 5.9% 10%;
   --brand-radius: 0.5rem;
 
-  /* Tokens legados/auxiliares */
-  --brand-primary-soft: hsl(var(--brand-primary) / 0.1);
-  --brand-primary-border: hsl(var(--brand-primary) / 0.25);
   --brand-accent: 240 5.9% 10%;
-  --brand-accent-soft: hsl(var(--brand-accent) / 0.08);
-  --brand-sidebar-gradient-from: hsl(var(--brand-primary) / 0.16);
-  --brand-sidebar-gradient-to: hsl(var(--brand-accent) / 0.04);
-  --brand-card-glow: 0 10px 30px hsl(var(--brand-primary) / 0.12);
-
-  /* ---------- Tokens consumidos pela UI ---------- */
-  --primary: var(--brand-primary);
-  --primary-foreground: var(--brand-primary-foreground);
 
   /* ---------- Radius ---------- */
   --radius: var(--brand-radius);
@@ -64,28 +59,32 @@
   /* ---------- Sidebar (LIGHT) ---------- */
   --sidebar-background: 0 0% 98%;
   --sidebar-foreground: 240 5.3% 26.1%;
-  --sidebar-primary: var(--brand-primary);
-  --sidebar-primary-foreground: var(--brand-primary-foreground);
   --sidebar-accent: 240 4.8% 95.9%;
   --sidebar-accent-foreground: 240 5.9% 10%;
   --sidebar-border: 220 13% 91%;
-  --sidebar-ring: var(--brand-ring);
   --sidebar: hsl(0 0% 98%);
 
   /* ---------- Extras para detalhes visuais ---------- */
   --surface-1: 0 0% 100%;
   --surface-2: 240 4.8% 97%;
   --surface-3: 240 4.8% 95%;
-  --brand-outline-soft: color-mix(in oklab, hsl(var(--brand-primary)) 18%, white);
-  --brand-tint-soft: color-mix(in oklab, hsl(var(--brand-primary)) 10%, white);
   --brand-shadow-strength: 0.14;
-  --brand-shadow-color: hsla(var(--brand-glow) / var(--brand-shadow-strength));
 
   /* ---------- Status semântico (independe do nicho) ---------- */
   --status-success: 125 50% 35%;
   --status-warning: 45 50% 33%;
   --status-danger:  14.8 58.8% 44.7%;
   --status-info:    197 48% 41%;
+
+  /* ---------- Categóricas (distinguir profissionais na agenda) ----------
+     Não significam status nem marca. Seis matizes afastadas entre si,
+     com luminosidade fixa para ler igual sobre o tinte de 14%. */
+  --cat-1: 205 55% 40%;
+  --cat-2: 340 45% 42%;
+  --cat-3: 150 40% 32%;
+  --cat-4: 30 60% 40%;
+  --cat-5: 265 40% 46%;
+  --cat-6: 180 45% 32%;
 }
 
 .dark {
@@ -113,32 +112,76 @@
 
   --border: 240 3.7% 15.9%;
   --input: 240 3.7% 15.9%;
-  --ring: 240 4.9% 83.9%;
 
   /* ---------- Sidebar (DARK) ---------- */
   --sidebar-background: 240 5.9% 10%;
   --sidebar-foreground: 240 4.8% 95.9%;
-  --sidebar-primary: var(--brand-primary);
-  --sidebar-primary-foreground: var(--brand-primary-foreground);
   --sidebar-accent: 240 3.7% 15.9%;
   --sidebar-accent-foreground: 240 4.8% 95.9%;
   --sidebar-border: 240 3.7% 15.9%;
-  --sidebar-ring: var(--brand-ring);
   --sidebar: hsl(240 5.9% 10%);
 
   /* ---------- Extras para detalhes visuais ---------- */
   --surface-1: 240 10% 8%;
   --surface-2: 240 6% 11%;
   --surface-3: 240 4% 14%;
-  --brand-outline-soft: color-mix(in oklab, hsl(var(--brand-primary)) 28%, black);
-  --brand-tint-soft: color-mix(in oklab, hsl(var(--brand-primary)) 14%, black);
   --brand-shadow-strength: 0.22;
-  --brand-shadow-color: hsla(var(--brand-glow) / var(--brand-shadow-strength));
 
   --status-success: 125 45% 58%;
   --status-warning: 45 45% 58%;
   --status-danger:  14.8 45% 58%;
   --status-info:    197 45% 58%;
+
+  --cat-1: 205 55% 62%;
+  --cat-2: 340 45% 66%;
+  --cat-3: 150 40% 58%;
+  --cat-4: 30 60% 62%;
+  --cat-5: 265 45% 68%;
+  --cat-6: 180 45% 56%;
+}
+
+/* =========================================================
+   TOKENS DERIVADOS DA MARCA
+   Uma custom property com var() é resolvida no elemento onde foi declarada.
+   Se `--primary: var(--brand-primary)` ficasse só em :root, a classe
+   `.theme-<nicho>` aplicada num <div> filho trocaria `--brand-primary` mas
+   `--primary` continuaria com o valor calculado em :root (quase-preto do
+   genérico) — era por isso que botões `bg-primary` não recebiam a cor do
+   nicho. Reaplicar as derivações no próprio elemento `.theme-*` resolve.
+   ========================================================= */
+
+:root,
+[class*="theme-"] {
+  --primary: var(--brand-primary);
+  --primary-foreground: var(--brand-primary-foreground);
+  /* Foco acompanha a cor do nicho: o campo ativo fica identificável. */
+  --ring: var(--brand-ring);
+
+  --sidebar-primary: var(--brand-primary);
+  --sidebar-primary-foreground: var(--brand-primary-foreground);
+  --sidebar-ring: var(--brand-ring);
+
+  /* Tokens legados/auxiliares */
+  --brand-primary-soft: hsl(var(--brand-primary) / 0.1);
+  --brand-primary-border: hsl(var(--brand-primary) / 0.25);
+  --brand-accent-soft: hsl(var(--brand-accent) / 0.08);
+  --brand-sidebar-gradient-from: hsl(var(--brand-primary) / 0.16);
+  --brand-sidebar-gradient-to: hsl(var(--brand-accent) / 0.04);
+  --brand-card-glow: 0 10px 30px hsl(var(--brand-primary) / 0.12);
+
+  --brand-outline-soft: color-mix(in oklab, hsl(var(--brand-primary)) 18%, white);
+  --brand-tint-soft: color-mix(in oklab, hsl(var(--brand-primary)) 10%, white);
+  --brand-shadow-color: hsla(var(--brand-glow) / var(--brand-shadow-strength));
+}
+
+.dark,
+.dark [class*="theme-"] {
+  /* No escuro o anel de foco fica claro e neutro: as cores de nicho com
+     luminosidade baixa (tatuador 24%, certificado 29%) sumiriam no fundo. */
+  --ring: 240 4.9% 83.9%;
+  --sidebar-ring: 240 4.9% 83.9%;
+  --brand-outline-soft: color-mix(in oklab, hsl(var(--brand-primary)) 28%, black);
+  --brand-tint-soft: color-mix(in oklab, hsl(var(--brand-primary)) 14%, black);
 }
 
 /* =========================================================
@@ -239,6 +282,23 @@
   --brand-border: 173.7 35% 85%;
   --brand-glow: 173.7 54.5% 24.1%;
   --brand-radius: 0.45rem;
+  --radius: var(--brand-radius);
+}
+
+/*
+  Manicure / Nail Designer — orquídea (#874B8B).
+  6,16:1 sobre branco; 5,55:1 sobre --brand-soft; ΔE76 ≥ 23 de salão e
+  psicologia (os vizinhos de matiz) e ≥ 30 dos quatro tokens de status.
+*/
+.theme-manicure {
+  --brand-primary: 296 30% 42%;
+  --brand-primary-foreground: 0 0% 100%;
+  --brand-ring: 296 30% 42%;
+  --brand-soft: 296 35% 96%;
+  --brand-soft-foreground: 296 30% 26%;
+  --brand-border: 296 25% 85%;
+  --brand-glow: 296 30% 42%;
+  --brand-radius: 0.5rem;
   --radius: var(--brand-radius);
 }
 

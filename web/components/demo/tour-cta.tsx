@@ -166,7 +166,7 @@ export function TourCta({ organizationId, onDone, onSkip }: TourCtaProps) {
             <ul className="space-y-1.5">
               {recapItems.map((id) => (
                 <li key={id} className="flex items-center gap-2 text-sm">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
                   {RECAP_LABELS[id]}
                 </li>
               ))}

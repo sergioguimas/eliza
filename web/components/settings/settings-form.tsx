@@ -51,7 +51,7 @@ export function SettingsForm({ profile, organization }: any) {
           <form action={handleSubmit}>
             <input type="hidden" name="form_type" value="organization" />
 
-            <Card className="border-zinc-200 dark:border-zinc-800">
+            <Card>
               <CardHeader>
                 <CardTitle>
                   {sections.organization_data || `Dados da ${orgLabel}`}
