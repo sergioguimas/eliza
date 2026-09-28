@@ -61,7 +61,7 @@ Crie `web/.env.local` com as variáveis necessárias. Para um guia completo, vej
 
 ## Deploy Rápido
 
-O app web possui `web/Dockerfile` e `web/docker-compose.yaml`. O compose atual publica o serviço `elisa-app` atrás do Traefik com host `eliza.sgdev.cloud`.
+O app web possui `web/Dockerfile` e `web/docker-compose.yaml`. O compose atual publica o serviço `elisa-app` atrás do Traefik com host `eliza.solasoftware.com.br`.
 
 ```bash
 cd web
@@ -79,8 +79,8 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 
-NEXT_PUBLIC_APP_URL=https://eliza.sgdev.cloud
-NEXT_PUBLIC_SITE_URL=https://eliza.sgdev.cloud
+NEXT_PUBLIC_APP_URL=https://eliza.solasoftware.com.br
+NEXT_PUBLIC_SITE_URL=https://eliza.solasoftware.com.br
 
 NEXT_PUBLIC_GOD_EMAIL=
 GOD_EMAIL=

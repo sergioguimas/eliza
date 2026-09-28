@@ -97,7 +97,7 @@ O login client-side espera que `signIn()` retorne `{ success: true, redirectTo }
 
 1. Configure Redirect URLs no Supabase:
    - `http://localhost:3000/auth/callback`
-   - `https://eliza.sgdev.cloud/auth/callback`
+   - `https://eliza.solasoftware.com.br/auth/callback`
 2. Confirme que o template de recuperação usa `{{ .ConfirmationURL }}`.
 3. Acesse `/forgot-password` ou `/reset-password`.
 4. Envie o e-mail.

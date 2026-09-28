@@ -57,13 +57,13 @@ Em **Authentication > URL Configuration**:
 Site URL de produção:
 
 ```txt
-https://eliza.sgdev.cloud/
+https://eliza.solasoftware.com.br/
 ```
 
 Redirect URLs:
 
 ```txt
-https://eliza.sgdev.cloud/auth/callback
+https://eliza.solasoftware.com.br/auth/callback
 http://localhost:3000/auth/callback
 ```
 
@@ -84,8 +84,8 @@ Não fixe o link em `/login`, `/reset-password` ou `/update-password`. A variáv
 Produção:
 
 ```env
-NEXT_PUBLIC_APP_URL=https://eliza.sgdev.cloud
-NEXT_PUBLIC_SITE_URL=https://eliza.sgdev.cloud
+NEXT_PUBLIC_APP_URL=https://eliza.solasoftware.com.br
+NEXT_PUBLIC_SITE_URL=https://eliza.solasoftware.com.br
 ```
 
 Desenvolvimento:

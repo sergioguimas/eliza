@@ -103,7 +103,7 @@ export async function POST(request: Request) {
 
   const meta = getNicheMetadata(niche)
   const handle = crypto.randomUUID()
-  const email = `demo-${handle}@demo.eliza.sgdev.cloud`
+  const email = `demo-${handle}@demo.eliza.solasoftware.com.br`
   const password = `${crypto.randomUUID()}Aa1!`
   const expiresAt = new Date(Date.now() + DEMO_TTL_MS)
 

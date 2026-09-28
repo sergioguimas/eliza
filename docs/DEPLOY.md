@@ -3,7 +3,7 @@
 ## Produção Atual
 
 ```txt
-https://eliza.sgdev.cloud
+https://eliza.solasoftware.com.br
 ```
 
 O deploy esperado usa Docker em VPS com Traefik.
@@ -18,14 +18,14 @@ O compose atual usa:
 - serviço `elisa-app`;
 - porta interna `3000`;
 - redes externas `public` e `private`;
-- host Traefik `eliza.sgdev.cloud`;
+- host Traefik `eliza.solasoftware.com.br`;
 - env file `web/.env`.
 
 ## Checklist Antes do Deploy
 
 - `.env` criado no diretório `web`.
-- `NEXT_PUBLIC_APP_URL=https://eliza.sgdev.cloud`.
-- `NEXT_PUBLIC_SITE_URL=https://eliza.sgdev.cloud`.
+- `NEXT_PUBLIC_APP_URL=https://eliza.solasoftware.com.br`.
+- `NEXT_PUBLIC_SITE_URL=https://eliza.solasoftware.com.br`.
 - Redirect URLs configuradas no Supabase.
 - `SUPABASE_SERVICE_ROLE_KEY` presente só no servidor.
 - `CRON_SECRET` forte.
@@ -58,8 +58,8 @@ docker compose restart elisa-app
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-NEXT_PUBLIC_APP_URL=https://eliza.sgdev.cloud
-NEXT_PUBLIC_SITE_URL=https://eliza.sgdev.cloud
+NEXT_PUBLIC_APP_URL=https://eliza.solasoftware.com.br
+NEXT_PUBLIC_SITE_URL=https://eliza.solasoftware.com.br
 NEXT_PUBLIC_GOD_EMAIL=
 GOD_EMAIL=
 CRON_SECRET=
@@ -74,7 +74,7 @@ EVOLUTION_API_KEY=
 Em Authentication > URL Configuration, inclua:
 
 ```txt
-https://eliza.sgdev.cloud/auth/callback
+https://eliza.solasoftware.com.br/auth/callback
 http://localhost:3000/auth/callback
 ```
 
@@ -93,7 +93,7 @@ Não fixe o destino em `/login`, `/reset-password` ou `/update-password`.
 Configure um job externo para chamar:
 
 ```txt
-GET https://eliza.sgdev.cloud/api/cron/send-reminders
+GET https://eliza.solasoftware.com.br/api/cron/send-reminders
 Authorization: Bearer <CRON_SECRET>
 ```
 

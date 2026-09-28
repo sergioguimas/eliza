@@ -86,7 +86,7 @@ Adicionar no Supabase:
 
 ```txt
 http://localhost:3000/auth/callback
-https://eliza.sgdev.cloud/auth/callback
+https://eliza.solasoftware.com.br/auth/callback
 ```
 
 ## Link de recuperação abre o login

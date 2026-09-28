@@ -127,7 +127,7 @@ Configure:
 
 ```txt
 http://localhost:3000/auth/callback
-https://eliza.sgdev.cloud/auth/callback
+https://eliza.solasoftware.com.br/auth/callback
 ```
 
 Variáveis recomendadas:
@@ -140,8 +140,8 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 Produção:
 
 ```env
-NEXT_PUBLIC_APP_URL=https://eliza.sgdev.cloud
-NEXT_PUBLIC_SITE_URL=https://eliza.sgdev.cloud
+NEXT_PUBLIC_APP_URL=https://eliza.solasoftware.com.br
+NEXT_PUBLIC_SITE_URL=https://eliza.solasoftware.com.br
 ```
 
 ## Service Role

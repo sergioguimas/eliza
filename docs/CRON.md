@@ -79,7 +79,7 @@ Produção:
 ```bash
 curl -i \
   -H "Authorization: Bearer <CRON_SECRET>" \
-  https://eliza.sgdev.cloud/api/cron/send-reminders
+  https://eliza.solasoftware.com.br/api/cron/send-reminders
 ```
 
 ## Problemas Comuns
