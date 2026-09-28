@@ -609,7 +609,7 @@ export function CreateAppointmentDialog({
 
           <AlertDialogAction
             onClick={() => performSubmit()}
-            className="bg-warning text-white hover:bg-warning/90"
+            className="bg-warning text-background hover:bg-warning/90"
           >
             {actions.confirm || "Confirmar"}
           </AlertDialogAction>

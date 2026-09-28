@@ -481,7 +481,7 @@ export function PublicBookingForm({
                       className={cn(
                         "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold border",
                         active && "border-primary bg-primary text-primary-foreground",
-                        done && "border-success bg-success text-white",
+                        done && "border-success bg-success text-background",
                         !active && !done && "border-border text-muted-foreground"
                       )}
                     >

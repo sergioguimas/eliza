@@ -76,7 +76,7 @@ Prefira:
 2. Adicionar dicionário em `web/lib/dictionaries/niches.ts`.
 3. Atualizar enum em actions que validam nicho, como `web/app/actions/organization.ts`.
 4. Atualizar check constraint no Supabase se necessário.
-5. Adicionar o bloco `.theme-<nicho>` em `web/app/globals.css`.
+5. Adicionar o bloco `.theme-<nicho>` (claro) e o `.dark .theme-<nicho>` (escuro) em `web/app/globals.css`.
 6. Adicionar o mapa de ícones em `web/components/shared/category-icon.tsx`.
 7. Adicionar a lista de documentos em `web/lib/niche-documents.ts` (pode ser vazia).
 8. Atualizar o tipo `Organization.niche` em `web/app/(app)/layout.tsx`.
@@ -105,6 +105,12 @@ passar 4,5:1 sobre `--brand-soft`, e a distância perceptual (ΔE76) para os out
 e para os quatro tokens `--status-*` deve ficar acima de 19, como registrado em
 `docs/PESQUISA_NICHOS_VISUAL.md`. O nicho `manicure` (orquídea `296 30% 42%`) foi
 escolhido assim: 6,16:1 sobre branco e ΔE76 ≥ 23 de salão e psicologia.
+
+No escuro, cada nicho tem um bloco `.dark .theme-<nicho>`: o primário sobe para ~62% de
+luminosidade (≥ 4,65:1 contra o card para `text-primary`) com texto escuro por cima, e
+`--brand-soft` vira um tinte escuro do matiz (16%) com `--brand-soft-foreground` claro
+(82%). Sem esse bloco o tema claro vaza: chips quase brancos e, no genérico, botão preto
+sobre fundo preto.
 
 Tokens que não dependem do nicho, também em `globals.css`:
 
