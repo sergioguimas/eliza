@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-09-28 (tema escuro)
+
+### Visual (tema escuro)
+
+- Cada nicho ganhou um bloco `.dark .theme-<nicho>`: antes os tokens de marca só tinham
+  valor claro, então no escuro o genérico renderizava botão primário preto sobre fundo
+  preto (inclusive em `/login`, `/setup` e `/demo/start`), `text-primary` de tatuador,
+  certificado e advocacia ficava abaixo de 2,5:1, e `bg-brand-soft` (item ativo da
+  sidebar, cards de nicho) aparecia como um bloco quase branco. Primário a ~62% de
+  luminosidade com texto escuro; `brand-soft` a 16% com texto a 82%.
+- `--border` 15,9% → 20% e `--input` 15,9% → 28% no escuro: divisórias e campos eram
+  1,20:1 contra o card e não se distinguiam.
+- Anel de foco no escuro segue a cor do nicho, como no claro.
+- Botões e marcadores `bg-success`/`bg-warning` usam `text-background` em vez de
+  `text-white`: no escuro essas cores têm 58% de luminosidade e o branco caía para ~2:1.
+
 ## 2026-09-28
 
 ### Keckleon

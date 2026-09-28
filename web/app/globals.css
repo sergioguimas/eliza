@@ -110,8 +110,22 @@
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 0% 98%;
 
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
+  /* Bordas e campos: 15,9% dava 1,20:1 contra o card (10%) — divisórias e
+     inputs sumiam. 20% para bordas (1,38:1) e 28% para campos (1,86:1). */
+  --border: 240 4% 20%;
+  --input: 240 4% 28%;
+
+  /* ---------- Marca padrão no escuro (genérico / rotas públicas) ----------
+     Os valores claros do genérico (primário 10%) somem sobre o fundo escuro:
+     botão preto em fundo preto. Os blocos `.dark .theme-*` abaixo fazem o
+     mesmo para cada nicho. */
+  --brand-primary: 0 0% 98%;
+  --brand-primary-foreground: 240 5.9% 10%;
+  --brand-ring: 0 0% 98%;
+  --brand-soft: 240 5% 16%;
+  --brand-soft-foreground: 240 5% 82%;
+  --brand-border: 240 5% 32%;
+  --brand-glow: 0 0% 98%;
 
   /* ---------- Sidebar (DARK) ---------- */
   --sidebar-background: 240 5.9% 10%;
@@ -176,10 +190,6 @@
 
 .dark,
 .dark [class*="theme-"] {
-  /* No escuro o anel de foco fica claro e neutro: as cores de nicho com
-     luminosidade baixa (tatuador 24%, certificado 29%) sumiriam no fundo. */
-  --ring: 240 4.9% 83.9%;
-  --sidebar-ring: 240 4.9% 83.9%;
   --brand-outline-soft: color-mix(in oklab, hsl(var(--brand-primary)) 28%, black);
   --brand-tint-soft: color-mix(in oklab, hsl(var(--brand-primary)) 14%, black);
 }
@@ -300,6 +310,104 @@
   --brand-glow: 296 30% 42%;
   --brand-radius: 0.5rem;
   --radius: var(--brand-radius);
+}
+
+/* =========================================================
+   TEMAS DE NICHO — VARIANTE ESCURA
+   No escuro o primário sobe para ~62% de luminosidade (≥ 4,65:1 contra o
+   card para `text-primary`/`text-brand`) e recebe texto escuro (≥ 4,65:1);
+   `brand-soft` vira um tinte escuro do matiz (16%) com texto claro (82%,
+   ≥ 9:1). Os valores claros dos temas ficam intactos.
+   ========================================================= */
+
+.dark .theme-generico {
+  --brand-primary: 0 0% 98%;
+  --brand-primary-foreground: 240 5.9% 10%;
+  --brand-ring: 0 0% 98%;
+  --brand-soft: 240 5% 16%;
+  --brand-soft-foreground: 240 5% 82%;
+  --brand-border: 240 5% 32%;
+  --brand-glow: 0 0% 98%;
+}
+
+.dark .theme-clinica {
+  --brand-primary: 216.9 55% 62%;
+  --brand-primary-foreground: 240 6% 10%;
+  --brand-ring: 216.9 55% 62%;
+  --brand-soft: 216.9 25% 16%;
+  --brand-soft-foreground: 216.9 35% 82%;
+  --brand-border: 216.9 25% 32%;
+  --brand-glow: 216.9 55% 62%;
+}
+
+.dark .theme-psicologia {
+  --brand-primary: 261.7 45% 64%;
+  --brand-primary-foreground: 240 6% 10%;
+  --brand-ring: 261.7 45% 64%;
+  --brand-soft: 261.7 25% 16%;
+  --brand-soft-foreground: 261.7 35% 82%;
+  --brand-border: 261.7 25% 32%;
+  --brand-glow: 261.7 45% 64%;
+}
+
+.dark .theme-barbearia {
+  --brand-primary: 27.9 55% 62%;
+  --brand-primary-foreground: 240 6% 10%;
+  --brand-ring: 27.9 55% 62%;
+  --brand-soft: 27.9 25% 16%;
+  --brand-soft-foreground: 27.9 35% 82%;
+  --brand-border: 27.9 25% 32%;
+  --brand-glow: 27.9 55% 62%;
+}
+
+.dark .theme-salao {
+  --brand-primary: 334.2 42% 64%;
+  --brand-primary-foreground: 240 6% 10%;
+  --brand-ring: 334.2 42% 64%;
+  --brand-soft: 334.2 25% 16%;
+  --brand-soft-foreground: 334.2 35% 82%;
+  --brand-border: 334.2 25% 32%;
+  --brand-glow: 334.2 42% 64%;
+}
+
+.dark .theme-advocacia {
+  --brand-primary: 214.6 45% 62%;
+  --brand-primary-foreground: 240 6% 10%;
+  --brand-ring: 214.6 45% 62%;
+  --brand-soft: 214.6 25% 16%;
+  --brand-soft-foreground: 214.6 35% 82%;
+  --brand-border: 214.6 25% 32%;
+  --brand-glow: 214.6 45% 62%;
+}
+
+.dark .theme-certificado {
+  --brand-primary: 134 29% 62%;
+  --brand-primary-foreground: 240 6% 10%;
+  --brand-ring: 134 29% 62%;
+  --brand-soft: 134 25% 16%;
+  --brand-soft-foreground: 134 35% 82%;
+  --brand-border: 134 25% 32%;
+  --brand-glow: 134 29% 62%;
+}
+
+.dark .theme-tatuador {
+  --brand-primary: 173.7 55% 62%;
+  --brand-primary-foreground: 240 6% 10%;
+  --brand-ring: 173.7 55% 62%;
+  --brand-soft: 173.7 25% 16%;
+  --brand-soft-foreground: 173.7 35% 82%;
+  --brand-border: 173.7 25% 32%;
+  --brand-glow: 173.7 55% 62%;
+}
+
+.dark .theme-manicure {
+  --brand-primary: 296 30% 62%;
+  --brand-primary-foreground: 240 6% 10%;
+  --brand-ring: 296 30% 62%;
+  --brand-soft: 296 25% 16%;
+  --brand-soft-foreground: 296 35% 82%;
+  --brand-border: 296 25% 32%;
+  --brand-glow: 296 30% 62%;
 }
 
 /* =========================================================
