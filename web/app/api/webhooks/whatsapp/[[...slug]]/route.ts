@@ -1,7 +1,9 @@
+import { createHash, timingSafeEqual } from "node:crypto"
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import { sendWhatsAppMessage } from "@/app/actions/send-whatsapp"
 import { Database } from "@/utils/database.types"
+import { brPhoneVariants } from "@/lib/phone-br"
 
 const CONFIRMATION_KEYWORDS = [
   "sim",
@@ -72,16 +74,24 @@ function extractMessageText(messageContent: any) {
   return ""
 }
 
+/**
+ * Número de quem mandou a mensagem, só para conversa 1:1.
+ *
+ * `body.sender` NÃO entra: no payload da Evolution ele é o número da própria
+ * instância (o tenant), não o do cliente. Grupo (`@g.us`) e JID `@lid` sem
+ * `remoteJidAlt` não identificam um telefone e são descartados.
+ */
 function extractIncomingNumber(body: any) {
-  const rawNumber =
-    body.data?.key?.remoteJidAlt ||
-    body.sender ||
-    body.data?.key?.participant ||
-    body.data?.key?.remoteJid
+  const key = body.data?.key
+  const candidates = [key?.remoteJidAlt, key?.remoteJid]
 
-  return String(rawNumber || "")
-    .replace(/@.*/, "")
-    .replace(/\D/g, "")
+  for (const jid of candidates) {
+    if (typeof jid === "string" && jid.endsWith("@s.whatsapp.net")) {
+      return jid.replace(/@.*/, "").replace(/\D/g, "")
+    }
+  }
+
+  return ""
 }
 
 function extractInstanceName(body: any) {
@@ -118,7 +128,59 @@ function renderMessage(template: string | null | undefined, vars: Record<string,
   })
 }
 
-export async function POST(req: Request) {
+/**
+ * Segredo compartilhado com a Evolution (env WHATSAPP_WEBHOOK_SECRET).
+ *
+ * Aceito em dois lugares porque a Evolution tem dois jeitos de configurar
+ * webhook e só um deles manda header:
+ *   - no caminho: /api/webhooks/whatsapp/<segredo> — funciona no webhook
+ *     GLOBAL (env WEBHOOK_GLOBAL_URL, que não envia header nenhum) e sobrevive
+ *     ao `byEvents`, que anexa `/messages-upsert` ao fim da URL (query string
+ *     quebraria ali);
+ *   - no header `x-webhook-secret` ou `Authorization: Bearer` — webhook por
+ *     instância (`/webhook/set/{instance}` com `headers`).
+ *
+ * Sem o env configurado a rota recusa tudo: fail-closed. Antes disto qualquer
+ * POST com um nome de instância (derivado do slug, público) confirmava ou
+ * cancelava agendamento de cliente e ainda disparava resposta pelo WhatsApp.
+ */
+function digest(value: string) {
+  return createHash("sha256").update(value).digest()
+}
+
+function isAuthorized(req: Request, slug: string[] | undefined) {
+  const secret = process.env.WHATSAPP_WEBHOOK_SECRET
+
+  if (!secret) return null
+
+  const bearer = req.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1]
+  const provided = [
+    slug?.[0],
+    req.headers.get("x-webhook-secret"),
+    bearer,
+  ].filter((value): value is string => Boolean(value))
+
+  const expected = digest(secret)
+
+  return provided.some((value) => timingSafeEqual(digest(value), expected))
+}
+
+export async function POST(
+  req: Request,
+  { params }: { params: Promise<{ slug?: string[] }> }
+) {
+  const { slug } = await params
+  const authorized = isAuthorized(req, slug)
+
+  if (authorized === null) {
+    console.error("🚫 [Webhook] WHATSAPP_WEBHOOK_SECRET não configurado — recusando.")
+    return NextResponse.json({ error: "not_configured" }, { status: 503 })
+  }
+
+  if (!authorized) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+  }
+
   try {
     const body = await req.json()
     const eventType = body.event || body.type
@@ -173,7 +235,7 @@ export async function POST(req: Request) {
     console.error("🔥 Erro no Webhook:", error)
 
     return NextResponse.json(
-      { error: error.message },
+      { error: "internal_error" },
       { status: 500 }
     )
   }
@@ -194,7 +256,7 @@ async function handleStatusChange(
   const incomingClean = extractIncomingNumber(body)
   const instanceName = extractInstanceName(body)
 
-  if (incomingClean.length < 8) {
+  if (incomingClean.length < 10) {
     console.log("⚠️ [Webhook] Identificador numérico inválido ou muito curto:", incomingClean)
 
     return {
@@ -202,9 +264,6 @@ async function handleStatusChange(
       reason: "invalid_phone",
     }
   }
-
-  const last8 = incomingClean.slice(-8)
-  const last4 = incomingClean.slice(-4)
 
   console.log(`✅ [Webhook] Remetente identificado: ${incomingClean}`)
   console.log(`🏢 [Webhook] Instância identificada: ${instanceName ?? "não informada"}`)
@@ -242,13 +301,20 @@ async function handleStatusChange(
     }
   }
 
-  console.log(`🔍 [Webhook] Buscando cliente na organização ${organizationId} com final ${last4}`)
+  // Igualdade exata em phone_normalized (índice único por org). O matching
+  // antigo era `phone ilike %últimos4` com fallback no primeiro candidato —
+  // bastava coincidir o final do número para mexer no agendamento de outro
+  // cliente.
+  const phoneVariants = brPhoneVariants(incomingClean)
+
+  console.log(`🔍 [Webhook] Buscando cliente na organização ${organizationId}`)
 
   const { data: candidates, error: customersError } = await supabase
     .from("customers")
     .select("id, name, phone, organization_id")
     .eq("organization_id", organizationId)
-    .or(`phone.ilike.%${last8},phone.ilike.%${last4}`)
+    .is("deleted_at", null)
+    .in("phone_normalized", phoneVariants)
 
   if (customersError) {
     console.error("🔥 [Webhook] Erro ao buscar cliente:", customersError)
@@ -260,7 +326,7 @@ async function handleStatusChange(
   }
 
   if (!candidates || candidates.length === 0) {
-    console.log(`⚠️ [Webhook] Cliente não encontrado para o final ${last4}`)
+    console.log("⚠️ [Webhook] Cliente não encontrado para o número recebido.")
 
     return {
       ok: false,
@@ -268,18 +334,21 @@ async function handleStatusChange(
     }
   }
 
-  const foundCustomer = candidates.find((customer) => {
-    if (!customer.phone) return false
+  // O mesmo celular gravado em duas formas (com e sem 9, com e sem DDI) vira
+  // dois cadastros. Não dá para saber qual é o certo: não mexe em nada.
+  if (candidates.length > 1) {
+    console.warn(
+      "⚠️ [Webhook] Número casa com mais de um cliente; ignorando.",
+      candidates.map((customer) => customer.id)
+    )
 
-    return customer.phone.replace(/\D/g, "").endsWith(last8)
-  }) ?? candidates[0]
-
-  if (!foundCustomer) {
     return {
       ok: false,
-      reason: "customer_not_matched",
+      reason: "customer_ambiguous",
     }
   }
+
+  const foundCustomer = candidates[0]
 
   const now = new Date().toISOString()
 

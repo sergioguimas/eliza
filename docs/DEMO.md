@@ -67,7 +67,7 @@ comercialmente). Todo valor precisa existir no CHECK `organizations_niche_check`
   **Precisa estar na crontab da VPS, de hora em hora** — confirmar que a linha existe em
   produção:
   ```
-  0 * * * * curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://eliza.sgdev.cloud/api/cron/cleanup-demo
+  0 * * * * curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://eliza.solasoftware.com.br/api/cron/cleanup-demo
   ```
 - Reset manual (`web/app/actions/demo/reset-demo.ts`): esvazia e reseeda a mesma
   organização, preservando org/perfil/sessão. Botão "Recomeçar a demonstração" no passo

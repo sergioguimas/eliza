@@ -97,6 +97,39 @@ não
 
 O webhook deve localizar organização/instância, identificar mensagem recebida e atualizar o agendamento quando aplicável.
 
+### Autenticação
+
+A rota exige o segredo `WHATSAPP_WEBHOOK_SECRET` (sem o env, 503 para tudo).
+Ele é aceito no primeiro segmento do caminho ou em header:
+
+```txt
+https://eliza.solasoftware.com.br/api/webhooks/whatsapp/<WHATSAPP_WEBHOOK_SECRET>
+x-webhook-secret: <segredo>        (ou Authorization: Bearer <segredo>)
+```
+
+O app NÃO registra o webhook na Evolution (`whatsapp-connect.ts` só cria a
+instância e busca QR). A URL fica em um destes lugares, conforme o servidor:
+
+- **Webhook global** (env `WEBHOOK_GLOBAL_URL` do container da Evolution):
+  não envia header customizado, então o segredo tem que ir no caminho. Com
+  `WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS=true` a Evolution anexa
+  `/messages-upsert` ao fim — o catch-all `[[...slug]]` absorve isso. Não use
+  query string (`?token=`): o `byEvents` quebraria a URL.
+- **Webhook por instância** (`POST /webhook/set/{instance}` ou pelo Manager):
+  pode usar o caminho ou o campo `headers` com `x-webhook-secret`.
+
+Envio de um número qualquer não prova nada: o segredo é a única barreira.
+Nome de instância é derivado do slug da org, que é público.
+
+### Identificação do cliente
+
+- Remetente vem de `data.key.remoteJidAlt` / `remoteJid` terminados em
+  `@s.whatsapp.net`. Grupos, `@lid` sem número alternativo e `body.sender`
+  (que é o número da própria instância) são ignorados.
+- Casamento por igualdade em `customers.phone_normalized`, testando as
+  variantes com/sem DDI 55 e com/sem o 9º dígito (`lib/phone-br.ts`).
+- Mais de um cliente casando → nada é alterado (`customer_ambiguous`).
+
 ## Troubleshooting
 
 ### Conectado na Evolution, mas UI mostra offline

@@ -3,7 +3,7 @@
 ## Produção Atual
 
 ```txt
-https://eliza.sgdev.cloud
+https://eliza.solasoftware.com.br
 ```
 
 O deploy esperado usa Docker em VPS com Traefik.
@@ -18,17 +18,20 @@ O compose atual usa:
 - serviço `elisa-app`;
 - porta interna `3000`;
 - redes externas `public` e `private`;
-- host Traefik `eliza.sgdev.cloud`;
+- host Traefik `eliza.solasoftware.com.br`;
 - env file `web/.env`.
 
 ## Checklist Antes do Deploy
 
 - `.env` criado no diretório `web`.
-- `NEXT_PUBLIC_APP_URL=https://eliza.sgdev.cloud`.
-- `NEXT_PUBLIC_SITE_URL=https://eliza.sgdev.cloud`.
+- `NEXT_PUBLIC_APP_URL=https://eliza.solasoftware.com.br`.
+- `NEXT_PUBLIC_SITE_URL=https://eliza.solasoftware.com.br`.
 - Redirect URLs configuradas no Supabase.
 - `SUPABASE_SERVICE_ROLE_KEY` presente só no servidor.
 - `CRON_SECRET` forte.
+- `WHATSAPP_WEBHOOK_SECRET` forte e a URL do webhook na Evolution já com o
+  segredo no caminho (subir o código antes de trocar a URL na Evolution faz
+  as respostas "sim/não" dos clientes caírem em 401 até a troca).
 - Evolution API acessível pela VPS.
 - Redes Docker externas `public` e `private` existentes.
 - Traefik com certresolver `meuresolver`, ou ajuste o label.
@@ -58,8 +61,8 @@ docker compose restart elisa-app
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-NEXT_PUBLIC_APP_URL=https://eliza.sgdev.cloud
-NEXT_PUBLIC_SITE_URL=https://eliza.sgdev.cloud
+NEXT_PUBLIC_APP_URL=https://eliza.solasoftware.com.br
+NEXT_PUBLIC_SITE_URL=https://eliza.solasoftware.com.br
 NEXT_PUBLIC_GOD_EMAIL=
 GOD_EMAIL=
 CRON_SECRET=
@@ -67,14 +70,21 @@ CRON_TZ=America/Sao_Paulo
 NEXT_PUBLIC_EVOLUTION_API_URL=
 EVOLUTION_API_URL=
 EVOLUTION_API_KEY=
+WHATSAPP_WEBHOOK_SECRET=
+DEMO_RATE_LIMIT_SALT=
 ```
+
+`WHATSAPP_WEBHOOK_SECRET` é obrigatória: sem ela o webhook de entrada do
+WhatsApp responde 503 para tudo (fail-closed). Gere com
+`openssl rand -hex 32` e use o mesmo valor na URL do webhook da Evolution —
+ver `docs/WHATSAPP_EVOLUTION.md`, seção Webhook.
 
 ## Supabase
 
 Em Authentication > URL Configuration, inclua:
 
 ```txt
-https://eliza.sgdev.cloud/auth/callback
+https://eliza.solasoftware.com.br/auth/callback
 http://localhost:3000/auth/callback
 ```
 
@@ -93,7 +103,7 @@ Não fixe o destino em `/login`, `/reset-password` ou `/update-password`.
 Configure um job externo para chamar:
 
 ```txt
-GET https://eliza.sgdev.cloud/api/cron/send-reminders
+GET https://eliza.solasoftware.com.br/api/cron/send-reminders
 Authorization: Bearer <CRON_SECRET>
 ```
 

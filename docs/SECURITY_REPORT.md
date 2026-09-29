@@ -151,3 +151,48 @@ Regra: `curl-auth-header`
 | LOW | SEMGREP | SAST | Semgrep Finding: rules.javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring | — |
 | LOW | SEMGREP | SAST | Semgrep Finding: rules.javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring | — |
 | LOW | SEMGREP | SAST | Semgrep Finding: rules.javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring | — |
+
+---
+
+## Achados manuais (fora do scan GitGuard)
+
+### 🔴 2026-09-23 — RPCs públicas expõem ficha de cliente de qualquer tenant (CRITICAL)
+
+**Status:** **CONFIRMADO no banco de produção em 2026-09-23** (projeto `ttrzlxuqyrqxgbztfmwv`). **CORRIGIDO em 2026-09-23**: migration `supabase/migrations/20260923111405_revoke_public_customer_rpcs.sql` aplicada via MCP do Supabase (versão `20260923111405` no histórico do banco).
+
+Verificação pós-correção:
+- `has_function_privilege`: `anon = false`, `authenticated = false`, `service_role = true` nas duas; `proacl` = `{postgres=X/postgres,service_role=X/postgres}`.
+- Teste real via REST com a anon key (`POST /rest/v1/rpc/<função>`): as duas retornam HTTP 401 `42501 permission denied for function ...`.
+
+Resultado da verificação: `has_function_privilege` = `true` para `anon`, `authenticated` e `service_role` nas duas funções; `proacl` = `{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}` (inclui `PUBLIC`); `prosecdef = true`; `find_or_create_public_customer` retorna `customers` inteiro.
+
+Exposição na data: 74 organizações, 141 clientes, 5 com CPF/data de nascimento/endereço preenchidos. Último `updated_at` em `customers` e último agendamento criado: 2026-08-31 18:28 (-03); nenhum agendamento `pending`. Logs de API só cobrem a partir da reativação do projeto (2026-09-23 ~14:01 UTC) e não mostram chamadas a `/rpc/`; o histórico anterior não está mais disponível, então não é possível provar que não houve exploração.
+
+**O quê:** `public.find_or_create_public_customer(...)` e `public.request_public_appointment(...)` são `SECURITY DEFINER` e, no snapshot `schema_public.sql` de 2026-08-15, têm `GRANT ALL ... TO anon` e `TO authenticated` (herdado do default privileges do Supabase). Nenhuma migration revogava.
+
+**Impacto (com a anon key, que é pública no browser):**
+- `find_or_create_public_customer(org_id, nome, telefone)` devolve a linha inteira de `customers` do cliente com aquele telefone na org: CPF (`document`), `birth_date`, `address`, `email`, `notes`. IDs de org são enumeráveis por anon via `organizations`. Resultado: dá pra consultar a ficha de qualquer cliente de qualquer tenant sabendo o telefone.
+- A mesma chamada faz `UPDATE` no cliente: sobrescreve `name`/`phone` e preenche campos vazios com o que o chamador mandar.
+- `request_public_appointment` cria agendamento `pending` sem rate limit, contornando o limite de `createPublicAppointment` (`web/app/actions/create-appointment.ts`).
+
+**Uso no app:** nenhum. As duas só aparecem em `web/utils/database.types.ts` (grep em 2026-09-23). Sem ordem de deploy a respeitar.
+
+**Correção:** `REVOKE ALL ... FROM PUBLIC, anon, authenticated` nas duas; `service_role` mantém `EXECUTE`.
+
+**Consulta de verificação (reutilizável):**
+
+```sql
+select f, has_function_privilege('anon', f, 'execute')          as anon,
+          has_function_privilege('authenticated', f, 'execute') as authenticated,
+          has_function_privilege('service_role', f, 'execute')  as service_role
+from unnest(array[
+  'public.find_or_create_public_customer(uuid,text,text,text,text,date,text,text,text)',
+  'public.request_public_appointment(uuid,uuid,uuid,timestamptz,text,text,text,text,date,text,text,text,text)'
+]) as f;
+```
+
+Antes: `anon = true` confirma o vazamento. Depois: esperado `false, false, true`.
+
+**Pendências relacionadas:**
+- Se `anon = true` antes da correção, verificar nos logs da API do Supabase (Logs → API, filtrar `/rest/v1/rpc/find_or_create_public_customer` e `/rpc/request_public_appointment`) se houve chamadas. Se houver chamadas de fora, avaliar se é preciso comunicar os titulares dos dados à ANPD (LGPD art. 48).
+- A raiz é `ALTER DEFAULT PRIVILEGES ... GRANT ALL ON FUNCTIONS TO anon`: toda função nova em `public` nasce executável por anon. Toda função `SECURITY DEFINER` nova precisa de `REVOKE ... FROM PUBLIC, anon, authenticated` explícito, como em `20260828120000_demo_rate_limit_atomic.sql`.
