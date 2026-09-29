@@ -29,6 +29,9 @@ O compose atual usa:
 - Redirect URLs configuradas no Supabase.
 - `SUPABASE_SERVICE_ROLE_KEY` presente só no servidor.
 - `CRON_SECRET` forte.
+- `WHATSAPP_WEBHOOK_SECRET` forte e a URL do webhook na Evolution já com o
+  segredo no caminho (subir o código antes de trocar a URL na Evolution faz
+  as respostas "sim/não" dos clientes caírem em 401 até a troca).
 - Evolution API acessível pela VPS.
 - Redes Docker externas `public` e `private` existentes.
 - Traefik com certresolver `meuresolver`, ou ajuste o label.
@@ -67,7 +70,14 @@ CRON_TZ=America/Sao_Paulo
 NEXT_PUBLIC_EVOLUTION_API_URL=
 EVOLUTION_API_URL=
 EVOLUTION_API_KEY=
+WHATSAPP_WEBHOOK_SECRET=
+DEMO_RATE_LIMIT_SALT=
 ```
+
+`WHATSAPP_WEBHOOK_SECRET` é obrigatória: sem ela o webhook de entrada do
+WhatsApp responde 503 para tudo (fail-closed). Gere com
+`openssl rand -hex 32` e use o mesmo valor na URL do webhook da Evolution —
+ver `docs/WHATSAPP_EVOLUTION.md`, seção Webhook.
 
 ## Supabase
 
