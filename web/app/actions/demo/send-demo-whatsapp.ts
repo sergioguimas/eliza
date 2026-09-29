@@ -1,4 +1,9 @@
-'use server'
+import "server-only"
+
+// Primitivo de envio — NÃO é server action. Com 'use server' cada export
+// virava endpoint POST público: qualquer um mandava texto/PDF arbitrário pelo
+// número de qualquer tenant, bastando o organizationId. Quem chama (actions
+// autenticadas, webhook, cron) é que autoriza.
 
 import { createClient } from "@supabase/supabase-js"
 import { Database } from "@/utils/database.types"

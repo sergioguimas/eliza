@@ -54,7 +54,7 @@ import {
 } from "@/app/actions/service-records"
 import { DateRange } from "react-day-picker"
 import { jsPDF } from "jspdf"
-import { sendWhatsAppMedia } from "@/app/actions/send-whatsapp"
+import { sendServiceRecordPdf } from "@/app/actions/send-record-whatsapp"
 import { useKeckleon } from "@/providers/keckleon-provider"
 
 interface ServiceRecordItemProps {
@@ -195,8 +195,8 @@ function ServiceRecordItem({
 
       const pdfBase64 = doc.output("datauristring").split(",")[1]
 
-      const result = await sendWhatsAppMedia({
-        phone: customer.phone,
+      const result = await sendServiceRecordPdf({
+        customerId: customer.id,
         caption:
           messages.whatsapp_record_caption ||
           `Olá! Segue o PDF do seu ${prontuario.toLowerCase()} do dia ${format(
@@ -208,7 +208,6 @@ function ServiceRecordItem({
           new Date(record.created_at),
           "dd-MM-yyyy"
         )}.pdf`,
-        organizationId: customer.organization_id,
       })
 
       if (result.success) {
