@@ -53,7 +53,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Textarea } from "@/components/ui/textarea"
 
-import { createAppointment } from "@/app/actions/create-appointment"
+import { createPublicAppointment } from "@/app/actions/create-appointment"
 import { getAvailableSlots } from "@/app/actions/get-available-slots"
 import { Database } from "@/utils/database.types"
 import { getNicheDocuments } from "@/lib/niche-documents"
@@ -311,7 +311,7 @@ export function PublicBookingForm({
         )
       )
 
-      const result = await createAppointment(formData)
+      const result = await createPublicAppointment(formData)
 
       if (result?.success) {
         setIsSuccess(true)
