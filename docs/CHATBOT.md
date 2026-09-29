@@ -1,6 +1,6 @@
 # Atendente Eliza (chatbot WhatsApp)
 
-> **Status:** planejamento — nenhum código escrito. Documento de decisões e escopo.
+> **Status:** F0 contratada — nenhum código de implementação escrito. Documento de decisões e escopo.
 > **Última revisão:** 2026-09-23
 > **Tipo:** TO-BE (descreve o alvo; o código atual ainda não está em conformidade)
 
@@ -61,7 +61,7 @@ Evolution API ──webhook──▶ Eliza /api/webhooks/whatsapp
                                              │ lock: 1 conversa por vez
                                              │ LLM + ferramentas
                                              ▼
-                                   Eliza /api/v1/atendente/*  (token de serviço)
+                              Eliza /api/v1/autoatendimento/*  (token + ticket)
                                              │
                                         lib/domain/*  ◀── server actions atuais
                                              │
@@ -69,7 +69,7 @@ Evolution API ──webhook──▶ Eliza /api/webhooks/whatsapp
                                              ▲
                          schema `atendente` ─┘ (histórico, estado da conversa)
 
-eliza-atendente ──resposta──▶ Evolution API (via adaptador de gateway)
+eliza-atendente ──resposta──▶ Eliza POST /mensagens ──▶ gateway ──▶ Evolution API
 ```
 
 ### Peças no Eliza
@@ -78,8 +78,8 @@ eliza-atendente ──resposta──▶ Evolution API (via adaptador de gateway)
 |---|---|
 | `web/lib/domain/` (`slots`, `appointments`, `customers`) | Regra extraída das server actions. Funções tipadas com `orgId` explícito, sem `FormData` nem `revalidatePath`. Server actions e API passam a chamá-las. |
 | `web/lib/whatsapp/gateway.ts` | Único ponto que conhece a Evolution: enviar texto/mídia, conectar, status, normalizar payload de webhook. Isola uma eventual troca de gateway. |
-| `web/app/api/v1/atendente/*` | Route handlers autenticados por token de serviço, escopados por (org, telefone do cliente). |
-| Config do add-on por org | Liga/desliga, tom, status de nascimento do agendamento, contato para escalar a humano. Tabela `org_addons` ou colunas em `organization_settings` (decidir no contrato). |
+| `web/app/api/v1/autoatendimento/*` | Route handlers autenticados por token de serviço + ticket de conversa; org e telefone saem do ticket. |
+| Config do add-on por org | Liga/desliga, tom, status de nascimento do agendamento, contato para escalar a humano. Tabela `autoatendimento_config` (proposta C6 do contrato). |
 | Flag `notify` no create de agendamento | Permite ao bot suprimir a notificação automática. |
 
 ### Peças no `eliza-atendente`
@@ -118,8 +118,8 @@ eliza-atendente ──resposta──▶ Evolution API (via adaptador de gateway)
 | # | Questão | Recomendação | Trade-off | Dono / prazo |
 |---|---|---|---|---|
 | A1 | Agendamento criado pelo bot nasce `scheduled` ou `pending`? | Configurável por org, padrão `scheduled` | Autonomia real da atendente 24h vs. tenant cauteloso precisar mudar o padrão | Sérgio — semana de 2026-09-28 |
-| A2 | Config do add-on: tabela `org_addons` ou colunas em `organization_settings`? | Decidir no contrato da F0 | Tabela escala para outros add-ons; colunas são mais simples | Contrato F0 |
-| A3 | Autenticação bot → Eliza: token de serviço único ou por org? | Decidir no contrato da F0 | Único é mais simples; por org limita o estrago de vazamento, mas o bot teria todos mesmo assim | Contrato F0 |
+| A2 | Config do add-on: tabela `org_addons` ou colunas em `organization_settings`? | **Proposto no contrato (C6):** tabela própria `autoatendimento_config` | Tipada e removível inteira vs. mais uma tabela | Sérgio confirma antes do passo 3 da F0 |
+| A3 | Autenticação bot → Eliza: token de serviço único ou por org? | **Proposto no contrato (C7):** token único + ticket de conversa assinado pelo Eliza | Com o ticket, token por org não reduz o estrago | Sérgio confirma |
 | A4 | Modelo de LLM e custo por tenant | Medir na F1 antes de fechar preço do add-on | — | F1 |
 | A5 | Retenção do histórico (LGPD) | Definir prazo antes da F1 ir para tenant real | Mais tempo = mais contexto; menos = menos exposição | Antes do go-live |
 
@@ -151,8 +151,18 @@ parametrizável.
 - **LGPD / provedor de LLM.** Conversas podem conter dado de saúde. Revisar
   termos do provedor e política de privacidade do tenant antes do go-live.
 
+## Contratos
+
+F0 contratada em [docs/contratos/autoatendimento/](contratos/autoatendimento/README.md)
+(2026-09-23). Zod em `web/contracts/autoatendimento/`. A API se chama
+**Autoatendimento** e é neutra de canal: o Eliza não sabe que do outro lado
+há um LLM. O contrato acrescenta duas decisões a esta página: o **ticket de
+conversa** assinado pelo Eliza (org e telefone saem dele, nunca do atendente)
+e o **envio de WhatsApp pelo Eliza** (o atendente não recebe a key da
+Evolution).
+
 ## Próximos passos
 
-1. Sérgio decide A1.
-2. Contratos da F0 (Zod em `src/contracts/` + `.md` por domínio), fechando A2 e A3.
-3. Implementação da F0.
+1. Sérgio decide A1 e confirma A2/A3 (C6/C7 do contrato).
+2. Commitar as correções de segurança de 2026-09-23 (pré-requisito da F0).
+3. Implementação da F0 seguindo o README do contrato, §7.

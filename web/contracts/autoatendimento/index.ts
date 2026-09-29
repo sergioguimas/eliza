@@ -1,0 +1,7 @@
+export * from "./comum"
+export * from "./ticket"
+export * from "./contexto"
+export * from "./catalogo"
+export * from "./agendamentos"
+export * from "./cadastro"
+export * from "./mensagens"
