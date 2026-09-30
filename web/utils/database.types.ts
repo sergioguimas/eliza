@@ -14,6 +14,104 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_keys: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          organization_id: string
+          revoked_at: string | null
+          scopes: string[]
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          organization_id: string
+          revoked_at?: string | null
+          scopes?: string[]
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          organization_id?: string
+          revoked_at?: string | null
+          scopes?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_request_logs: {
+        Row: {
+          api_key_id: string
+          created_at: string
+          duration_ms: number | null
+          error_code: string | null
+          id: string
+          ip: string | null
+          key_prefix: string
+          method: string
+          organization_id: string
+          path: string
+          request_id: string
+          status_code: number
+          user_agent: string | null
+        }
+        Insert: {
+          api_key_id: string
+          created_at?: string
+          duration_ms?: number | null
+          error_code?: string | null
+          id?: string
+          ip?: string | null
+          key_prefix: string
+          method: string
+          organization_id: string
+          path: string
+          request_id: string
+          status_code: number
+          user_agent?: string | null
+        }
+        Update: {
+          api_key_id?: string
+          created_at?: string
+          duration_ms?: number | null
+          error_code?: string | null
+          id?: string
+          ip?: string | null
+          key_prefix?: string
+          method?: string
+          organization_id?: string
+          path?: string
+          request_id?: string
+          status_code?: number
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       appointment_logs: {
         Row: {
           action: string | null
