@@ -249,5 +249,8 @@ curl -si $B/me -H "Authorization: Bearer $R"                                    
   O trecho de `api_keys`/`api_request_logs` escrito à mão na `a0ff88a` é
   **idêntico** ao gerado, e as demais tabelas/funções batem com o gerado. Nada a
   regenerar; o arquivo passa a corresponder ao banco.
-- Pendente: curl com uma chave `read,payments` (200 no pagamento, 403 no POST) e a
-  tela de chaves com os dois checkboxes — precisa de uma chave criada pelo painel.
+- Chave `read,payments` criada pelo painel com os dois checkboxes novos (só
+  "baixa de pagamento" marcado): `/me` → `scopes: ["read","payments"]`;
+  `POST /appointments` → 403 "A chave não tem o escopo \"write\""; pagamento de
+  sinal num `scheduled` → 200 `paid`; `cancel` → 403. Agendamento de teste
+  (`TESTE-ETAPA4`) cancelado com a chave de escrita.
