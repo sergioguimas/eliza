@@ -42,6 +42,8 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog"
 import { useKeckleon } from "@/providers/keckleon-provider"
+import { acoesDoAgendamento } from "@/components/appointments/acoes-agendamento"
+import { STATUS_CONFIG } from "@/lib/appointment-config"
 
 interface UpdateAppointmentDialogProps {
   appointment: any | null
@@ -141,6 +143,9 @@ export function UpdateAppointmentDialog({
   const handlePreSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
+    // Defesa em profundidade: o formulário já vem desabilitado e a action recusa.
+    if (!acoes.editar) return
+
     if (!date || !time) {
       toast.error(messages.fill_date_time || "Preencha data e horário.")
       return
@@ -182,6 +187,9 @@ export function UpdateAppointmentDialog({
 
   if (!appointment) return null
 
+  // Quem decide se dá para editar/cancelar é a máquina de status, não este diálogo.
+  const acoes = acoesDoAgendamento(appointment)
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -200,6 +208,15 @@ export function UpdateAppointmentDialog({
           </DialogHeader>
 
           <form onSubmit={handlePreSubmit} className="space-y-4 py-2">
+
+            {!acoes.editar && (
+              <p className="text-sm text-muted-foreground">
+                {STATUS_CONFIG[appointment.status]?.label || "Este agendamento"}: não pode mais ser editado.
+              </p>
+            )}
+
+            {/* fieldset desabilitado trava todos os campos de uma vez (inclusive os Select do Radix) */}
+            <fieldset disabled={!acoes.editar} className="space-y-4 min-w-0 border-0 p-0 m-0">
 
             {/* PROFISSIONAL */}
             <div className="space-y-2">
@@ -273,23 +290,27 @@ export function UpdateAppointmentDialog({
               />
             </div>
 
-            <DialogFooter className="flex items-center justify-between w-full gap-2">
-              <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                onClick={() => setIsCancelOpen(true)}
-                title={actions.cancel || "Cancelar"}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+            </fieldset>
 
-              <div className="flex gap-2">
+            <DialogFooter className="flex items-center justify-between w-full gap-2">
+              {acoes.cancelar && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  onClick={() => setIsCancelOpen(true)}
+                  title={actions.cancel || "Cancelar"}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+
+              <div className="flex gap-2 ml-auto">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   {actions.back || "Voltar"}
                 </Button>
 
-                <Button type="submit" disabled={isLoading}>
+                <Button type="submit" disabled={isLoading || !acoes.editar}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {actions.save || "Salvar"}
                 </Button>
