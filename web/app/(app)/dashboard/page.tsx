@@ -60,9 +60,8 @@ function getBrazilDayBounds(dateStr: string) {
 // misturar compromissos de dias diferentes. Curto de propósito: cabe ao
 // lado do horário sem quebrar o layout do card.
 function formatShortDayLabel(dateStr: string) {
-  // new Date(`${dateStr}T12:00:00Z`) cai no mesmo dia de calendário em SP
-  // que o offset -03:00 (UTC para UTC-3 equivale a meio-dia em ambos os casos).
-  // Sem offset fixo, funciona corretamente se o Brasil mudar o horário de verão.
+  // Meio-dia UTC cai no mesmo dia de calendário em São Paulo com ou sem horário
+  // de verão, então serve de âncora para formatar o dia sem deslocamento literal.
   return new Intl.DateTimeFormat("pt-BR", {
     timeZone: "America/Sao_Paulo",
     weekday: "short",

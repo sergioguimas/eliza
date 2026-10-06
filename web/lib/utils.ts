@@ -38,7 +38,7 @@ export function formatBRL(value: number) {
  * mesmos agendamentos, senão o card e a página que ele abre se contradizem.
  *
  * O mês sai do fuso do negócio, não do relógio do servidor. Os limites usam
- * `limitesDoDiaUtc` para eliminar o offset fixo -03:00, que erraria se o Brasil
+ * `limitesDoDiaUtc` em vez de um deslocamento literal de UTC-3, que erraria se o Brasil
  * voltasse a ter horário de verão.
  *
  * `startDate`/`endDate` saem sem hora, para colunas `date` como `expenses.due_date`.
@@ -60,13 +60,10 @@ export function getFinancialMonthRange(dateParam?: string) {
 
   // limitesDoDiaUtc retorna instantes UTC; fim é exclusivo (meia-noite do dia seguinte).
   // Os chamadores usam .lte(), então subtraímos 1ms de fim para manter semântica inclusiva.
-  const limites_inicio = limitesDoDiaUtc(startDate)
-  const limites_fim = limitesDoDiaUtc(endDate)
-
   return {
     startDate,
     endDate,
-    start: limites_inicio.inicio.toISOString(),
-    end: new Date(limites_fim.fim.getTime() - 1).toISOString(),
+    start: limitesDoDiaUtc(startDate).inicio.toISOString(),
+    end: new Date(limitesDoDiaUtc(endDate).fim.getTime() - 1).toISOString(),
   }
 }
