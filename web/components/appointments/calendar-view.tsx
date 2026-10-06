@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { createClient } from "@/utils/supabase/client"
 import {
   format,
   startOfWeek,
@@ -41,6 +40,7 @@ import { ReturnPromptDialog } from "@/components/appointments/return-prompt-dial
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AppointmentContextMenu } from "@/components/appointments/appointment-context-menu"
 import { AppointmentCardActions } from "@/components/appointments/appointment-card-actions"
+import { acoesDoAgendamento } from "@/components/appointments/acoes-agendamento"
 import {
   Select,
   SelectContent,
@@ -149,7 +149,6 @@ function CalendarContent({
 }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const supabase = createClient()
   const { dict } = useKeckleon()
   const { defaults: demoDefaults, loading: demoDefaultsLoading } =
     useDemoAppointmentDefaults(isDemo, organization_id)
@@ -314,6 +313,11 @@ function CalendarContent({
 
   function handleEventClick(e: React.MouseEvent, appointment: Appointment) {
     e.stopPropagation()
+
+    // Só abre a edição se a regra de status permitir (pending/scheduled/confirmed).
+    // Não há tela de leitura; para os demais status o card só serve de alvo dos menus.
+    if (!acoesDoAgendamento(appointment).editar) return
+
     setSelectedAppointment(appointment)
     setIsUpdateOpen(true)
   }
@@ -337,25 +341,6 @@ function CalendarContent({
 
     setCreateDate(targetDate)
     setIsCreateOpen(true)
-  }
-
-  const handleStatusChange = async (apt: any, newStatus: string) => {
-    try {
-      const { error } = await supabase
-        .from("appointments")
-        .update({ status: newStatus })
-        .eq("id", apt.id)
-
-      if (error) throw error
-
-      if (newStatus === "completed" || newStatus === "finalized") {
-        const params = new URLSearchParams(window.location.search)
-        params.set("return_check", apt.id)
-        router.replace(`?${params.toString()}`, { scroll: false })
-      }
-    } catch (err) {
-      console.error("Erro ao mudar status:", err)
-    }
   }
 
   const handleReturnConfirm = (days: number | null) => {
@@ -457,14 +442,14 @@ function CalendarContent({
     }
 
     return (
-      <AppointmentContextMenu
-        appointment={appointment}
-        onStatusChange={handleStatusChange}
-      >
+      // O menu grava pela server action e já recarrega os dados (router.refresh);
+      // o calendário não escreve mais em `appointments` pelo navegador.
+      <AppointmentContextMenu appointment={appointment}>
         <div
           onClick={(e) => handleEventClick(e, appointment)}
           className={cn(
-            "px-2 py-1 rounded border text-[10px] md:text-xs font-medium h-full flex flex-col justify-center gap-0.5 transition-all hover:brightness-95 shadow-sm overflow-hidden cursor-pointer relative",
+            "px-2 py-1 rounded border text-[10px] md:text-xs font-medium h-full flex flex-col justify-center gap-0.5 transition-all hover:brightness-95 shadow-sm overflow-hidden relative",
+            acoesDoAgendamento(appointment).editar ? "cursor-pointer" : "cursor-default",
             status === "canceled" && "opacity-70 grayscale"
           )}
           style={{
