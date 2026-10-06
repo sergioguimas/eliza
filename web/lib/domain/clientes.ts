@@ -22,7 +22,7 @@ const COLUNAS_CLIENTE = "id, name, phone, email"
  * dígitos (documento pode ter letra, como RG). Se a busca normalizasse
  * diferente do banco, o `document_normalized = ?` nunca casaria.
  */
-function normalizarDocumento(documento?: string | null): string | null {
+export function normalizarDocumento(documento?: string | null): string | null {
   return documento?.replace(/[^0-9A-Za-z]/g, "") || null
 }
 
@@ -52,7 +52,7 @@ export async function buscarPorTelefone(db: Db, orgId: string, telefone: string)
   return (data ?? []).map((c) => ({ id: c.id, nome: c.name, telefone: c.phone, email: c.email }))
 }
 
-async function buscarPorDocumento(db: Db, orgId: string, documento: string): Promise<ClienteResumo[]> {
+export async function buscarPorDocumento(db: Db, orgId: string, documento: string): Promise<ClienteResumo[]> {
   const { data, error } = await db
     .from("customers")
     .select(COLUNAS_CLIENTE)
