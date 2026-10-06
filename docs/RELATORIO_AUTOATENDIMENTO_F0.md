@@ -369,3 +369,27 @@ msg "$INST" 5511900000009@s.whatsapp.net false "sim"
 # org sem linha de config / ativo=false / org demo com config ativa -> nunca encaminha (eco mudo); fromMe -> ignored_from_me
 # "sim" ao lembrete com o atendente fora do ar ainda confirma pelo fluxo antigo: só com um cliente de TESTE seu, com agendamento scheduled futuro e o número no seu WhatsApp
 ```
+
+## Verificação do orquestrador (2026-10-06)
+
+Servidor de dev com `AUTOATENDIMENTO_API_TOKEN`/`AUTOATENDIMENTO_TICKET_SECRET` novos,
+`ATENDENTE_URL` vazia, org `admin` com `autoatendimento_config.ativo = true` (inserida via MCP).
+
+| Aceite | Caso | Resultado |
+|---|---|---|
+| 01 | sem token / token errado / versão 2 / sem ticket / adulterado / vencido / outra instância | 401 / 401 / 400 `VERSION_MISMATCH` / 401 `TICKET_MISSING` / 401 `TICKET_INVALID` / 401 `TICKET_EXPIRED` / 403 `ADDON_INACTIVE` ✓ |
+| 02 | telefone sem cadastro / com cadastro; contexto sem documento, contato humano ou instância | `desconhecido` / `identificado` + `primeiroNome`; grep = 0 ✓ |
+| 03 | profissionais sem telefone; horários de serviço 45 min; data passada; query extra; serviço de outra org | 11:30/12:30/17:30 fora ✓; 422 `OUT_OF_WINDOW`; 422; 404 ✓ |
+| 04 | criar (nasce `pending`, log `autoatendimento`); repetir (C5, mesmo id); fora da grade 15:10; antecedência < 2 h; `customerId` no body | ✓; ✓; 409 `fora_da_grade` + sugestões; 422 `NOTICE_TOO_SHORT`; 422 ✓ |
+| 04 | confirmar `pending`; remarcar mesmo horário (no-op, sem log); remarcar sobreposto 13:00→13:30 | 409 com mensagem de aguardando aprovação; segue `pending`; ✓ |
+| 04 | ciclo: tenant aprova pela v1 → bot confirma (2× idempotente) → bot remarca (volta `pending`) → bot cancela | ✓ (logs: created, rescheduled, scheduled/api, confirmed, rescheduled, canceled) |
+| 04 | outro cliente identificado cancela/remarca agendamento alheio | 404 `NOT_FOUND` ✓ |
+| 05 | GET identificado; GET desconhecido; POST com cadastro existente; PATCH vazio; PATCH com telefone; POST novo (documento mascarado `***X123`) | ✓ / 409 / 409 `CUSTOMER_CONFLICT` / 422 / 422 / 201 ✓ |
+
+**Não testado com servidor real** (coberto só pelos scripts de banco falso do bloco B):
+`POST /mensagens` e `/escalonamentos` (mandariam WhatsApp real pela instância da org) e o
+encaminhamento do webhook (precisa de `ATENDENTE_URL` + servidor de eco; o fallback para o fluxo
+de palavra-chave responde ao cliente de verdade).
+
+Dados de teste na org `admin`: clientes "TESTE API Claude" e "TESTE F0 Outro"; agendamento
+`TESTE-F0` cancelado; `autoatendimento_config` ativa (sem efeito enquanto `ATENDENTE_URL` estiver vazia).
