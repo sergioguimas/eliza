@@ -32,9 +32,12 @@ web/lib/domain/
   erros.ts          DomainError
 ```
 
-- Todo arquivo começa com `import "server-only"`, **exceto `status.ts`**, que
-  é puro (sem banco) e é importado também pelos componentes do painel para
-  decidir quais ações mostrar (§8.2). **Nenhum** tem `'use server'`: server
+- Todo arquivo começa com `import "server-only"`, **exceto `status.ts` e
+  `tempo.ts`**, que são puros (sem banco, sem segredo) e são importados também
+  por código do navegador: `status.ts` pelos componentes do painel para
+  decidir quais ações mostrar (§8.2); `tempo.ts` por `lib/utils.ts` e pelo
+  dashboard, para eliminar o offset fixo `-03:00` (decisão de 2026-10-06,
+  depois da etapa 1). Nenhum dos dois pode importar nada `server-only`. **Nenhum** tem `'use server'`: server
   action vira endpoint POST público (lição de `send-whatsapp.ts`).
 - O domínio recebe um client Supabase **service role** como parâmetro
   (`db: Db`). Como o RLS não escopa nada, **toda** query filtra por
@@ -561,6 +564,10 @@ Cada passo termina com o app funcionando para painel, página pública e API v1.
    `professionals` para `anon` (§3), que entra logo em seguida.
 2. `horarios.ts` + wrapper `getAvailableSlots` + `GET /api/v1/availability`
    (a rota perde o filtro próprio de duração e chama `listarHorariosLivres`).
+2b. `tempo.ts` sem `server-only` (e `erros.ts` também, porque `tempo.ts` o
+   importa); trocar o `-03:00` de `lib/utils.ts` (`SAO_PAULO_UTC_OFFSET`) e de
+   `app/(app)/dashboard/page.tsx` por `limitesDoDiaUtc` / `diaDaSemanaLocal`.
+   Depois disso, `-03:00` dá zero no grep.
 3. `status.ts` (com `acoesDisponiveis` e `no_show` em `STATUS_CONFIG`),
    `clientes.ts`, `mensagens.ts`, `agendamentos.ts`.
 4. Apontar as actions e a automação do §8.1, uma por commit: criar → editar →
