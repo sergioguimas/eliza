@@ -390,3 +390,18 @@ rejeita e o toast mostra a mensagem do domínio. Status e pagamento também most
   só nos status que permitem cancelar.
 - [ ] Finanças "a prazo": "Baixar" só nos itens pagáveis; erro de pagamento mostra a mensagem.
 - [ ] Tour (demo): anchors `data-tour` e eventos `eliza:appointment-*` preservados (não foram tocados).
+
+## Etapa 1b — migration aplicada em produção (2026-10-06)
+
+`20261006120000_professionals_hide_sensitive_columns_from_anon` aplicada via MCP
+depois do deploy do PR #39 (produção conferida servindo o código novo: HTML de
+`/marcar/admin` sem `license_number`/`user_id`/`phone`).
+
+- Catálogo: `anon` sem SELECT em `phone`, `license_number`, `user_id`; com SELECT em
+  `id`, `name`; `authenticated` mantém `phone`.
+- REST com a anon key: `select=phone` e `select=*` → 401/42501; `select=id,name` → 200.
+- `/marcar/admin` em produção: 200, profissionais listados.
+- Grep: nenhum outro caminho anônimo lê `professionals` (o resto é rota logada ou service role).
+
+Pendente: `20261006120200` (D9, `authenticated` só lê `appointments`) — depois de
+confirmar em produção que o painel cria, edita, muda status e paga normalmente.
