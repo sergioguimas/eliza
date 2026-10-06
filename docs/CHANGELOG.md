@@ -2,6 +2,23 @@
 
 ## 2026-10-06
 
+### API v1 (etapa 4: escopo `payments`, gate de plano e documentação)
+
+- Novo escopo de chave `payments`: `POST /api/v1/appointments/{id}/payment` passa a exigir `payments` (`write` não
+  basta; `payments` sem `write` é válido). Chaves existentes não o ganham. A migration `20261006120100` já amplia o
+  CHECK de `api_keys.scopes`.
+- Configurações → API: o checkbox "Permitir escrita" virou dois ("Permitir escrita" e "Permitir baixa de pagamento"),
+  ambos desmarcados por padrão (`read` sempre vai). A tabela mostra os escopos por extenso (Leitura, Escrita, Baixa de
+  pagamento).
+- Gate de plano (D7): `web/lib/api/planos.ts` com `PLANOS_COM_API` (hoje `"todos"`, sem mudança de comportamento).
+  Com lista e plano fora dela: 403 `PLAN_REQUIRED` no autenticador de chave (depois da suspensão, antes do rate
+  limit), a server action de criar chave recusa, e a tela avisa e bloqueia o botão. Regra numa função só
+  (`planoPermiteApi`).
+- `docs/API.md` reescrito conforme o contrato: escopos, rotas com escopo, envelope e catálogo de erros
+  (`PLAN_REQUIRED`, `CUSTOMER_AMBIGUOUS`, horário passado = 409 `SLOT_UNAVAILABLE` com `sugestoes`), `DELETE`
+  removido, `notify` só para cliente existente com teto de 60/h e `meta.notify_skipped`, `service_id` obrigatório em
+  `/availability`, `method` de pagamento como enum e a regra de status D4.
+
 ### Domínio de agendamento (etapa 2: status, clientes e agendamentos; passos 3-4)
 
 - `lib/domain/` ganha `status.ts` (máquina D4), `clientes.ts`, `mensagens.ts` e `agendamentos.ts`.

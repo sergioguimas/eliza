@@ -170,3 +170,68 @@ SQL: `select source, action, count(*) from appointment_logs where source like 'a
 deve mostrar `api:elz_live_xxxxxx` em cada escrita.
 
 Ficam para a etapa 4 (não testar agora): chave `read,payments` (payment 200, POST 403), `read,write` no payment (403) e `PLAN_REQUIRED`.
+
+## Etapa 4 (api-v1 §8 passos 5–8: escopo `payments`, gate de plano, docs)
+
+### O que foi feito
+
+- **Escopo `payments` (D5).** `API_SCOPES` em `lib/api/keys.ts` agora é `ApiScope.options` do contrato (fonte única).
+  `POST /appointments/{id}/payment` usa `apiRoute("payments", ...)`. A action `createApiKey` já filtrava por
+  `API_SCOPES`, então aceita o escopo novo sem mudança. Tela: dois checkboxes (escrita, baixa de pagamento), ambos
+  desmarcados; `read` sempre; tabela com rótulos legíveis (`lib/api/escopos.ts`, `Record<ApiScope, string>`).
+- **Gate de plano (D7).** `lib/api/planos.ts`: `PLANOS_COM_API = "todos"`, `planoPermiteApi(plano)` e a mensagem.
+  Autenticador: `organizations.plan` entra no select da org e o gate fica entre suspensão e rate limit. A action
+  `createApiKey` recusa (via `organizacaoTemApi` em `lib/api/plano-da-org.ts`, que lê o plano por service role porque
+  `authenticated` não lê colunas de billing); a página de configurações passa `planAllowsApi` ao componente, que
+  mostra o aviso e desabilita "Gerar chave".
+- **Docs.** `docs/API.md` e `docs/CHANGELOG.md` atualizados (lidas as rotas e os Zod antes de documentar).
+
+### Commits
+
+1. `5b6b9fb` feat(api): escopo payments nas chaves e na rota de pagamento (D5)
+2. `aee2412` feat(api): gate de plano da API B2B (D7)
+3. docs: API.md, CHANGELOG e este relatório (hash no retorno do orquestrador)
+
+### Arquivos
+
+`web/lib/api/keys.ts`, `escopos.ts` (novo), `planos.ts` (novo), `plano-da-org.ts` (novo), `autenticar-chave.ts`,
+`web/app/api/v1/appointments/[id]/payment/route.ts`, `web/app/actions/api-keys.ts`,
+`web/app/(app)/configuracoes/page.tsx`, `web/components/settings/api-keys-settings.tsx`, `docs/API.md`,
+`docs/CHANGELOG.md`, `docs/RELATORIO_API_V1.md`. Os dois `TODO(etapa 4)` foram removidos.
+
+### Verificação
+
+- `npx tsc --noEmit -p .` limpo antes e depois de cada commit; `npm run build` ok; eslint limpo nos arquivos tocados.
+- Script descartável (fora do repo, sem banco, com db falso): chave `read,write` na rota de payment -> 403 FORBIDDEN;
+  `read,payments` -> passa; `read,payments` em rota `write` -> 403. Gate: `"todos"` libera qualquer plano (inclusive
+  nulo); lista `["pro"]` libera `pro` e recusa `basic` e nulo; autenticador com a lista ligada e org `basic` -> 403
+  `PLAN_REQUIRED`, org `pro` -> passa.
+
+### Divergências contrato × código
+
+Nenhuma encontrada. Ressalva menor: a mensagem de `PLAN_REQUIRED` no contrato não tem ponto final; a action de criar
+chave devolve a mesma frase com ponto (texto de UI), o `error.message` da API é exatamente o do contrato.
+
+### Decisões fora do contrato
+
+- `lib/api/plano-da-org.ts` (server-only) existe para não duplicar a leitura do plano entre action e página; o
+  autenticador usa só `planoPermiteApi`, pois já lê a org.
+- Plano nulo conta como "fora da lista" quando há gate (e como liberado com `"todos"`).
+- `API_SCOPES` virou `ApiScope.options` (e `ApiScope` é reexportado de `keys.ts`) em vez de uma segunda lista.
+- Rótulos de escopo em `lib/api/escopos.ts` (sem `server-only`, porque o componente é client).
+- A seção "Curls a rodar" da etapa 3 usa `W` (read,write) em `payment`: com a etapa 4 esses curls devem usar a chave `P`.
+
+### Curls a rodar
+
+`B=<base>/api/v1`, `H="Content-Type: application/json"`, chaves: `W` (read,write), `P` (read,payments), `R` (read).
+
+```bash
+curl -si -X POST $B/appointments/<scheduled>/payment -H "Authorization: Bearer $W" -H "$H" -d '{"method":"pix"}'   # 403 FORBIDDEN (write não basta)
+curl -si -X POST $B/appointments/<scheduled>/payment -H "Authorization: Bearer $P" -H "$H" -d '{"method":"pix"}'   # 200
+curl -si -X POST $B/appointments -H "Authorization: Bearer $P" -H "$H" -d '{}'                                     # 403 FORBIDDEN
+curl -si $B/me -H "Authorization: Bearer $P"                                                                       # 200, scopes ["read","payments"]
+# nos curls de payment da etapa 3 (409 em no_show, 200 sinal, 422 "Outros"), trocar $W por $P
+# PLAN_REQUIRED: trocar PLANOS_COM_API para ["pro"] em web/lib/api/planos.ts com a org em outro plano, reiniciar:
+curl -si $B/me -H "Authorization: Bearer $R"                                                                       # 403 PLAN_REQUIRED "O plano da organização não inclui acesso à API"
+# painel: Configurações -> API mostra o aviso e o botão fica desabilitado; voltar a constante para "todos"
+```
