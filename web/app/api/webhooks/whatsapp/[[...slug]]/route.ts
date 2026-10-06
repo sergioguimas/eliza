@@ -349,24 +349,51 @@ async function handleStatusChange(
 
   console.log(`📅 [Webhook] Buscando próximo agendamento para cliente ${foundCustomer.id}`)
 
-  const { data: appointment, error: appointmentError } = await supabase
-    .from("appointments")
-    .select(`
-      id,
-      status,
-      start_time,
-      organization_id,
-      customer_id,
-      professional:professionals(name),
-      service:services(title)
-    `)
-    .eq("organization_id", organizationId)
-    .eq("customer_id", foundCustomer.id)
-    .in("status", ["pending", "scheduled", "confirmed"])
-    .gte("start_time", now)
-    .order("start_time", { ascending: true })
-    .limit(1)
-    .maybeSingle()
+  // O alvo depende da intenção. "Sim" só confirma `scheduled` (pedido `pending`
+  // é aprovado pelo tenant, D8): se a busca incluísse `pending`, um pedido mais
+  // próximo roubava o "sim" do agendamento que recebeu o lembrete, e a troca era
+  // recusada sem resposta ao cliente. Sem `scheduled` futuro, cai no `confirmed`
+  // mais próximo só para o "sim" repetido receber a resposta de novo
+  // (idempotente). "Cancelar" vale para qualquer agendamento ativo futuro.
+  const statusAlvo =
+    newStatus === "confirmed" ? [["scheduled"], ["confirmed"]] : [["pending", "scheduled", "confirmed"]]
+
+  let appointment: {
+    id: string
+    status: string | null
+    start_time: string
+    organization_id: string
+    customer_id: string
+    professional: { name: string } | null
+    service: { title: string } | null
+  } | null = null
+  let appointmentError: unknown = null
+
+  for (const statuses of statusAlvo) {
+    const resultado = await supabase
+      .from("appointments")
+      .select(`
+        id,
+        status,
+        start_time,
+        organization_id,
+        customer_id,
+        professional:professionals(name),
+        service:services(title)
+      `)
+      .eq("organization_id", organizationId)
+      .eq("customer_id", foundCustomer.id)
+      .in("status", statuses)
+      .gte("start_time", now)
+      .order("start_time", { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    appointmentError = resultado.error
+    appointment = resultado.data
+
+    if (appointmentError || appointment) break
+  }
 
   if (appointmentError) {
     console.error("🔥 [Webhook] Erro ao buscar agendamento:", appointmentError)

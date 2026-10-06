@@ -232,7 +232,7 @@ validarHorario(db, p: {
 
 | Canal | `exigirGrade` | `naoAntesDe` | Motivo |
 |---|---|---|---|
-| `painel` | não | agora | O tenant marca 14:10 se quiser; é a agenda dele. |
+| `painel` | não | **início do dia de hoje** (revisto em 2026-10-06, na revisão) | O tenant marca 14:10 se quiser e lança o encaixe que já começou ou o atendimento de mais cedo; é a agenda dele. Dia anterior é recusado. |
 | `api` (B2B) | não | agora | A chave age como o tenant (mesmo poder do painel). |
 | `publico` | sim | agora | Só aceita o que a página ofereceu. |
 | `autoatendimento` | sim | agora + `antecedencia_minima_minutos` | Idem, mais a política do add-on. |

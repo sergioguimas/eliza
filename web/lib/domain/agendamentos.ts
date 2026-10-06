@@ -27,7 +27,7 @@ import {
   type Status,
   type StatusPagamento,
 } from "./status"
-import { momento, utcParaHoraLocal, type Momento } from "./tempo"
+import { dataLocal, limitesDoDiaUtc, momento, utcParaHoraLocal, type Momento } from "./tempo"
 
 export type Canal = "painel" | "publico" | "api" | "autoatendimento" | "whatsapp_webhook"
 
@@ -102,6 +102,18 @@ const rotulo = (status: string) => STATUS_CONFIG[status]?.label ?? status
 
 // Só os canais de terceiros exigem que o início caia na grade oferecida (E1).
 const exigeGrade = (canal: Canal) => canal === "publico" || canal === "autoatendimento"
+
+/**
+ * Horário mais cedo aceito para criar/remarcar. O painel aceita qualquer
+ * horário de HOJE (decisão de 2026-10-06): a recepção lança o encaixe que já
+ * começou ou registra à noite os atendimentos do dia. Os demais canais só
+ * aceitam o futuro, mais a antecedência da política do canal.
+ */
+function corteDeHorario(canal: Canal, agora: Date, antecedenciaMinutos = 0): Date {
+  if (canal === "painel") return limitesDoDiaUtc(dataLocal(agora)).inicio
+
+  return new Date(agora.getTime() + antecedenciaMinutos * 60000)
+}
 
 /** Todo acesso por id passa por aqui: id E tenant, senão NOT_FOUND. */
 async function carregar(db: Db, orgId: string, id: string): Promise<Linha> {
@@ -303,7 +315,7 @@ export async function criarAgendamento(
     profissionalId: profissional.id,
     inicio: entrada.inicio,
     duracaoMinutos: servico.duracaoMinutos,
-    naoAntesDe: new Date(agora.getTime() + (entrada.antecedenciaMinutos ?? 0) * 60000),
+    naoAntesDe: corteDeHorario(ator.canal, agora, entrada.antecedenciaMinutos),
     exigirGrade: exigeGrade(ator.canal),
   })
 
@@ -397,12 +409,21 @@ export async function editarAgendamento(
   ])
 
   const inicio = entrada.inicio ?? new Date(atual.start_time)
-  const fim = new Date(inicio.getTime() + servico.duracaoMinutos * 60000)
 
+  // Só conta como remarcação o que o pedido de fato mudou. Comparar o fim
+  // recalculado com o gravado tratava como remarcação qualquer edição de
+  // observação quando a duração do serviço tinha mudado no cadastro depois do
+  // agendamento: revalidava a agenda (recusando agendamento já passado),
+  // regravava o fim, zerava lembretes e avisava o cliente de uma mudança que
+  // não houve.
   const mudouHorario =
     inicio.getTime() !== new Date(atual.start_time).getTime() ||
-    fim.getTime() !== new Date(atual.end_time).getTime() ||
-    profissional.id !== atual.professional_id
+    profissional.id !== atual.professional_id ||
+    servico.id !== atual.service_id
+
+  // Sem remarcação, o fim gravado fica como está (a duração do atendimento
+  // marcado não acompanha mudança posterior no cadastro do serviço).
+  const fim = mudouHorario ? new Date(inicio.getTime() + servico.duracaoMinutos * 60000) : new Date(atual.end_time)
 
   if (mudouHorario) {
     await validarHorario(db, {
@@ -410,7 +431,7 @@ export async function editarAgendamento(
       profissionalId: profissional.id,
       inicio,
       duracaoMinutos: servico.duracaoMinutos,
-      naoAntesDe: new Date(),
+      naoAntesDe: corteDeHorario(ator.canal, new Date()),
       exigirGrade: exigeGrade(ator.canal),
       // Remarcar para um horário que se sobrepõe ao atual não conflita consigo mesmo.
       ignorarAgendamentoId: id,
