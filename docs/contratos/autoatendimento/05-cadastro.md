@@ -20,14 +20,14 @@ Nunca devolver `address`, `notes`, `gender` nem `document` completo.
 ## `POST /cadastro` — criar
 
 Só quando `identificacao = desconhecido`. `identificado` →
-`CLIENTE_JA_CADASTRADO`; `ambiguo` → `CLIENTE_AMBIGUO`.
+`CUSTOMER_CONFLICT`; `ambiguo` → `CUSTOMER_AMBIGUOUS`.
 
 1. `aa-escrita`.
 2. Normalizar `documento` com a mesma regra do trigger
    `trg_normalize_customer_fields` (`[^0-9A-Za-z]` removido) só para a busca
    prévia; o trigger preenche `document_normalized` na gravação. Se já existe
    cliente na org com esse documento
-   (`uq_customers_org_document`), responder `CLIENTE_JA_CADASTRADO` **sem**
+   (`uq_customers_org_document`), responder `CUSTOMER_CONFLICT` **sem**
    vincular nem atualizar esse cadastro. O documento pode ser de outra pessoa,
    e o vínculo telefone ↔ cadastro existente é decisão da equipe. O atendente
    escala.
@@ -45,9 +45,9 @@ Exige `identificado`. Body `AtualizarCadastroBody` (pelo menos um campo).
 
 - `nome`, `email`, `dataNascimento`: sobrescrevem.
 - `documento`: aceito **só se o cadastro ainda não tem documento**. Se já tem,
-  `TRANSICAO_INVALIDA`, mesmo que o valor seja igual. Trocar documento por
+  `INVALID_TRANSITION`, mesmo que o valor seja igual. Trocar documento por
   WhatsApp é o caminho de apropriação de cadastro alheio. Conflito com o
-  documento de outro cliente → `CLIENTE_JA_CADASTRADO`.
+  documento de outro cliente → `CUSTOMER_CONFLICT`.
 - Telefone **não** se altera por aqui. Mudou de número? A equipe resolve.
 - `updated_at = now()`.
 
@@ -61,7 +61,7 @@ Aqui criar e atualizar são operações separadas, com as travas acima.
 ## Aceite
 
 - [ ] `desconhecido` cria → 201; um `GET /contexto` seguinte vem `identificado`.
-- [ ] `identificado` tentando criar → 409 `CLIENTE_JA_CADASTRADO`.
+- [ ] `identificado` tentando criar → 409 `CUSTOMER_CONFLICT`.
 - [ ] Criar com documento de outro cliente da org → 409, e o outro cadastro fica intacto.
 - [ ] `PATCH` de documento quando já existe um → 409, sem alterar.
 - [ ] `PATCH {}` → 422.

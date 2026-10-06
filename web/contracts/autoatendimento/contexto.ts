@@ -3,7 +3,7 @@
  * Documentação: docs/contratos/autoatendimento/02-contexto-e-identificacao.md
  */
 import { z } from "zod"
-import { FUSO_HORARIO, HoraLocal, Momento, Uuid, respostaOk } from "./comum"
+import { FUSO_HORARIO, HoraLocal, Momento, Uuid, apiSuccess } from "./comum"
 import { AgendamentoResumo } from "./agendamentos"
 
 /** Vocabulário do nicho (Keckleon), para o atendente falar como o estabelecimento. */
@@ -46,7 +46,6 @@ export const Contexto = z.object({
     almoco: z.object({ inicio: HoraLocal, fim: HoraLocal }).nullable(),
   }),
   politica: z.object({
-    statusInicial: z.enum(["pending", "scheduled"]),
     antecedenciaMinimaMinutos: z.number().int().nonnegative(),
     janelaMaximaDias: z.number().int().positive(),
     maxAgendamentosAtivos: z.number().int().positive(),
@@ -64,7 +63,7 @@ export const Contexto = z.object({
 })
 
 // GET /api/v1/autoatendimento/contexto
-export const ContextoResposta = respostaOk(Contexto)
+export const ContextoResposta = apiSuccess(Contexto)
 
 export type Termos = z.infer<typeof Termos>
 export type Identificacao = z.infer<typeof Identificacao>

@@ -3,7 +3,7 @@
  * Documentação: docs/contratos/autoatendimento/06-mensagens-e-encaminhamento.md
  */
 import { z } from "zod"
-import { InstanteUtc, Telefone, Uuid, respostaOk } from "./comum"
+import { InstanteUtc, Telefone, Uuid, apiSuccess } from "./comum"
 import { TicketEmitido } from "./ticket"
 
 // ---------------------------------------------------------------------------
@@ -53,7 +53,7 @@ export const EnviarMensagemBody = z
   })
   .strict()
 
-export const EnviarMensagemResposta = respostaOk(
+export const EnviarMensagemResposta = apiSuccess(
   z.object({
     /** id devolvido pela Evolution; volta depois como MensagemEncaminhada.deMim */
     mensagemId: z.string().nullable(),
@@ -79,7 +79,7 @@ export const EscalonarBody = z
   })
   .strict()
 
-export const EscalonarResposta = respostaOk(
+export const EscalonarResposta = apiSuccess(
   z.object({
     /** false quando a org não configurou contato humano */
     equipeNotificada: z.boolean(),

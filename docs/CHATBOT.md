@@ -117,14 +117,13 @@ eliza-atendente ──resposta──▶ Eliza POST /mensagens ──▶ gateway 
 
 | # | Questão | Recomendação | Trade-off | Dono / prazo |
 |---|---|---|---|---|
-| A1 | Agendamento criado pelo bot nasce `scheduled` ou `pending`? | Configurável por org, padrão `scheduled` | Autonomia real da atendente 24h vs. tenant cauteloso precisar mudar o padrão | Sérgio — semana de 2026-09-28 |
-| A2 | Config do add-on: tabela `org_addons` ou colunas em `organization_settings`? | **Proposto no contrato (C6):** tabela própria `autoatendimento_config` | Tipada e removível inteira vs. mais uma tabela | Sérgio confirma antes do passo 3 da F0 |
-| A3 | Autenticação bot → Eliza: token de serviço único ou por org? | **Proposto no contrato (C7):** token único + ticket de conversa assinado pelo Eliza | Com o ticket, token por org não reduz o estrago | Sérgio confirma |
+| ~~A1~~ | **Fechada em 2026-10-06 (D8):** nasce `pending` ("solicitado"), sempre, igual à página pública; o tenant confirma. Não configurável. | — | — | — |
+| ~~A2~~ | **Fechada em 2026-10-06:** C6 confirmada, tabela própria `autoatendimento_config`. | — | — | — |
+| ~~A3~~ | **Fechada em 2026-10-06:** C7 confirmada, token de serviço único + ticket. O token do bot não é uma API key da v1. | — | — | — |
 | A4 | Modelo de LLM e custo por tenant | Medir na F1 antes de fechar preço do add-on | — | F1 |
 | A5 | Retenção do histórico (LGPD) | Definir prazo antes da F1 ir para tenant real | Mais tempo = mais contexto; menos = menos exposição | Antes do go-live |
 
-A1 não bloqueia F0 nem F1: a F0 só precisa deixar o status de nascimento
-parametrizável.
+Decisões de 2026-10-06 em `docs/contratos/DECISOES_API.md`.
 
 ## Fases
 
@@ -163,6 +162,6 @@ Evolution).
 
 ## Próximos passos
 
-1. Sérgio decide A1 e confirma A2/A3 (C6/C7 do contrato).
-2. Commitar as correções de segurança de 2026-09-23 (pré-requisito da F0).
-3. Implementação da F0 seguindo o README do contrato, §7.
+1. ~~Decidir A1 e confirmar A2/A3~~ (feito em 2026-10-06).
+2. ~~Commitar as correções de segurança de 2026-09-23~~ (feito).
+3. Executar a ordem de `docs/contratos/README.md`: 00-dominio → api-v1 → F0 do Autoatendimento.

@@ -3,7 +3,7 @@
  * Documentação: docs/contratos/autoatendimento/04-agendamentos.md
  */
 import { z } from "zod"
-import { DataHoraLocal, Momento, StatusAgendamento, Uuid, respostaOk } from "./comum"
+import { DataHoraLocal, Momento, StatusAgendamento, Uuid, apiSuccess } from "./comum"
 
 export const AgendamentoResumo = z.object({
   id: Uuid,
@@ -19,7 +19,7 @@ export const AgendamentoResumo = z.object({
 })
 
 // GET /api/v1/autoatendimento/agendamentos
-export const ListarAgendamentosResposta = respostaOk(
+export const ListarAgendamentosResposta = apiSuccess(
   z.object({ agendamentos: z.array(AgendamentoResumo) })
 )
 
@@ -55,7 +55,7 @@ export const ConfirmarAgendamentoBody = z.object({}).strict()
 export const AgendamentoIdParams = z.object({ id: Uuid })
 
 /** Resposta de criar, remarcar, cancelar e confirmar. */
-export const AgendamentoResposta = respostaOk(
+export const AgendamentoResposta = apiSuccess(
   z.object({ agendamento: AgendamentoResumo })
 )
 

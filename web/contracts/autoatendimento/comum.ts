@@ -1,6 +1,8 @@
 /**
  * API de Autoatendimento — tipos compartilhados.
  *
+ * Revisado em 2026-10-06 (D3/D8): envelope e erros vêm de ../comum/envelope.ts.
+ *
  * Contrato TO-BE. Fonte da verdade: este diretório. O serviço `eliza-atendente`
  * mantém uma cópia versionada dele; os dois lados conferem CONTRATO_VERSAO.
  * Documentação: docs/contratos/autoatendimento/README.md
@@ -49,78 +51,16 @@ export const StatusAgendamento = z.enum([
   "no_show",
 ])
 
-export const CodigoErro = z.enum([
-  // 401
-  "TOKEN_INVALIDO",
-  "TICKET_AUSENTE",
-  "TICKET_INVALIDO",
-  "TICKET_EXPIRADO",
-  // 400
-  "VERSAO_INCOMPATIVEL",
-  // 403
-  "ADDON_INATIVO",
-  // 404
-  "NAO_ENCONTRADO",
-  // 409
-  "CLIENTE_NAO_IDENTIFICADO",
-  "CLIENTE_AMBIGUO",
-  "CLIENTE_JA_CADASTRADO",
-  "HORARIO_INDISPONIVEL",
-  "TRANSICAO_INVALIDA",
-  "LIMITE_AGENDAMENTOS_ATIVOS",
-  // 422
-  "VALIDACAO",
-  "FORA_DA_JANELA",
-  "ANTECEDENCIA_INSUFICIENTE",
-  // 429
-  "LIMITE_TAXA",
-  // 5xx
-  "WHATSAPP_INDISPONIVEL",
-  "ERRO_INTERNO",
-])
+// Envelope e catálogo de erros são os mesmos da API v1 (decisão D3,
+// docs/contratos/DECISOES_API.md). Sucesso: { data, meta? }. Erro:
+// { error: { code, message, details?, request_id } }.
+export {
+  ErrorCode,
+  HTTP_STATUS_BY_CODE,
+  ApiErrorBody,
+  apiSuccess,
+  HEADER_REQUEST_ID,
+} from "../comum/envelope"
 
-export const STATUS_HTTP_POR_CODIGO: Record<z.infer<typeof CodigoErro>, number> = {
-  TOKEN_INVALIDO: 401,
-  TICKET_AUSENTE: 401,
-  TICKET_INVALIDO: 401,
-  TICKET_EXPIRADO: 401,
-  VERSAO_INCOMPATIVEL: 400,
-  ADDON_INATIVO: 403,
-  NAO_ENCONTRADO: 404,
-  CLIENTE_NAO_IDENTIFICADO: 409,
-  CLIENTE_AMBIGUO: 409,
-  CLIENTE_JA_CADASTRADO: 409,
-  HORARIO_INDISPONIVEL: 409,
-  TRANSICAO_INVALIDA: 409,
-  LIMITE_AGENDAMENTOS_ATIVOS: 409,
-  VALIDACAO: 422,
-  FORA_DA_JANELA: 422,
-  ANTECEDENCIA_INSUFICIENTE: 422,
-  LIMITE_TAXA: 429,
-  WHATSAPP_INDISPONIVEL: 502,
-  ERRO_INTERNO: 500,
-}
-
-export const Erro = z.object({
-  codigo: CodigoErro,
-  /** Português, pronto para o atendente repassar. Nunca contém dado de outro cliente. */
-  mensagem: z.string(),
-  detalhes: z.record(z.string(), z.unknown()).optional(),
-})
-
-export const RespostaErro = z.object({
-  ok: z.literal(false),
-  erro: Erro,
-})
-
-export function respostaOk<T extends z.ZodType>(dados: T) {
-  return z.object({
-    ok: z.literal(true),
-    dados,
-  })
-}
-
-export type CodigoErro = z.infer<typeof CodigoErro>
-export type Erro = z.infer<typeof Erro>
 export type Momento = z.infer<typeof Momento>
 export type StatusAgendamento = z.infer<typeof StatusAgendamento>
