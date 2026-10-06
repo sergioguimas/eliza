@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-10-06
+
+### Domínio de agendamento (etapa 1: tempo, catálogo e horários)
+
+- Nova `web/lib/domain/` (erros, tempo, catálogo, horários). Conversão de fuso numa
+  fonte só (`lib/domain/tempo.ts`); `lib/api/tempo.ts` removido.
+- Mudanças de comportamento desejadas:
+  - A página pública `/marcar/[slug]` deixa de oferecer horário que já passou hoje.
+  - Serviço longo deixa de ser oferecido onde não cabe: a janela testada é a duração do
+    serviço, não a do passo da organização (serviço de 60 min não aparece às 11:30 com
+    almoço às 12:00). O formulário público passa a enviar o serviço escolhido.
+  - Ocupado passa a ser o conjunto de status ativos (`pending`, `scheduled`, `confirmed`,
+    `arrived`), o mesmo da exclusion constraint; `completed` e `no_show` não bloqueiam mais.
+  - `GET /api/v1/availability` exige `service_id` (sem ele, 422) e passa a responder
+    `{ date, professional_id, service_id, slots, empty_reason }` com
+    `meta: { timezone, grid_step_minutes }`; `message` e `example_start_time` saíram.
+  - Data/hora de relógio inválida (30/02, 25h) passa a ser recusada em vez de "rolar" para
+    outro dia.
+- A página pública lê serviços e profissionais por colunas explícitas: `phone`,
+  `license_number` e `user_id` do profissional não vão mais ao HTML.
+
 ## 2026-09-28 (tema escuro)
 
 ### Visual (tema escuro)

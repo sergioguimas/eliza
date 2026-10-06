@@ -187,7 +187,7 @@ export function PublicBookingForm({
       if (selectedDate && selectedProf) {
         setLoadingSlots(true)
         try {
-          const result = await getAvailableSlots(selectedProf, selectedDate, organizationId)
+          const result = await getAvailableSlots(selectedProf, selectedDate, organizationId, selectedServiceId || undefined)
           setSlots(result.slots)
           setSlotMessage(result.message || null)
           form.setValue("time", "")
@@ -203,7 +203,7 @@ export function PublicBookingForm({
     }
 
     updateSlots()
-  }, [selectedDate, selectedProf, organizationId, form])
+  }, [selectedDate, selectedProf, selectedServiceId, organizationId, form])
 
   function setDocumentFile(documentId: string, file: File | null) {
     if (!file) return

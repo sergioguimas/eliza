@@ -2,12 +2,16 @@
 
 import { createAdminClient } from "@/utils/supabase/admin"
 import { Database } from "@/utils/database.types"
-import { dataLocal, diaDaSemanaLocal, limitesDoDiaUtc, minutosDoDiaLocal } from "@/lib/domain/tempo"
+import { exigirServicoAtivo } from "@/lib/domain/catalogo"
+import { DomainError } from "@/lib/domain/erros"
+import { listarHorariosLivres, type MotivoSemHorario } from "@/lib/domain/horarios"
+import { dataLocal } from "@/lib/domain/tempo"
 
 type AvailableSlotsReason =
   | "organization_closed_day"
   | "professional_unavailable_day"
   | "professional_not_in_organization"
+  | "service_unavailable"
   | "outside_business_hours"
   | "fully_booked"
   | "error"
@@ -18,254 +22,101 @@ type AvailableSlotsResult = {
   reason?: AvailableSlotsReason
 }
 
-function timeToMinutes(time: string) {
-  const [hours, minutes] = time.slice(0, 5).split(":").map(Number)
-  return hours * 60 + minutes
+// A regra vive em lib/domain/horarios; aqui só se traduz o motivo do domínio
+// para o vocabulário que o formulário público já consome. Intervalo, ocupado,
+// antecedência e agenda lotada, vistos de fora, são todos "sem horário livre".
+const RESULTADO_POR_MOTIVO: Partial<
+  Record<MotivoSemHorario, { reason: AvailableSlotsReason; message: string }>
+> = {
+  organizacao_fechada: {
+    reason: "organization_closed_day",
+    message: "Este dia não está disponível para agendamentos.",
+  },
+  profissional_sem_expediente: {
+    reason: "professional_unavailable_day",
+    message: "O profissional não possui expediente configurado para este dia.",
+  },
+  fora_do_expediente: {
+    reason: "outside_business_hours",
+    message: "Não há expediente disponível para este profissional neste dia.",
+  },
 }
 
-function minutesToTime(totalMinutes: number) {
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
-
-  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`
-}
-
-function overlapsRange(
-  startMinutes: number,
-  endMinutes: number,
-  rangeStart: string | null,
-  rangeEnd: string | null
-) {
-  if (!rangeStart || !rangeEnd) return false
-
-  const rangeStartMinutes = timeToMinutes(rangeStart)
-  const rangeEndMinutes = timeToMinutes(rangeEnd)
-
-  return startMinutes < rangeEndMinutes && endMinutes > rangeStartMinutes
+const SEM_HORARIO_LIVRE: { reason: AvailableSlotsReason; message: string } = {
+  reason: "fully_booked",
+  message:
+    "Não há horários disponíveis neste dia. Pode ser intervalo, agenda cheia ou ausência de expediente livre.",
 }
 
 /**
- * Calcula os horários livres de um profissional num dia.
+ * Horários livres de um profissional num dia, para o formulário público
+ * (/marcar/[slug]), que não tem sessão. Wrapper fino de `listarHorariosLivres`.
  *
- * Roda com SERVICE ROLE. O único chamador é o formulário público
- * (/marcar/[slug]), que não tem sessão — antes isso usava o client de cookie e
- * caía no papel `anon`, com dois efeitos silenciosos:
+ * Roda com SERVICE ROLE: como anon, `organization_settings` voltava vazia (o
+ * RLS isola por `get_user_org_id()`, NULL para anon) e `appointments` só
+ * mostrava os `pending`, então expediente/almoço da org eram ignorados e
+ * horário ocupado era oferecido como livre. Em troca, o escopo é nosso:
+ * `professionalId`, `serviceId` e `organizationId` vêm do client, e o domínio
+ * valida o vínculo de cada um com a org antes de ler a agenda.
  *
- *   1. `organization_settings` é isolada por `get_user_org_id()`, que é NULL
- *      para anon. A query voltava vazia sem erro, então o expediente e o
- *      almoço da organização eram simplesmente ignorados no cálculo — o
- *      horário caía no fallback da agenda do profissional.
- *   2. A policy de `appointments` para anon é `USING (status = 'pending')`.
- *      Agendamentos `scheduled` e `confirmed` ficavam invisíveis aqui, então
- *      horário ocupado era oferecido como livre. Quem tentasse reservar batia
- *      na exclusion constraint e recebia "este horário acabou de ser ocupado".
+ * `serviceId` define a duração testada. Sem ele, vale o passo da organização
+ * (`appointment_duration`), que é o comportamento antigo. Horário que já
+ * passou hoje não é oferecido.
  *
- * Com service role o RLS sai do caminho e as duas leituras ficam corretas. Em
- * troca, o escopo passa a ser responsabilidade daqui: `professionalId` e
- * `organizationId` vêm do client, então o vínculo entre os dois é validado
- * explicitamente antes de qualquer leitura — senão dava para combinar o
- * expediente de uma org com o profissional de outra.
- *
- * O retorno continua sendo só uma lista de horários livres, que é exatamente o
- * que uma página pública de agendamento precisa expor.
+ * O retorno é só uma lista de horários livres, que é exatamente o que uma
+ * página pública de agendamento precisa expor.
  */
 export async function getAvailableSlots(
   professionalId: string,
   date: Date,
-  organizationId: string
+  organizationId: string,
+  serviceId?: string
 ): Promise<AvailableSlotsResult> {
-  const supabase = createAdminClient<Database>()
+  const db = createAdminClient<Database>()
 
-  const dateOnly = dataLocal(date)
-  const dayOfWeek = diaDaSemanaLocal(dateOnly)
+  let duracaoMinutos: number | undefined
 
-  // Substitui o escopo que o RLS dava: sem isto, service role leria a agenda
-  // de qualquer profissional de qualquer tenant.
-  const { data: professional, error: professionalError } = await supabase
-    .from("professionals")
-    .select("id")
-    .eq("id", professionalId)
-    .eq("organization_id", organizationId)
-    .eq("is_active", true)
-    .maybeSingle()
-
-  if (professionalError) {
-    console.error("[getAvailableSlots:professional]", professionalError)
-
-    return {
-      slots: [],
-      reason: "error",
-      message: "Erro ao validar o profissional.",
+  if (serviceId) {
+    try {
+      duracaoMinutos = (await exigirServicoAtivo(db, organizationId, serviceId)).duracaoMinutos
+    } catch (error) {
+      return resultadoDeErro(error, "service_unavailable", "Serviço indisponível para agendamento.")
     }
   }
 
-  if (!professional) {
-    return {
-      slots: [],
-      reason: "professional_not_in_organization",
-      message: "Profissional indisponível para agendamento.",
-    }
-  }
-
-  const { data: settings, error: settingsError } = await supabase
-    .from("organization_settings")
-    .select(`
-      days_of_week,
-      open_hours_start,
-      open_hours_end,
-      lunch_start,
-      lunch_end,
-      appointment_duration
-    `)
-    .eq("organization_id", organizationId)
-    .maybeSingle()
-
-  if (settingsError) {
-    console.error("[getAvailableSlots:settings]", settingsError)
-
-    return {
-      slots: [],
-      reason: "error",
-      message: "Erro ao carregar configurações de expediente.",
-    }
-  }
-
-  const organizationWorkingDays = settings?.days_of_week || []
-
-  if (
-    Array.isArray(organizationWorkingDays) &&
-    organizationWorkingDays.length > 0 &&
-    !organizationWorkingDays.includes(dayOfWeek)
-  ) {
-    return {
-      slots: [],
-      reason: "organization_closed_day",
-      message: "Este dia não está disponível para agendamentos.",
-    }
-  }
-
-  const { data: availability, error: availabilityError } = await supabase
-    .from("professional_availability")
-    .select("*")
-    .eq("professional_id", professionalId)
-    .eq("day_of_week", dayOfWeek)
-    .eq("is_active", true)
-    .maybeSingle()
-
-  if (availabilityError) {
-    console.error("[getAvailableSlots:availability]", availabilityError)
-
-    return {
-      slots: [],
-      reason: "error",
-      message: "Erro ao carregar disponibilidade do profissional.",
-    }
-  }
-
-  if (!availability) {
-    return {
-      slots: [],
-      reason: "professional_unavailable_day",
-      message: "O profissional não possui expediente configurado para este dia.",
-    }
-  }
-
-  const appointmentDuration = settings?.appointment_duration || 30
-
-  const organizationStart = settings?.open_hours_start
-    ? timeToMinutes(settings.open_hours_start)
-    : timeToMinutes(availability.start_time)
-
-  const organizationEnd = settings?.open_hours_end
-    ? timeToMinutes(settings.open_hours_end)
-    : timeToMinutes(availability.end_time)
-
-  const professionalStart = timeToMinutes(availability.start_time)
-  const professionalEnd = timeToMinutes(availability.end_time)
-
-  const workStart = Math.max(organizationStart, professionalStart)
-  const workEnd = Math.min(organizationEnd, professionalEnd)
-
-  if (workStart >= workEnd) {
-    return {
-      slots: [],
-      reason: "outside_business_hours",
-      message: "Não há expediente disponível para este profissional neste dia.",
-    }
-  }
-
-  const { inicio: dayStartDate, fim: dayEndDate } = limitesDoDiaUtc(dateOnly)
-  const dayStart = dayStartDate.toISOString()
-  const dayEnd = dayEndDate.toISOString()
-
-  // Agora enxerga TODOS os status menos 'canceled' — antes, como anon, só via
-  // os 'pending'. O filtro por organização é redundante (profissional pertence
-  // a uma org só) mas mantém a query escopada sem depender do RLS.
-  const { data: existingAppointments, error: appointmentsError } = await supabase
-    .from("appointments")
-    .select("start_time, end_time")
-    .eq("professional_id", professionalId)
-    .eq("organization_id", organizationId)
-    .neq("status", "canceled")
-    .gte("start_time", dayStart)
-    .lt("start_time", dayEnd)
-
-  if (appointmentsError) {
-    console.error("[getAvailableSlots:appointments]", appointmentsError)
-
-    return {
-      slots: [],
-      reason: "error",
-      message: "Erro ao verificar horários ocupados.",
-    }
-  }
-
-  const slots: string[] = []
-
-  for (
-    let current = workStart;
-    current + appointmentDuration <= workEnd;
-    current += appointmentDuration
-  ) {
-    const end = current + appointmentDuration
-    const slotString = minutesToTime(current)
-
-    const isInOrganizationLunch = overlapsRange(
-      current,
-      end,
-      settings?.lunch_start || null,
-      settings?.lunch_end || null
-    )
-
-    const isInProfessionalBreak = overlapsRange(
-      current,
-      end,
-      availability.break_start || null,
-      availability.break_end || null
-    )
-
-    const isOccupied = existingAppointments?.some((appointment) => {
-      const appointmentStartMinutes = minutosDoDiaLocal(new Date(appointment.start_time))
-      const appointmentEndMinutes = minutosDoDiaLocal(new Date(appointment.end_time))
-
-      return current < appointmentEndMinutes && end > appointmentStartMinutes
+  try {
+    const { horarios, motivoVazio } = await listarHorariosLivres(db, {
+      orgId: organizationId,
+      profissionalId: professionalId,
+      data: dataLocal(date),
+      duracaoMinutos,
+      naoAntesDe: new Date(),
     })
 
-    if (!isInOrganizationLunch && !isInProfessionalBreak && !isOccupied) {
-      slots.push(slotString)
-    }
+    if (horarios.length > 0) return { slots: horarios }
+
+    return { slots: [], ...((motivoVazio && RESULTADO_POR_MOTIVO[motivoVazio]) || SEM_HORARIO_LIVRE) }
+  } catch (error) {
+    return resultadoDeErro(
+      error,
+      "professional_not_in_organization",
+      "Profissional indisponível para agendamento."
+    )
+  }
+}
+
+// NOT_FOUND do domínio vira o motivo pedido; qualquer outra falha é erro
+// genérico (o detalhe vai para o log, não para a página pública).
+function resultadoDeErro(
+  error: unknown,
+  reasonNaoEncontrado: AvailableSlotsReason,
+  messageNaoEncontrado: string
+): AvailableSlotsResult {
+  if (error instanceof DomainError && error.codigo === "NOT_FOUND") {
+    return { slots: [], reason: reasonNaoEncontrado, message: messageNaoEncontrado }
   }
 
-  if (slots.length === 0) {
-    return {
-      slots: [],
-      reason: "fully_booked",
-      message:
-        "Não há horários disponíveis neste dia. Pode ser intervalo, agenda cheia ou ausência de expediente livre.",
-    }
-  }
+  console.error("[getAvailableSlots]", error)
 
-  return {
-    slots,
-  }
+  return { slots: [], reason: "error", message: "Erro ao carregar horários disponíveis." }
 }
