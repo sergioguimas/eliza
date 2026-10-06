@@ -1,5 +1,3 @@
-import "server-only"
-
 import { DomainError } from "./erros"
 
 /**
@@ -7,6 +5,7 @@ import { DomainError } from "./erros"
  * (create-appointment, update-appointment, lib/api/tempo e um offset fixo em
  * get-available-slots); o offset fixo erraria se o Brasil voltasse a ter
  * horário de verão. O Intl resolve o offset da data pedida.
+ * Arquivo puro (sem banco, sem segredo), importado também por código do navegador (lib/utils, dashboard).
  */
 export const FUSO = "America/Sao_Paulo"
 

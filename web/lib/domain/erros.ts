@@ -1,5 +1,3 @@
-import "server-only"
-
 export type CodigoDominio =
   | "NOT_FOUND"            // recurso inexistente OU de outro tenant (nunca diferenciar)
   | "VALIDATION_ERROR"     // entrada malformada (data inválida, campo faltando)

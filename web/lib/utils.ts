@@ -1,17 +1,12 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { limitesDoDiaUtc } from "@/lib/domain/tempo"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
 export const SAO_PAULO_TIME_ZONE = "America/Sao_Paulo"
-
-/**
- * O Brasil não tem mais horário de verão desde 2019, então São Paulo fica em
- * UTC-3 o ano inteiro e o deslocamento pode ser literal.
- */
-export const SAO_PAULO_UTC_OFFSET = "-03:00"
 
 export function formatSaoPauloTime(value: string | Date) {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -42,11 +37,9 @@ export function formatBRL(value: number) {
  * para o card Financeiro do dashboard — os dois precisam somar exatamente os
  * mesmos agendamentos, senão o card e a página que ele abre se contradizem.
  *
- * O mês sai do fuso do negócio, não do relógio do servidor, e os limites levam
- * o deslocamento de São Paulo. Antes o mês vinha de `getFullYear`/`getMonth`
- * (hora local) e os limites eram `Z`: na VPS, que roda em UTC, a janela ficava
- * 3h adiantada — puxava as 21h–23h59 do último dia do mês anterior e largava
- * de fora esse mesmo horário do último dia do mês corrente.
+ * O mês sai do fuso do negócio, não do relógio do servidor. Os limites usam
+ * `limitesDoDiaUtc` para eliminar o offset fixo -03:00, que erraria se o Brasil
+ * voltasse a ter horário de verão.
  *
  * `startDate`/`endDate` saem sem hora, para colunas `date` como `expenses.due_date`.
  */
@@ -65,10 +58,15 @@ export function getFinancialMonthRange(dateParam?: string) {
   const startDate = `${monthKey}-01`
   const endDate = `${monthKey}-${lastDay}`
 
+  // limitesDoDiaUtc retorna instantes UTC; fim é exclusivo (meia-noite do dia seguinte).
+  // Os chamadores usam .lte(), então subtraímos 1ms de fim para manter semântica inclusiva.
+  const limites_inicio = limitesDoDiaUtc(startDate)
+  const limites_fim = limitesDoDiaUtc(endDate)
+
   return {
     startDate,
     endDate,
-    start: `${startDate}T00:00:00${SAO_PAULO_UTC_OFFSET}`,
-    end: `${endDate}T23:59:59.999${SAO_PAULO_UTC_OFFSET}`,
+    start: limites_inicio.inicio.toISOString(),
+    end: new Date(limites_fim.fim.getTime() - 1).toISOString(),
   }
 }

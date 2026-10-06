@@ -21,6 +21,7 @@ import {
   formatSaoPauloTime,
   getFinancialMonthRange,
 } from "@/lib/utils"
+import { limitesDoDiaUtc } from "@/lib/domain/tempo"
 import { AppointmentCardActions } from "@/components/appointments/appointment-card-actions"
 import { RealtimeAppointments } from "@/components/layout/realtime-appointments"
 import { Database } from "@/utils/database.types"
@@ -46,9 +47,12 @@ function getBrazilDateStr(date: Date) {
 }
 
 function getBrazilDayBounds(dateStr: string) {
+  const limites = limitesDoDiaUtc(dateStr)
+  // limites.fim é exclusivo (meia-noite UTC do dia seguinte); subtraímos 1ms
+  // para manter semântica inclusiva com .lte() nas queries.
   return {
-    start: `${dateStr}T00:00:00-03:00`,
-    end: `${dateStr}T23:59:59-03:00`,
+    start: limites.inicio.toISOString(),
+    end: new Date(limites.fim.getTime() - 1).toISOString(),
   }
 }
 
@@ -56,12 +60,15 @@ function getBrazilDayBounds(dateStr: string) {
 // misturar compromissos de dias diferentes. Curto de propósito: cabe ao
 // lado do horário sem quebrar o layout do card.
 function formatShortDayLabel(dateStr: string) {
+  // new Date(`${dateStr}T12:00:00Z`) cai no mesmo dia de calendário em SP
+  // que o offset -03:00 (UTC para UTC-3 equivale a meio-dia em ambos os casos).
+  // Sem offset fixo, funciona corretamente se o Brasil mudar o horário de verão.
   return new Intl.DateTimeFormat("pt-BR", {
     timeZone: "America/Sao_Paulo",
     weekday: "short",
     day: "2-digit",
     month: "2-digit",
-  }).format(new Date(`${dateStr}T12:00:00-03:00`))
+  }).format(new Date(`${dateStr}T12:00:00Z`))
 }
 
 export const dynamic = "force-dynamic"
