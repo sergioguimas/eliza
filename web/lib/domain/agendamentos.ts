@@ -376,6 +376,8 @@ export type EntradaEdicao = {
   profissionalId?: string
   servicoId?: string
   observacao?: string | null
+  /** Política do add-on de autoatendimento: soma ao "agora" do corte de horário (mesmo papel que em EntradaCriacao). */
+  antecedenciaMinutos?: number
 }
 
 export async function editarAgendamento(
@@ -431,7 +433,7 @@ export async function editarAgendamento(
       profissionalId: profissional.id,
       inicio,
       duracaoMinutos: servico.duracaoMinutos,
-      naoAntesDe: corteDeHorario(ator.canal, new Date()),
+      naoAntesDe: corteDeHorario(ator.canal, new Date(), entrada.antecedenciaMinutos),
       exigirGrade: exigeGrade(ator.canal),
       // Remarcar para um horário que se sobrepõe ao atual não conflita consigo mesmo.
       ignorarAgendamentoId: id,

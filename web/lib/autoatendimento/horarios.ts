@@ -26,7 +26,7 @@ const MOTIVO_DO_CONTRATO: Record<MotivoDoDominio, MotivoSemHorario> = {
 }
 
 /** Soma dias a uma data de calendário "AAAA-MM-DD" sem passar por fuso. */
-function somarDias(data: string, dias: number) {
+export function somarDias(data: string, dias: number) {
   const [y, m, d] = data.split("-").map(Number)
 
   return new Date(Date.UTC(y, m - 1, d + dias)).toISOString().slice(0, 10)
