@@ -1,7 +1,7 @@
 import { apiRoute } from "@/lib/api/handler"
 import { deleteAppointment, getAppointment, rescheduleAppointment } from "@/lib/api/domain/appointments"
 import { updateAppointmentBody } from "@/lib/api/schemas"
-import { parseApiDateTime } from "@/lib/api/tempo"
+import { parseApiDateTime } from "@/lib/api/http"
 import { z } from "zod"
 
 export const GET = apiRoute("read", async ({ db, organizationId, params }) => ({

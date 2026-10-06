@@ -1,8 +1,8 @@
 import { z } from "zod"
 import { getAvailableSlots } from "@/app/actions/get-available-slots"
 import { apiRoute } from "@/lib/api/handler"
-import { ApiError, notFound, validation } from "@/lib/api/http"
-import { dayBoundsUtc, parseApiDateTime, toLocalString } from "@/lib/api/tempo"
+import { ApiError, notFound, parseApiDateTime, validation } from "@/lib/api/http"
+import { FUSO, limitesDoDiaUtc, utcParaHoraLocal } from "@/lib/domain/tempo"
 
 const query = z.object({
   professional_id: z.string().uuid(),
@@ -24,7 +24,7 @@ export const GET = apiRoute("read", async ({ db, organizationId, query: qs }) =>
 
   const { professional_id, date, service_id } = parsed.data
 
-  const result = await getAvailableSlots(professional_id, new Date(`${date}T12:00:00-03:00`), organizationId)
+  const result = await getAvailableSlots(professional_id, new Date(limitesDoDiaUtc(date).inicio.getTime() + 12 * 3600000), organizationId)
 
   if (result.reason === "professional_not_in_organization") throw notFound("Profissional")
   if (result.reason === "error") throw new ApiError(500, "INTERNAL_ERROR", "Erro interno.")
@@ -45,7 +45,7 @@ export const GET = apiRoute("read", async ({ db, organizationId, query: qs }) =>
 
     if (!service) throw notFound("Serviço")
 
-    const { start, end } = dayBoundsUtc(date)
+    const { inicio: start, fim: end } = limitesDoDiaUtc(date)
 
     const { data: busy } = await db
       .from("appointments")
@@ -73,6 +73,6 @@ export const GET = apiRoute("read", async ({ db, organizationId, query: qs }) =>
       slots,
       ...(slots.length === 0 && result.message ? { message: result.message } : {}),
     },
-    meta: { timezone: "America/Sao_Paulo", example_start_time: slots[0] ? toLocalString(parseApiDateTime(`${date}T${slots[0]}`)) : null },
+    meta: { timezone: FUSO, example_start_time: slots[0] ? utcParaHoraLocal(parseApiDateTime(`${date}T${slots[0]}`)) : null },
   }
 })

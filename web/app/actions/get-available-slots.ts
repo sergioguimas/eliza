@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/utils/supabase/admin"
 import { Database } from "@/utils/database.types"
+import { dataLocal, diaDaSemanaLocal, limitesDoDiaUtc, minutosDoDiaLocal } from "@/lib/domain/tempo"
 
 type AvailableSlotsReason =
   | "organization_closed_day"
@@ -17,8 +18,6 @@ type AvailableSlotsResult = {
   reason?: AvailableSlotsReason
 }
 
-const SAO_PAULO_OFFSET = "-03:00"
-
 function timeToMinutes(time: string) {
   const [hours, minutes] = time.slice(0, 5).split(":").map(Number)
   return hours * 60 + minutes
@@ -29,21 +28,6 @@ function minutesToTime(totalMinutes: number) {
   const minutes = totalMinutes % 60
 
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`
-}
-
-function getSaoPauloDateOnly(date: Date) {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Sao_Paulo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date)
-}
-
-function getSaoPauloDayOfWeek(date: Date) {
-  const dateOnly = getSaoPauloDateOnly(date)
-
-  return new Date(`${dateOnly}T12:00:00`).getDay()
 }
 
 function overlapsRange(
@@ -92,8 +76,8 @@ export async function getAvailableSlots(
 ): Promise<AvailableSlotsResult> {
   const supabase = createAdminClient<Database>()
 
-  const dayOfWeek = getSaoPauloDayOfWeek(date)
-  const dateOnly = getSaoPauloDateOnly(date)
+  const dateOnly = dataLocal(date)
+  const dayOfWeek = diaDaSemanaLocal(dateOnly)
 
   // Substitui o escopo que o RLS dava: sem isto, service role leria a agenda
   // de qualquer profissional de qualquer tenant.
@@ -210,8 +194,9 @@ export async function getAvailableSlots(
     }
   }
 
-  const dayStart = new Date(`${dateOnly}T00:00:00.000${SAO_PAULO_OFFSET}`).toISOString()
-  const dayEnd = new Date(`${dateOnly}T23:59:59.999${SAO_PAULO_OFFSET}`).toISOString()
+  const { inicio: dayStartDate, fim: dayEndDate } = limitesDoDiaUtc(dateOnly)
+  const dayStart = dayStartDate.toISOString()
+  const dayEnd = dayEndDate.toISOString()
 
   // Agora enxerga TODOS os status menos 'canceled' — antes, como anon, só via
   // os 'pending'. O filtro por organização é redundante (profissional pertence
@@ -223,7 +208,7 @@ export async function getAvailableSlots(
     .eq("organization_id", organizationId)
     .neq("status", "canceled")
     .gte("start_time", dayStart)
-    .lte("start_time", dayEnd)
+    .lt("start_time", dayEnd)
 
   if (appointmentsError) {
     console.error("[getAvailableSlots:appointments]", appointmentsError)
@@ -260,22 +245,8 @@ export async function getAvailableSlots(
     )
 
     const isOccupied = existingAppointments?.some((appointment) => {
-      const appointmentStart = new Date(appointment.start_time).toLocaleTimeString("pt-BR", {
-        timeZone: "America/Sao_Paulo",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      })
-
-      const appointmentEnd = new Date(appointment.end_time).toLocaleTimeString("pt-BR", {
-        timeZone: "America/Sao_Paulo",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      })
-
-      const appointmentStartMinutes = timeToMinutes(appointmentStart)
-      const appointmentEndMinutes = timeToMinutes(appointmentEnd)
+      const appointmentStartMinutes = minutosDoDiaLocal(new Date(appointment.start_time))
+      const appointmentEndMinutes = minutosDoDiaLocal(new Date(appointment.end_time))
 
       return current < appointmentEndMinutes && end > appointmentStartMinutes
     })

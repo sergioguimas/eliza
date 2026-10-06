@@ -8,6 +8,7 @@ import { consumeRateLimit, hashIdentifier } from "@/lib/demo/rate-limit"
 import { sendWhatsAppMessage } from "./send-whatsapp"
 import { checkProfessionalAvailability, checkOrganizationBusinessHours } from "@/lib/appointment-config"
 import { Database } from "@/utils/database.types"
+import { horaLocalParaUtc } from "@/lib/domain/tempo"
 
 type AppointmentInsert = Database["public"]["Tables"]["appointments"]["Insert"]
 
@@ -24,82 +25,6 @@ function formatDateTime(date: Date) {
     hour: "2-digit",
     minute: "2-digit",
   })
-}
-
-const TIME_ZONE = "America/Sao_Paulo"
-
-function getDatePartsInTimeZone(date: Date, timeZone = TIME_ZONE) {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  })
-
-  const parts = formatter.formatToParts(date)
-
-  const get = (type: string) => {
-    const value = parts.find((part) => part.type === type)?.value
-    return Number(value)
-  }
-
-  return {
-    year: get("year"),
-    month: get("month"),
-    day: get("day"),
-    hour: get("hour"),
-    minute: get("minute"),
-    second: get("second"),
-  }
-}
-
-function getTimeZoneOffsetMs(date: Date, timeZone = TIME_ZONE) {
-  const parts = getDatePartsInTimeZone(date, timeZone)
-
-  const utcFromTimeZoneParts = Date.UTC(
-    parts.year,
-    parts.month - 1,
-    parts.day,
-    parts.hour,
-    parts.minute,
-    parts.second
-  )
-
-  return utcFromTimeZoneParts - date.getTime()
-}
-
-function zonedDateTimeToUtc(
-  year: number,
-  month: number,
-  day: number,
-  hour: number,
-  minute: number,
-  timeZone = TIME_ZONE
-) {
-  const utcGuess = new Date(Date.UTC(year, month - 1, day, hour, minute, 0, 0))
-  const offset = getTimeZoneOffsetMs(utcGuess, timeZone)
-
-  return new Date(utcGuess.getTime() - offset)
-}
-
-function parseAppointmentWallTimeToUtc(rawValue: string) {
-  const raw = rawValue.trim()
-
-  const match = raw.match(
-    /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/
-  )
-
-  if (!match) {
-    throw new Error("Formato de data/hora inválido.")
-  }
-
-  const [, year, month, day, hour, minute] = match.map(Number)
-
-  return zonedDateTimeToUtc(year, month, day, hour, minute)
 }
 
 function renderMessageTemplate(
@@ -406,7 +331,7 @@ async function createAppointmentCore(formData: FormData, ctx: BookingContext) {
   let startTime: Date
 
   try {
-    startTime = parseAppointmentWallTimeToUtc(start_time_raw)
+    startTime = horaLocalParaUtc(start_time_raw)
   } catch (error) {
     console.error("Erro ao interpretar horário do agendamento:", {
       start_time_raw,

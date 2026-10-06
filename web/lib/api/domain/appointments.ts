@@ -4,7 +4,7 @@ import { checkOrganizationBusinessHours, checkProfessionalAvailability } from "@
 import { sendWhatsAppMessage } from "@/app/actions/send-whatsapp"
 import { ApiError, notFound } from "../http"
 import type { Db } from "../handler"
-import { toLocalString } from "../tempo"
+import { utcParaHoraLocal as toLocalString } from "@/lib/domain/tempo"
 
 export const APPOINTMENT_STATUSES = [
   "pending",

@@ -4,82 +4,9 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { sendWhatsAppMessage } from './send-whatsapp'
 import { Database } from "@/utils/database.types"
-
-const TIME_ZONE = "America/Sao_Paulo"
+import { horaLocalParaUtc } from "@/lib/domain/tempo"
 
 type AppointmentUpdate = Database["public"]["Tables"]["appointments"]["Update"]
-
-function getDatePartsInTimeZone(date: Date, timeZone = TIME_ZONE) {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  })
-
-  const parts = formatter.formatToParts(date)
-
-  const get = (type: string) => {
-    const value = parts.find((part) => part.type === type)?.value
-    return Number(value)
-  }
-
-  return {
-    year: get("year"),
-    month: get("month"),
-    day: get("day"),
-    hour: get("hour"),
-    minute: get("minute"),
-    second: get("second"),
-  }
-}
-
-function getTimeZoneOffsetMs(date: Date, timeZone = TIME_ZONE) {
-  const parts = getDatePartsInTimeZone(date, timeZone)
-
-  const utcFromTimeZoneParts = Date.UTC(
-    parts.year,
-    parts.month - 1,
-    parts.day,
-    parts.hour,
-    parts.minute,
-    parts.second
-  )
-
-  return utcFromTimeZoneParts - date.getTime()
-}
-
-function zonedDateTimeToUtc(
-  year: number,
-  month: number,
-  day: number,
-  hour: number,
-  minute: number,
-  timeZone = TIME_ZONE
-) {
-  const utcGuess = new Date(Date.UTC(year, month - 1, day, hour, minute, 0, 0))
-  const offset = getTimeZoneOffsetMs(utcGuess, timeZone)
-
-  return new Date(utcGuess.getTime() - offset)
-}
-
-function parseSaoPauloWallTimeToUtc(rawValue: string) {
-  const match = rawValue.trim().match(
-    /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/
-  )
-
-  if (!match) {
-    throw new Error("Formato de data/hora inválido.")
-  }
-
-  const [, year, month, day, hour, minute] = match.map(Number)
-
-  return zonedDateTimeToUtc(year, month, day, hour, minute)
-}
 
 export async function updateAppointment(formData: FormData) {
   const supabase = await createClient<Database>()
@@ -127,7 +54,14 @@ export async function updateAppointment(formData: FormData) {
     }
   }
 
-  const newStartTime = parseSaoPauloWallTimeToUtc(`${dateRaw}T${timeRaw}:00`)
+  let newStartTime: Date
+
+  try {
+    newStartTime = horaLocalParaUtc(`${dateRaw}T${timeRaw}:00`)
+  } catch {
+    return { error: "Horário do agendamento inválido." }
+  }
+
   const duration = service?.duration_minutes || 30
   const newEndTime = new Date(newStartTime.getTime() + duration * 60000)
   const updateData: AppointmentUpdate = {

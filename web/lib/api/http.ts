@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server"
+import { DomainError } from "@/lib/domain/erros"
+import { horaLocalParaUtc } from "@/lib/domain/tempo"
 
 export type ApiErrorCode =
   | "UNAUTHORIZED"
@@ -30,6 +32,23 @@ export const notFound = (what: string) =>
 
 export const validation = (message: string, details?: unknown) =>
   new ApiError(422, "VALIDATION_ERROR", message, details)
+
+/**
+ * Converte o `start_time`/`from`/`to` da API em instante UTC pelo domínio
+ * (lib/domain/tempo). O DomainError de entrada malformada vira 422 com a mesma
+ * mensagem de sempre; qualquer outro erro sobe como está.
+ */
+export function parseApiDateTime(raw: string, field = "start_time") {
+  try {
+    return horaLocalParaUtc(raw, field)
+  } catch (error) {
+    if (error instanceof DomainError && error.codigo === "VALIDATION_ERROR") {
+      throw new ApiError(422, "VALIDATION_ERROR", error.message)
+    }
+
+    throw error
+  }
+}
 
 export function jsonResponse(
   body: unknown,

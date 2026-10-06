@@ -1,4 +1,6 @@
 import { createClient } from "@/utils/supabase/server"
+import { createAdminClient } from "@/utils/supabase/admin"
+import { listarProfissionaisAtivos, listarServicosAtivos } from "@/lib/domain/catalogo"
 import { notFound } from "next/navigation"
 import { PublicBookingForm } from "./public-booking-form"
 import { Database } from "@/utils/database.types"
@@ -45,10 +47,14 @@ export default async function PublicBookingPage({params}: {params: Promise<{ slu
 
   if (!organization) notFound()
 
-  // 2. Busca serviços e profissionais ativos
-  const [servicesRes, professionalsRes] = await Promise.all([
-    supabase.from('services').select('*').eq('organization_id', organization.id).eq('is_active', true),
-    supabase.from('professionals').select('*').eq('organization_id', organization.id).eq('is_active', true)
+  // 2. Serviços e profissionais ativos pelo domínio, com colunas explícitas.
+  // A org já foi resolvida pelo slug acima; o domínio recebe service role e
+  // filtra por ela. Não dá para usar o client anon aqui: o profissional tem
+  // phone/license_number/user_id, que não podem chegar ao HTML público.
+  const admin = createAdminClient<Database>()
+  const [services, professionals] = await Promise.all([
+    listarServicosAtivos(admin, organization.id),
+    listarProfissionaisAtivos(admin, organization.id),
   ])
 
   return (
@@ -63,8 +69,8 @@ export default async function PublicBookingPage({params}: {params: Promise<{ slu
           organizationId={organization.id}
           organizationNiche={organization.niche}
           organizationName={organization.name}
-          services={servicesRes.data || []}
-          professionals={professionalsRes.data || []}
+          services={services}
+          professionals={professionals}
         />
       </div>
     </div>

@@ -55,7 +55,7 @@ import { Textarea } from "@/components/ui/textarea"
 
 import { createPublicAppointment } from "@/app/actions/create-appointment"
 import { getAvailableSlots } from "@/app/actions/get-available-slots"
-import { Database } from "@/utils/database.types"
+import type { Profissional, Servico } from "@/lib/domain/catalogo"
 import { getNicheDocuments } from "@/lib/niche-documents"
 
 const formSchema = z.object({
@@ -77,8 +77,8 @@ const formSchema = z.object({
 interface PublicBookingFormProps {
   organizationId: string
   organizationNiche?: string
-  services: Database['public']['Tables']['services']['Row'][]
-  professionals: Database['public']['Tables']['professionals']['Row'][]
+  services: Servico[]
+  professionals: Profissional[]
   organizationName?: string
   headline?: string
   subtitle?: string
@@ -375,10 +375,10 @@ export function PublicBookingForm({
 
           <div className="mx-auto max-w-md rounded-2xl border bg-background p-4 text-left space-y-2">
             <p className="text-sm">
-              <strong>Serviço:</strong> {selectedService?.title || "—"}
+              <strong>Serviço:</strong> {selectedService?.titulo || "—"}
             </p>
             <p className="text-sm">
-              <strong>Profissional:</strong> {selectedProfessional?.name || "—"}
+              <strong>Profissional:</strong> {selectedProfessional?.nome || "—"}
             </p>
             <p className="text-sm">
               <strong>Data:</strong>{" "}
@@ -525,7 +525,7 @@ export function PublicBookingForm({
                                 <SelectContent>
                                   {services.map((s) => (
                                     <SelectItem key={s.id} value={s.id}>
-                                      {s.title} — R$ {Number(s.price).toFixed(2)}
+                                      {s.titulo} — R$ {Number(s.preco).toFixed(2)}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -550,7 +550,7 @@ export function PublicBookingForm({
                                 <SelectContent>
                                   {professionals.map((p) => (
                                     <SelectItem key={p.id} value={p.id}>
-                                      {p.name}
+                                      {p.nome}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -1066,7 +1066,7 @@ export function PublicBookingForm({
                         Serviço
                       </p>
                       <p className="text-sm font-medium">
-                        {selectedService?.title || "Ainda não selecionado"}
+                        {selectedService?.titulo || "Ainda não selecionado"}
                       </p>
                     </div>
                   </div>
@@ -1080,7 +1080,7 @@ export function PublicBookingForm({
                         Profissional
                       </p>
                       <p className="text-sm font-medium">
-                        {selectedProfessional?.name || "Ainda não selecionado"}
+                        {selectedProfessional?.nome || "Ainda não selecionado"}
                       </p>
                     </div>
                   </div>
@@ -1104,13 +1104,13 @@ export function PublicBookingForm({
                   </div>
                 </div>
 
-                {selectedService?.price && (
+                {selectedService?.preco && (
                   <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
                     <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
                       Valor do serviço
                     </p>
                     <p className="mt-1 text-2xl font-bold text-foreground">
-                      R$ {Number(selectedService.price).toFixed(2)}
+                      R$ {Number(selectedService.preco).toFixed(2)}
                     </p>
                   </div>
                 )}

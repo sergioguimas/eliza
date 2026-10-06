@@ -1,9 +1,9 @@
 import { z } from "zod"
 import { apiRoute } from "@/lib/api/handler"
-import { validation } from "@/lib/api/http"
+import { parseApiDateTime, validation } from "@/lib/api/http"
 import { APPOINTMENT_STATUSES, type AppointmentStatus, createAppointment, listAppointments } from "@/lib/api/domain/appointments"
 import { createAppointmentBody } from "@/lib/api/schemas"
-import { dayBoundsUtc, parseApiDateTime } from "@/lib/api/tempo"
+import { limitesDoDiaUtc } from "@/lib/domain/tempo"
 
 const listQuery = z.object({
   status: z.string().optional(),
@@ -21,8 +21,8 @@ const dateOnly = /^\d{4}-\d{2}-\d{2}$/
 const bound = (v: string, edge: "from" | "to") =>
   dateOnly.test(v)
     ? edge === "from"
-      ? dayBoundsUtc(v).start
-      : dayBoundsUtc(v).end
+      ? limitesDoDiaUtc(v).inicio
+      : limitesDoDiaUtc(v).fim
     : parseApiDateTime(v, edge)
 
 export const GET = apiRoute("read", async ({ db, organizationId, query }) => {
