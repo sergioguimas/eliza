@@ -1,11 +1,13 @@
 import { apiRoute } from "@/lib/api/handler"
-import { deleteAppointment, getAppointment, rescheduleAppointment } from "@/lib/api/domain/appointments"
+import { deleteAppointment, rescheduleAppointment } from "@/lib/api/domain/appointments"
+import { obterAgendamento } from "@/lib/api/leitura-agendamentos"
+import { paraAppointment } from "@/lib/api/serializar"
 import { updateAppointmentBody } from "@/lib/api/schemas"
 import { horaLocalParaUtc } from "@/lib/domain/tempo"
 import { z } from "zod"
 
 export const GET = apiRoute("read", async ({ db, organizationId, params }) => ({
-  data: await getAppointment(db, organizationId, params.id),
+  data: paraAppointment(await obterAgendamento(db, organizationId, params.id)),
 }))
 
 /** Remarcar/alterar: horário, profissional, serviço e/ou observação. */

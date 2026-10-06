@@ -1,18 +1,8 @@
 import { apiRoute } from "@/lib/api/handler"
-import { ApiError } from "@/lib/http/erros"
+import { paraProfessional } from "@/lib/api/serializar"
+import { listarProfissionaisAtivos } from "@/lib/domain/catalogo"
 
-export const GET = apiRoute("read", async ({ db, organizationId }) => {
-  const { data, error } = await db
-    .from("professionals")
-    .select("id, name, specialty")
-    .eq("organization_id", organizationId)
-    .eq("is_active", true)
-    .order("name")
-
-  if (error) {
-    console.error("[api:professionals]", error.message)
-    throw new ApiError("INTERNAL_ERROR", "Erro interno.")
-  }
-
-  return { data }
-})
+/** Só id, name e specialty: o domínio nunca devolve phone nem license_number. */
+export const GET = apiRoute("read", async ({ db, organizationId }) => ({
+  data: (await listarProfissionaisAtivos(db, organizationId)).map(paraProfessional),
+}))

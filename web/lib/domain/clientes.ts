@@ -13,9 +13,9 @@ export type NovoCliente = {
   email?: string | null
 }
 
-export type ClienteResumo = { id: string; nome: string; telefone: string }
+export type ClienteResumo = { id: string; nome: string; telefone: string; email: string | null }
 
-const COLUNAS_CLIENTE = "id, name, phone"
+const COLUNAS_CLIENTE = "id, name, phone, email"
 
 /**
  * Mesma normalização do trigger `normalize_customer_fields`: só letras e
@@ -49,7 +49,7 @@ export async function buscarPorTelefone(db: Db, orgId: string, telefone: string)
     throw error
   }
 
-  return (data ?? []).map((c) => ({ id: c.id, nome: c.name, telefone: c.phone }))
+  return (data ?? []).map((c) => ({ id: c.id, nome: c.name, telefone: c.phone, email: c.email }))
 }
 
 async function buscarPorDocumento(db: Db, orgId: string, documento: string): Promise<ClienteResumo[]> {
@@ -65,7 +65,7 @@ async function buscarPorDocumento(db: Db, orgId: string, documento: string): Pro
     throw error
   }
 
-  return (data ?? []).map((c) => ({ id: c.id, nome: c.name, telefone: c.phone }))
+  return (data ?? []).map((c) => ({ id: c.id, nome: c.name, telefone: c.phone, email: c.email }))
 }
 
 /** Telefone e documento podem apontar para o mesmo cadastro ou para dois: conta ids distintos. */
