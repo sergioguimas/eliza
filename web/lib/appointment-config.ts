@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   UserCheck,
   XCircle,
+  UserX,
   PlayCircle,
   MessageCircleWarningIcon,
 } from "lucide-react"
@@ -44,6 +45,11 @@ export const STATUS_CONFIG: Record<
     label: "Cancelado",
     color: "bg-red-500/10 border-red-500/20 text-red-400",
     icon: XCircle,
+  },
+  no_show: {
+    label: "Faltou",
+    color: "bg-orange-500/10 border-orange-500/20 text-orange-400",
+    icon: UserX,
   },
 }
 

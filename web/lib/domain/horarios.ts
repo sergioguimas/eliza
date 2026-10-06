@@ -3,6 +3,7 @@ import "server-only"
 import { exigirProfissionalAtivo } from "./catalogo"
 import type { Db } from "./db"
 import { DomainError } from "./erros"
+import { ATIVOS } from "./status"
 import {
   dataLocal,
   diaDaSemanaLocal,
@@ -39,11 +40,6 @@ export type DiaDeAgenda = {
   ocupados: Faixa[] // agendamentos ATIVOS do profissional no dia
   motivoFechado: MotivoSemHorario | null
 }
-
-// Status que ocupam agenda: os mesmos da exclusion constraint
-// appointments_professional_overlap_idx. (Quando status.ts existir, vira
-// ATIVOS de lá.)
-const STATUS_ATIVOS = ["pending", "scheduled", "confirmed", "arrived"]
 
 const PASSO_PADRAO_MINUTOS = 30
 
@@ -102,7 +98,7 @@ export async function carregarDiaDeAgenda(
     .select("start_time, end_time")
     .eq("organization_id", p.orgId)
     .eq("professional_id", p.profissionalId)
-    .in("status", STATUS_ATIVOS)
+    .in("status", ATIVOS)
     .lt("start_time", fim.toISOString())
     .gt("end_time", inicio.toISOString())
 
