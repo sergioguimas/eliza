@@ -108,11 +108,13 @@ export const StatusBody = z
 
 /**
  * POST /appointments/{id}/payment — escopo `payments` (D5), não `write`.
- * Recusado em canceled e no_show.
+ * Recusado em canceled e no_show. Permitido antes de concluir (sinal, D10).
+ * Repetir `paid` num agendamento já pago não altera `paid_at` (idempotente).
  */
 export const PaymentBody = z
   .object({
-    method: z.string().trim().min(1).max(40),
+    /** = appointments_payment_method_check. Texto livre (AS-IS da a0ff88a) violava o CHECK do banco. */
+    method: z.enum(["dinheiro", "pix", "cartao_credito", "cartao_debito", "outro"]),
     status: PaymentStatus.default("paid"),
   })
   .strict()

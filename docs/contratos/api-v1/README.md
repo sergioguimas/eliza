@@ -208,7 +208,12 @@ Tudo vem de 00-dominio §5–§6, sem regra própria na rota:
 - Mudar horário zera os lembretes; mudar só `notes` não valida agenda.
 - Repetir o status atual → 200 sem log novo (idempotente).
 - `arrived → no_show` e `completed → *` → 409.
-- Pagamento em `canceled`/`no_show` → 409.
+- `→ no_show` antes do horário de início → 409 (D11).
+- Pagamento em `canceled`/`no_show` → 409. Antes de concluir (sinal) → ok (D10).
+- `method` do pagamento é enum (`dinheiro|pix|cartao_credito|cartao_debito|outro`,
+  o CHECK do banco). O AS-IS aceitava texto livre e quebraria no banco com 500.
+- Escrita concorrente (status mudou entre leitura e gravação) → 409
+  `INVALID_TRANSITION` (00-dominio E6).
 
 ## 6. Auditoria (AS-IS, ratificado)
 
@@ -306,7 +311,8 @@ Domínio pela API:
 - [ ] POST com `customer_id` existente e `notify: true` → WhatsApp sai e `notified = true`.
 - [ ] POST com telefone `(11) 98765-4321` e cliente cadastrado como `5511987654321` → reusa (não duplica).
 - [ ] PATCH em `completed` → 409; status `completed → scheduled` → 409; `arrived → no_show` → 409.
-- [ ] Payment em `no_show` → 409.
+- [ ] Payment em `no_show` → 409; em `scheduled` → 200; `method: "Outros"` → 422.
+- [ ] Status `no_show` antes do horário → 409.
 - [ ] DELETE → 405.
 - [ ] `appointment_logs` com `source = 'api:elz_live_xxxxxx'` para cada escrita.
 - [ ] Recurso de outro tenant em qualquer rota com `{id}` → 404.

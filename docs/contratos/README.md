@@ -22,14 +22,19 @@ funcionando. Cada contrato tem a sua ordem interna e o seu Aceite.
 | # | Etapa | Contrato | Relatório |
 |---|---|---|---|
 | 1 | Domínio: tempo, catálogo, horários | 00-dominio §10 passos 1–2 | `docs/RELATORIO_DOMINIO.md` |
-| 2 | Domínio: status, clientes, agendamentos; actions do painel apontadas | 00-dominio §10 passos 3–4 | idem |
-| 3 | Rotas v1 no domínio; `lib/api/domain` apagado | 00-dominio passo 5 + api-v1 §8 passos 1–4 | `docs/RELATORIO_API_V1.md` |
+| 1b | Migration: `REVOKE` das colunas sensíveis de `professionals` para `anon` | 00-dominio §3 | idem |
+| 2 | Domínio: status, clientes, agendamentos; actions, automação e componentes do painel | 00-dominio §10 passos 3–5 | idem |
+| 3 | Rotas v1 no domínio; `lib/api/domain` apagado | 00-dominio passo 6 + api-v1 §8 passos 1–4 | `docs/RELATORIO_API_V1.md` |
 | 4 | v1: escopo `payments`, gate de plano, tipos, `docs/API.md` | api-v1 §8 passos 5–8 | idem |
 | — | **Revisão Opus** da leva 1–4 → merge na `main` → deploy | | |
+| 4b | Migration D9: `authenticated` só lê `appointments` (**só depois do deploy**) | 00-dominio §8.3 | `docs/RELATORIO_DOMINIO.md` |
 | 5 | Autoatendimento F0 | autoatendimento §7 | `docs/RELATORIO_AUTOATENDIMENTO_F0.md` |
 
-Antes da etapa 2: incorporar o resultado de `docs/AUDITORIA_STATUS_PAINEL.md`
-(conferência paralela de 2026-10-06) à tabela §8 do 00-dominio.
+A auditoria do painel (`docs/AUDITORIA_STATUS_PAINEL.md`, 2026-10-06) já está
+incorporada ao 00-dominio §8 (decisões D9–D11).
+
+A etapa 1b também só pode ir **depois do deploy** da etapa 1: hoje a página
+pública faz `select('*')` em `professionals` como `anon`.
 
 **Branch:** `development`. Nada vai para a `main` antes da revisão. O commit
 `a0ff88a` (v1 sem contrato) já está na `development` e não está em produção.

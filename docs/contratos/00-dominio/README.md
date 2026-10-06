@@ -32,8 +32,10 @@ web/lib/domain/
   erros.ts          DomainError
 ```
 
-- Todo arquivo começa com `import "server-only"`. **Nenhum** tem `'use server'`:
-  server action vira endpoint POST público (lição de `send-whatsapp.ts`).
+- Todo arquivo começa com `import "server-only"`, **exceto `status.ts`**, que
+  é puro (sem banco) e é importado também pelos componentes do painel para
+  decidir quais ações mostrar (§8.2). **Nenhum** tem `'use server'`: server
+  action vira endpoint POST público (lição de `send-whatsapp.ts`).
 - O domínio recebe um client Supabase **service role** como parâmetro
   (`db: Db`). Como o RLS não escopa nada, **toda** query filtra por
   `organization_id`, sem exceção.
@@ -267,10 +269,23 @@ export const TRANSICOES: Record<Status, Status[]> = {
   no_show:   [],
 }
 
-export function podeTransicionar(de: Status, para: Status): boolean
+export function podeTransicionar(de: Status, para: Status, inicio: Date, agora: Date): boolean
 export function podeEditar(s: Status): boolean           // EDITAVEIS
 export function podeReceberPagamento(s: Status): boolean // tudo menos canceled e no_show
+
+export const METODOS_PAGAMENTO = ["dinheiro", "pix", "cartao_credito", "cartao_debito", "outro"] as const
+// = appointments_payment_method_check no banco. O default 'Outros' de
+// update-appointment-payment.ts viola o CHECK (achado da auditoria §2.3).
+
+/** Para a UI: quais ações o painel mostra para este agendamento agora. */
+export function acoesDisponiveis(a: { status: Status; inicio: Date; pagamento: string | null }, agora: Date): {
+  confirmar: boolean; chegou: boolean; finalizar: boolean; faltou: boolean
+  cancelar: boolean; editar: boolean; pagar: boolean
+}
 ```
+
+`acoesDisponiveis` é derivada **só** de `podeTransicionar` / `podeEditar` /
+`podeReceberPagamento` (sem `if` próprio), com `pagar = podeReceberPagamento && pagamento !== "paid"`.
 
 A regra, como o Sérgio ditou:
 
@@ -280,8 +295,10 @@ A regra, como o Sérgio ditou:
   um **novo** agendamento. Não recebe pagamento (sem taxa de falta).
 - **`canceled` é final.** Não recebe pagamento.
 - `arrived` não vira `no_show`: quem chegou não faltou.
-- Pagamento antes de concluir (sinal, pré-pago) é permitido em qualquer status
-  ativo.
+- **`→ no_show` só depois do horário de início** (`inicio <= agora`), em
+  todos os canais (D11). Não se marca falta antecipada.
+- **Pagamento antes de concluir (sinal, pré-pago) é permitido** em `pending`,
+  `scheduled`, `confirmed` e `arrived` (D10, confirmado em 2026-10-06).
 
 ### Quem pode o quê, por canal
 
@@ -383,23 +400,36 @@ type EntradaEdicao = {
 2. `podeTransicionar` e a tabela de canal do §5. Senão, `INVALID_TRANSITION`
    "Não é possível mudar de <rótulo> para <rótulo>". Os rótulos vêm de
    `STATUS_CONFIG`.
-3. `update status, updated_at`. Log `action = <para>` (mesmo vocabulário do
-   webhook atual), `raw_message = motivo`.
-4. Notifica só em `canceled` e `confirmed`, com os textos atuais.
+3. `update status, updated_at` **condicionado ao status lido**
+   (`.eq("status", atual)`). Se 0 linhas forem afetadas, alguém mudou o
+   agendamento entre a leitura e a escrita: `INVALID_TRANSITION` "O
+   agendamento foi alterado por outra pessoa; atualize a tela". Fecha a
+   corrida apontada pela auditoria (§4, webhook × painel).
+4. Log `action = <para>` (mesmo vocabulário do webhook atual), `raw_message = motivo`.
+5. Notifica só em `canceled` e `confirmed`, com os textos atuais.
+
+**Toda escrita do domínio** (6.2, 6.3, 6.4) usa a mesma condição de
+concorrência: `update ... where id and organization_id and status = <lido>`.
 
 ### 6.4 `registrarPagamento(db, ator, id, { metodo, status })`
 
-`status ∈ pending | paid | partially_paid | refunded` (CHECK do banco).
+`metodo ∈ METODOS_PAGAMENTO`; `status ∈ pending | paid | partially_paid | refunded`
+(os dois são CHECK do banco).
 
 1. Carregar (id + org). `!podeReceberPagamento(status)` → `INVALID_TRANSITION`
    "Agendamento <rótulo> não recebe pagamento".
-2. `paid_at = now()` se `paid`; `null` se `pending`; mantém nos demais.
-3. Log `action = "payment:<status>"`, `raw_message = metodo`.
+2. Já está `paid` e o pedido é `paid` → devolve sem escrever (idempotente;
+   hoje repagar sobrescreve `paid_at`).
+3. `paid_at = now()` se `paid`; `null` se `pending`; mantém nos demais.
+4. Log `action = "payment:<status>"`, `raw_message = metodo`.
 
 ### 6.5 Exclusão
 
-O domínio **não** exporta exclusão. `delete-appointment.ts` (painel) continua
-como está e fica fora deste contrato. A API não exclui (D5).
+O domínio **não** exporta exclusão (D5).
+`delete-appointment.ts` exporta `deleteAppointment` (DELETE físico), que
+**nenhum componente importa**, mas que, por ser `'use server'`, é um endpoint
+público para usuário logado. **Remover o export.** O `cancelAppointment`
+duplicado do mesmo arquivo é unificado com `cancel-appointment.ts` (ver §8).
 
 ## 7. `clientes.ts`
 
@@ -433,27 +463,81 @@ grava hoje: o público com `55` na frente, os demais como vierem, só dígitos.
 
 ## 8. Quem passa a chamar o quê
 
-| Hoje | Passa a chamar |
-|---|---|
-| `actions/create-appointment.ts` (`createAppointment`, `createPublicAppointment`) | `criarAgendamento`. As actions continuam: autenticam, montam `Ator`, convertem `FormData`, aplicam o rate limit do público e revalidam. |
-| `actions/update-appointment.ts` | `editarAgendamento` (org pela sessão, como em `createAppointment`) |
-| `actions/update-appointment-status.ts` | `mudarStatus`. ⚠️ Hoje grava **qualquer** string sem olhar o status atual. |
-| `actions/update-appointment-payment.ts` | `registrarPagamento` com `status: "paid"` |
-| `actions/get-available-slots.ts` | `listarHorariosLivres` |
-| `app/marcar/[slug]/page.tsx` | `listarServicosAtivos` / `listarProfissionaisAtivos` |
-| webhook WhatsApp (troca de status) | `mudarStatus` com canal `whatsapp_webhook` |
-| `lib/api/domain/appointments.ts`, `lib/api/tempo.ts` | **apagados**. As rotas v1 chamam o domínio. |
-| `checkOrganizationBusinessHours` / `checkProfessionalAvailability` (`lib/appointment-config.ts`) | Removidos após a migração. `STATUS_CONFIG` fica. |
+Fonte: este contrato + [`docs/AUDITORIA_STATUS_PAINEL.md`](../../AUDITORIA_STATUS_PAINEL.md)
+(conferência de 2026-10-06, que lista arquivo:linha de cada violação).
+
+### 8.1 Server actions e automação
+
+| Hoje | Passa a chamar | Violação que fecha (auditoria) |
+|---|---|---|
+| `actions/create-appointment.ts` (`createAppointment`, `createPublicAppointment`) | `criarAgendamento`. As actions continuam: autenticam, montam `Ator`, convertem `FormData`, aplicam o rate limit do público e revalidam. | §2.7: `payment_status` do form deixava criar já pago; passa a ser `entrada.pagamento` validado (`metodo` no enum) |
+| `actions/update-appointment.ts` | `editarAgendamento` (org pela sessão) | §2.2: edita `arrived`/`completed`/`canceled` |
+| `actions/update-appointment-status.ts` | `mudarStatus` | §2.1: qualquer string, de qualquer status |
+| `actions/update-appointment-payment.ts` | `registrarPagamento` (`status: "paid"`, `metodo` obrigatório) | §2.3: paga `canceled`; default `'Outros'` viola o CHECK |
+| `actions/cancel-appointment.ts` + `cancelAppointment` de `actions/delete-appointment.ts` | **uma** action `cancelAppointment` (fica em `cancel-appointment.ts`) → `mudarStatus(canceled)`. Importadores do outro arquivo passam a usar esta. | §2.4/§2.5: cancela `completed` pago (some a receita) e reenvia WhatsApp em `canceled` |
+| `deleteAppointment` de `actions/delete-appointment.ts` | **removido** (§6.5) | §2.5: DELETE físico por chamada direta |
+| `actions/handle-appointment-request.ts` | `mudarStatus` (`confirmed` \| `canceled`) | §2.6: confirma/cancela de qualquer status; corrida com o dashboard |
+| `actions/get-available-slots.ts` | `listarHorariosLivres` | — |
+| `app/marcar/[slug]/page.tsx` | `listarServicosAtivos` / `listarProfissionaisAtivos` | colunas de profissional (§3) |
+| webhook WhatsApp `route.ts:356-401` | `mudarStatus` com canal `whatsapp_webhook` | §4: escrita sem condição de status |
+| `actions/get-financial-summary.ts:47-57` ("a prazo") | Sem chamada ao domínio, mas o filtro passa a ser: `status ∈ {scheduled, confirmed, arrived, completed}` e não pago | §3.5: somava `pending` e `no_show` como receita esperada |
+| `lib/api/domain/appointments.ts`, `lib/api/tempo.ts` | **apagados**. As rotas v1 chamam o domínio. | §5: `arrived → no_show` permitido; DELETE exposto |
+| `checkOrganizationBusinessHours` / `checkProfessionalAvailability` (`lib/appointment-config.ts`) | Removidos após a migração. `STATUS_CONFIG` fica (ganha `no_show: "Faltou"`). | — |
+
+### 8.2 Componentes do painel
+
+Nenhum componente decide ação por `if` próprio de status: todos perguntam a
+`acoesDisponiveis` (§5).
+
+| Componente | Mudança | Violação que fecha |
+|---|---|---|
+| `components/appointments/appointment-card-actions.tsx:132-221` | Itens por `acoesDisponiveis`. **Novo item "Faltou"** (`→ no_show`), visível em `scheduled`/`confirmed` só depois do horário de início (D11). | §3.1: `pending → arrived/completed`, `arrived → confirmed`, `no_show` reaberto |
+| `components/appointments/appointment-context-menu.tsx:124-187` | Idem, incluindo "Faltou" | §3.2 |
+| `components/appointments/calendar-view.tsx:342-358` | **Remover a escrita direta** pelo client do navegador (`supabase.from("appointments").update`) e o ramo `"finalized"`. O menu já grava pela action; o calendário só recarrega. | §3.3: segunda escrita via PostgREST |
+| `components/appointments/calendar-view.tsx:315-319` | Clique no card abre edição só se `acoesDisponiveis.editar`; senão abre em modo leitura (ou não abre) | §3.3 / §2.2 pela UI |
+| `components/appointments/update-appointment-dialog.tsx` (form `:202`, lixeira `:276-281`) | Form desabilitado se `!editar`; lixeira só se `cancelar` | §3.4 |
+| `components/dashboard/financial-cards.tsx:293` ("Baixar") | Só se `acoesDisponiveis.pagar` | §3.5 |
+| `components/appointments/payment-menu.tsx` | **Remover** (não é usado) | §3.6 |
+| `app/(app)/dashboard/page.tsx:160` | `"cancelled"` → `"canceled"` | §3.7 (cosmético) |
+
+### 8.3 Banco: revogar escrita do `authenticated` (D9)
+
+A máquina de status em TS não vale nada enquanto a policy `Org access
+appointments` (`ALL`, `organization_id = get_user_org_id()`) deixar qualquer
+membro da org fazer `PATCH`/`DELETE /rest/v1/appointments` com o próprio JWT
+(auditoria §1). Decisão D9: **usuário logado só lê**; toda escrita passa por
+server action → domínio (service role).
+
+Migration `supabase/migrations/<timestamp>_appointments_readonly_for_authenticated.sql`:
+
+```sql
+begin;
+drop policy if exists "Org access appointments" on public.appointments;
+create policy "Org members read appointments" on public.appointments
+  for select to authenticated
+  using (organization_id = public.get_user_org_id());
+revoke insert, update, delete on public.appointments from anon, authenticated;
+commit;
+```
+
+- Antes de escrever a migration, **conferir no catálogo** se há outra
+  policy em `appointments` (a auditoria viu uma só; a anon foi dropada em
+  2026-08-11) e se algum caminho ainda faz `insert` como `authenticated`.
+  O grep de 2026-10-06 achou só `calendar-view.tsx:346` escrevendo pelo
+  navegador.
+- ⚠️ **Ordem obrigatória: código antes da migration.** Hoje
+  `update-appointment*.ts`, `cancel-appointment.ts`, `delete-appointment.ts` e
+  `handle-appointment-request.ts` escrevem com o client de sessão
+  (`authenticated`). Com o revoke antes do deploy, todas quebram com 42501.
+  A migration só roda depois que o passo 4 do §10 estiver **em produção**.
+- `appointment_logs`: conferir os grants. Se `authenticated` puder inserir,
+  revogar também, porque o log passa a ser escrito só pelo domínio.
 
 **Autorização nas actions do painel**: hoje `update-appointment*.ts` usa o
 client de sessão e o RLS escopa a org. Com o domínio rodando em service role,
 a action resolve `organizationId` pelo perfil da sessão (mesmo padrão de
 `createAppointment`, linhas 142–173) e passa ao domínio, que filtra por ela.
 Papéis: igual a hoje, qualquer membro da org. Não muda permissão nesta etapa.
-
-Achado da conferência paralela (`docs/AUDITORIA_STATUS_PAINEL.md`, quando
-existir): todo ponto de chamada listado lá entra nesta tabela antes de
-executar.
 
 ## 9. Decisões deste contrato
 
@@ -464,6 +548,8 @@ executar.
 | E3 | Ocupado = status ativos (os da constraint) | `<> canceled` | Uma definição só de "ocupa agenda". |
 | E4 | Toda escrita loga em `appointment_logs` com `source` = origem | Logar só API/bot | A auditoria passa a cobrir o painel. Custa uma linha por ação. |
 | E5 | Domínio recebe `organizationId` pronto e roda em service role | Domínio com client de sessão | Funciona igual para os 4 canais. O custo é que toda query precisa do filtro de org, e isso entra no Aceite. |
+| E6 | Escrita condicionada ao status lido (`.eq("status", atual)`) | Ler e gravar sem condição (AS-IS) | Fecha a corrida webhook × painel × API sem lock nem tabela. |
+| E7 | UI pergunta a `acoesDisponiveis`; nenhum `if` de status em componente | Corrigir os `if` de cada menu | Os três menus já divergiam entre si; uma função pura não diverge. |
 
 ## 10. Ordem de execução
 
@@ -471,21 +557,29 @@ Cada passo termina com o app funcionando para painel, página pública e API v1.
 
 1. `erros.ts`, `tempo.ts`, `catalogo.ts`. Trocar as quatro cópias de fuso e a
    página pública. `lib/api/tempo.ts` sai.
+   **Deploy deste passo** libera a migration de `REVOKE` de colunas de
+   `professionals` para `anon` (§3), que entra logo em seguida.
 2. `horarios.ts` + wrapper `getAvailableSlots` + `GET /api/v1/availability`
    (a rota perde o filtro próprio de duração e chama `listarHorariosLivres`).
-3. `status.ts`, `clientes.ts`, `mensagens.ts`, `agendamentos.ts`.
-4. Apontar as actions do §8, uma por commit: criar → editar → status →
-   pagamento → webhook.
-5. Apontar as rotas v1 e apagar `lib/api/domain/`.
-6. Relatório em `docs/RELATORIO_DOMINIO.md` com o resultado do Aceite.
-
-Não há migration nesta etapa.
+3. `status.ts` (com `acoesDisponiveis` e `no_show` em `STATUS_CONFIG`),
+   `clientes.ts`, `mensagens.ts`, `agendamentos.ts`.
+4. Apontar as actions e a automação do §8.1, uma por commit: criar → editar →
+   status → cancelar (unificado) → pedido pendente → pagamento → webhook →
+   "a prazo" do financeiro. Remover `deleteAppointment`.
+5. Componentes do §8.2, incluindo o item "Faltou" e a remoção da escrita
+   direta em `calendar-view.tsx`.
+6. Apontar as rotas v1 e apagar `lib/api/domain/`.
+7. Relatório em `docs/RELATORIO_DOMINIO.md` com o resultado do Aceite.
+8. **Depois do deploy de 1–6 em produção:** migration do §8.3 (D9).
 
 ## Aceite
 
 Grep (rodar em `web/`, fora de `lib/domain/` e `node_modules`):
 
-- [ ] `from("appointments")` / `from('appointments')` seguido de `.insert(` ou `.update(` → zero ocorrências, exceto em `delete-appointment.ts` e no cron de lembretes (que só marca `reminder_*_sent_at`).
+- [ ] `from("appointments")` / `from('appointments')` seguido de `.insert(`, `.update(` ou `.delete(` → zero ocorrências, exceto no cron de lembretes (que só marca `reminder_*_sent_at`), em `lib/demo/` (seed e limpeza) e em `create-demo-timeline.ts`.
+- [ ] Nenhum componente `"use client"` escreve em `appointments`.
+- [ ] Nenhum componente compara `status ===` para decidir ação (só `acoesDisponiveis`); rótulo e cor continuam por `STATUS_CONFIG`.
+- [ ] `deleteAppointment` e `payment-menu.tsx` não existem mais.
 - [ ] `America/Sao_Paulo` aparece só em `lib/domain/tempo.ts` e em formatação de exibição (`toLocaleString` de componente).
 - [ ] `-03:00` → zero ocorrências.
 - [ ] Nenhum arquivo de `lib/domain/` contém `'use server'`.
@@ -496,9 +590,21 @@ Comportamento (browser + curl):
 - [ ] Painel: criar, remarcar, chegou, finalizar e pagar funcionam como antes. Cada ação gera uma linha em `appointment_logs` com `source='painel'`.
 - [ ] Painel: tentar mudar um `completed` para `scheduled` (chamando a action direto) → erro, sem alterar.
 - [ ] Painel: remarcar para cima de outro agendamento → erro "ocupado"; antes passava até a constraint.
-- [ ] Painel: pagar um `no_show` → erro.
+- [ ] Painel: pagar um `no_show` → erro; pagar um `scheduled` (sinal) → ok; pagar duas vezes → a 2ª não muda `paid_at`.
+- [ ] Menus (card, clique direito, ficha do cliente) para cada status mostram exatamente as ações da tabela do §5: `pending` sem Chegada/Finalizar; `arrived` sem Confirmar; `completed` só Pagar; `canceled`/`no_show` nada (exceto Pagar, que também some neles).
+- [ ] "Faltou" aparece em `scheduled`/`confirmed` só depois do horário; marcar falta antes do horário pela action direta → erro.
+- [ ] Cancelar um `completed` pela action direta → erro; a receita continua no financeiro.
+- [ ] Clique num card `completed` não abre o formulário de edição editável.
+- [ ] Finanças "a prazo" não conta `pending`, `canceled` nem `no_show`.
+- [ ] Duas abas: aba A finaliza, aba B (desatualizada) tenta "Chegada" → erro "alterado por outra pessoa", sem sobrescrever.
 - [ ] Público: mesmos serviços/profissionais; serviço de 60 min com almoço 12–13 → 11:30 não aparece, 11:00 aparece; horários passados de hoje não aparecem.
 - [ ] Público: cliente cadastrado no painel como `11987654321` agenda pelo público com `(11) 98765-4321` → reusa o cadastro (não duplica).
 - [ ] HTML de `/marcar/<slug>` não contém telefone nem registro de profissional.
 - [ ] API v1: `availability` e `POST /appointments` concordam: todo horário listado é aceito, e um horário ocupado é recusado com `sugestoes`.
 - [ ] Webhook: resposta "confirmo" a um `completed` não muda nada.
+
+Depois da migration do §8.3 (D9):
+
+- [ ] `PATCH /rest/v1/appointments?id=eq.<id>` com JWT de membro da org → 401/403 (42501), sem alterar.
+- [ ] `DELETE` idem.
+- [ ] Painel continua criando, editando, mudando status e pagando normalmente.

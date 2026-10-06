@@ -32,6 +32,18 @@ fere a C4.
 | D7 | A API B2B é feature de plano: o handler checa `organizations.plan` contra uma lista em config. Começa com todos os planos liberados. | Sem gate | Liga a API ao pricing sem bloquear a entrega. |
 | D8 | Agendamento criado pelo bot nasce `pending` ("solicitado") e espera o tenant confirmar, igual à página pública (`create-appointment.ts`: `is_public_booking ? "pending"`). Fecha a pendência A1 do CHATBOT.md. | Nascer `scheduled` | Mesmo tratamento de pedido vindo de fora: o tenant mantém o controle da agenda. |
 
+### Decisões de 2026-10-06, após a auditoria do painel
+
+`docs/AUDITORIA_STATUS_PAINEL.md`: nenhuma camada aplica a regra hoje, e a RLS
+`ALL` de `appointments` deixa qualquer membro da org escrever direto pelo
+PostgREST.
+
+| # | Decisão | Alternativa descartada | Motivo |
+|---|---|---|---|
+| D9 | `authenticated` só **lê** `appointments`; toda escrita por server action → `lib/domain` (service role). Migration depois do deploy do domínio. | Trigger `BEFORE UPDATE` com a tabela de transições em SQL; ou os dois | A regra fica num lugar só (TS). Só um ponto do navegador escrevia direto (`calendar-view.tsx:346`). |
+| D10 | Pagamento antecipado (sinal) permitido em `pending`/`scheduled`/`confirmed`/`arrived`. Bloqueado só em `canceled`/`no_show`. "A prazo" no financeiro deixa de contar `pending`/`no_show`. | Pagamento só em `completed` | Sinal é prática comum nos nichos (tatuador, estética, salão). |
+| D11 | Painel ganha a ação **"Faltou"** (`→ no_show`) em `scheduled`/`confirmed`, só depois do horário de início. A regra do horário vale em todos os canais. | Sem restrição de horário; ou sem ação no painel | Evita falta marcada antes da hora por engano. |
+
 ## Regra de status (D4)
 
 Ditada pelo Sérgio:
