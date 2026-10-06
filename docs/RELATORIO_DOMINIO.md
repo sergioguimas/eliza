@@ -390,3 +390,27 @@ rejeita e o toast mostra a mensagem do domínio. Status e pagamento também most
   só nos status que permitem cancelar.
 - [ ] Finanças "a prazo": "Baixar" só nos itens pagáveis; erro de pagamento mostra a mensagem.
 - [ ] Tour (demo): anchors `data-tour` e eventos `eliza:appointment-*` preservados (não foram tocados).
+
+## Etapa 1b — migration aplicada em produção (2026-10-06)
+
+`20261006120000_professionals_hide_sensitive_columns_from_anon` aplicada via MCP
+depois do deploy do PR #39 (produção conferida servindo o código novo: HTML de
+`/marcar/admin` sem `license_number`/`user_id`/`phone`).
+
+- Catálogo: `anon` sem SELECT em `phone`, `license_number`, `user_id`; com SELECT em
+  `id`, `name`; `authenticated` mantém `phone`.
+- REST com a anon key: `select=phone` e `select=*` → 401/42501; `select=id,name` → 200.
+- `/marcar/admin` em produção: 200, profissionais listados.
+- Grep: nenhum outro caminho anônimo lê `professionals` (o resto é rota logada ou service role).
+
+## D9 — migration aplicada em produção (2026-10-06)
+
+`20261006120200_appointments_readonly_for_authenticated` aplicada via MCP depois de o
+Sérgio testar o painel em produção (criar, editar, mudar status, pagar).
+
+- Antes: uma policy só, `Org access appointments` (ALL).
+- Depois: uma policy só, `Org members read appointments` (SELECT, `get_user_org_id()`);
+  `authenticated` sem INSERT/UPDATE/DELETE, com SELECT; `service_role` mantém escrita.
+- Prova: `set local role authenticated; update appointments ... where false` →
+  42501 `permission denied for table appointments` (nenhuma linha tocada).
+- Produção: `/marcar/admin` e `/login` respondem 200.

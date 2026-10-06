@@ -376,6 +376,8 @@ export type EntradaEdicao = {
   profissionalId?: string
   servicoId?: string
   observacao?: string | null
+  /** Política do add-on de autoatendimento: soma ao "agora" do corte de horário (mesmo papel que em EntradaCriacao). */
+  antecedenciaMinutos?: number
 }
 
 export async function editarAgendamento(
@@ -431,7 +433,7 @@ export async function editarAgendamento(
       profissionalId: profissional.id,
       inicio,
       duracaoMinutos: servico.duracaoMinutos,
-      naoAntesDe: corteDeHorario(ator.canal, new Date()),
+      naoAntesDe: corteDeHorario(ator.canal, new Date(), entrada.antecedenciaMinutos),
       exigirGrade: exigeGrade(ator.canal),
       // Remarcar para um horário que se sobrepõe ao atual não conflita consigo mesmo.
       ignorarAgendamentoId: id,
@@ -454,8 +456,15 @@ export async function editarAgendamento(
     mudancas.reminder_morning_sent_at = null
   }
 
-  // O "confirmado" valia para o horário antigo (D8): o cliente que remarca volta a pedido.
-  if (ator.canal === "autoatendimento") mudancas.status = "pending"
+  if (ator.canal === "autoatendimento") {
+    // "Remarcar" para o mesmo horário e profissional não muda nada. Sem esta
+    // saída, a linha abaixo rebaixava um `confirmed` para `pending` sem
+    // reagendar coisa alguma. Idempotente: devolve o agendamento como está.
+    if (!mudouHorario) return { agendamento: completo(atual), notificado: false }
+
+    // O "confirmado" valia para o horário antigo (D8): o cliente que remarca volta a pedido.
+    mudancas.status = "pending"
+  }
 
   // E6: só grava se o status continua o que lemos.
   const { data: escrito, error } = await db

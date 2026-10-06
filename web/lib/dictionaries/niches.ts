@@ -53,6 +53,8 @@ function buildNiche(config: NicheConfig) {
 
   return {
     niche_label: config.niche_label,
+    // Gênero gramatical do nicho ("a consulta", "o corte"); lido pelo Contexto do autoatendimento.
+    gender: config.gender ?? ("m" as const),
 
     entities,
 

@@ -122,5 +122,5 @@ cria-se a tabela.
 - [ ] Mensagem de grupo: nunca encaminha.
 - [ ] Assinatura recalculada sobre o corpo recebido bate; corpo alterado em 1 byte não bate.
 - [ ] `POST /mensagens` entrega no telefone do ticket e devolve `mensagemId`.
-- [ ] Ticket da org A usado depois de a org A trocar de instância → 401.
+- [ ] Ticket da org A usado depois de a org A trocar de instância → 403 `ADDON_INACTIVE` (README §2; revisto em 2026-10-06).
 - [ ] Escalonamento sem contato configurado → `equipeNotificada: false`, 200.

@@ -249,6 +249,50 @@ export type Database = {
           },
         ]
       }
+      autoatendimento_config: {
+        Row: {
+          antecedencia_minima_minutos: number
+          ativo: boolean
+          contato_humano_telefone: string | null
+          created_at: string
+          instrucoes_atendimento: string | null
+          janela_maxima_dias: number
+          max_agendamentos_ativos: number
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          antecedencia_minima_minutos?: number
+          ativo?: boolean
+          contato_humano_telefone?: string | null
+          created_at?: string
+          instrucoes_atendimento?: string | null
+          janela_maxima_dias?: number
+          max_agendamentos_ativos?: number
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          antecedencia_minima_minutos?: number
+          ativo?: boolean
+          contato_humano_telefone?: string | null
+          created_at?: string
+          instrucoes_atendimento?: string | null
+          janela_maxima_dias?: number
+          max_agendamentos_ativos?: number
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "autoatendimento_config_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           active: boolean | null
