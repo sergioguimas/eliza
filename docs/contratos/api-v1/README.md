@@ -139,12 +139,14 @@ Os usados pela v1:
 | `SLOT_UNAVAILABLE` | 409 | `validarHorario` recusou, ou corrida (`23P01`). `details: { motivo, sugestoes }` |
 | `INVALID_TRANSITION` | 409 | Máquina de status, edição fora de `EDITAVEIS`, pagamento em `canceled`/`no_show` |
 | `CUSTOMER_AMBIGUOUS` | 409 | **TO-BE:** mais de um cadastro casa com telefone/documento. Mandar `customer_id`. |
-| `VALIDATION_ERROR` | 422 | Zod, data malformada, horário passado. `details: [{ field, message }]` |
+| `VALIDATION_ERROR` | 422 | Zod, data malformada. `details: [{ field, message }]` |
 | `RATE_LIMITED` | 429 | Com `Retry-After` e `details.retry_after_seconds` |
 | `INTERNAL_ERROR` | 500 | |
 
-Horário passado continua 422 `VALIDATION_ERROR` "O horário informado já
-passou" (AS-IS), e não 409: é erro de entrada, não de agenda.
+Horário passado responde **409 `SLOT_UNAVAILABLE`** com
+`details.motivo = "antecedencia_minima"` e `sugestoes` (revisto em 2026-10-06,
+etapa 3): é o mesmo predicado de agenda do domínio, e as sugestões ajudam o
+integrador. O AS-IS da `a0ff88a` respondia 422.
 
 ## 5. Rotas
 
