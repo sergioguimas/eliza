@@ -306,3 +306,87 @@ Aceite que depende de browser, com o app rodando em `development`:
   "Há mais de um cadastro com esses dados; informe o cliente."; horário fora da grade -> erro.
 - [ ] Webhook: "confirmo" a um `scheduled` confirma, loga `source='whatsapp_webhook'` com
   `push_name`/`raw_message`; a um `completed` (ou `pending`) não muda nada; "cancelar" cancela.
+
+
+## Etapa 2 (passo 5)
+
+Escopo: 00-dominio §10 passo 5 (§8.2, componentes do painel). Branch `development`, sem push,
+sem mexer em actions, `lib/domain`, rotas v1, migrations, `lib/demo` ou tour.
+
+### O que foi feito
+
+| Item | Commit |
+|---|---|
+| menus do card e do clique direito por `acoesDisponiveis` + "Faltou" + toast de erro | `abd3498` |
+| calendário sem escrita direta; clique só abre edição se `editar` | `087f0c6` |
+| diálogo de edição (formulário e lixeira) | commit "dialogo de edicao" |
+| financeiro: "Baixar" só se `pagar` | `0f2589f` |
+| remove `payment-menu.tsx` | `8aa8b2b` |
+| rótulos do dashboard/ficha por `STATUS_CONFIG`, `cancelled` -> `canceled` | commit "rotulos de status" |
+
+Arquivos: `components/appointments/acoes-agendamento.ts` (novo), `appointment-card-actions.tsx`,
+`appointment-context-menu.tsx`, `calendar-view.tsx`, `update-appointment-dialog.tsx`,
+`components/dashboard/financial-cards.tsx`, `app/(app)/dashboard/page.tsx`,
+`app/(app)/clientes/[id]/page.tsx`; removido `payment-menu.tsx`.
+
+`acoes-agendamento.ts` (puro, só importa `lib/domain/status`): `acoesDoAgendamento(agendamento)`
+(adapta status/start_time/payment_status do painel para `acoesDisponiveis`; status desconhecido
+ou sem horário = nenhuma ação), `METODOS_NOS_MENUS` (derivado de `METODOS_PAGAMENTO`, sem `outro`
+como antes), `rotuloMetodo`, `lancarSeErro` (transforma `{ error }` em rejeição para `toast.promise`).
+Os dois menus usam o mesmo helper, então mostram os mesmos itens.
+
+Bugs: (2) cancelar nos menus usava `toast.promise` e mostrava sucesso com `{ error }`; agora
+rejeita e o toast mostra a mensagem do domínio. Status e pagamento também mostram `result.error`
+(no card, clique direito e financeiro). (3) ver divergências.
+
+### Verificação
+
+| Verificação | Resultado |
+|---|---|
+| `tsc --noEmit` antes e depois de cada commit | limpo |
+| `npm run build` | passou |
+| eslint nos arquivos tocados | só erros que já existiam (`no-explicit-any`, `react/no-unescaped-entities`, setState em effect); nenhum novo |
+| nenhum componente client escreve em `appointments` | confirmado (grep de `from("appointments")` em arquivos `use client`: zero) |
+| `payment-menu.tsx` | não existe |
+| `status ===` em componentes | restam: `status === 'arrived'/'completed'` nos handlers dos menus (STATUS ALVO, para evento do tour e redirecionamento, não decidem se a ação aparece); estilo/ocultar cancelado na grade do calendário |
+
+### Divergências
+
+1. **Bug 3 (card do dashboard não atualiza)**: o código dos menus já chamava `router.refresh()`
+   após sucesso e o dashboard é `force-dynamic` com `RealtimeAppointments` (que também faz refresh).
+   Não consegui reproduzir sem browser; mantive `router.refresh()` em todos os sucessos (menos
+   `completed`, que faz `router.push` para a ficha, sem refresh em seguida). Se persistir, é para
+   investigar no browser. Não havia callback no dashboard (só o calendário passava `onStatusChange`,
+   removido junto com a escrita direta; a prop continua opcional no menu, sem uso).
+2. Rótulo de `arrived` no dashboard muda de "Na recepção" para "Chegou" (STATUS_CONFIG).
+3. Ficha do cliente: badge para `completed` com pagamento parcial/reembolsado passa a "Finalizado"
+   (antes vazio); `pending` e `no_show` ganham rótulo.
+4. `get-financial-summary.ts` já selecionava `status` e `start_time`: nada a mudar.
+5. Calendário: não existe tela de leitura, então clicar num card não editável não abre nada
+   (o cursor deixa de ser pointer).
+
+### Decisões fora do contrato
+
+- Sem nenhuma ação disponível, os dois menus mostram um item desabilitado: "Pagamento concluído"
+  se pago, senão o rótulo do status (`STATUS_CONFIG`). O gatilho continua visível.
+- Menus oferecem pix/crédito/débito/dinheiro (como antes); o financeiro continua oferecendo
+  também `outro`. Todos os valores são do enum.
+- `agora` é lido a cada render: um menu renderizado antes do horário não mostra "Faltou" até
+  re-renderizar; a action recusa de qualquer forma.
+- Diálogo de edição não editável: `<fieldset disabled>` + aviso de status; botão Salvar desabilitado.
+
+### Checklist de browser
+
+- [ ] Dashboard/agenda/ficha, menu "..." e clique direito, por status: `pending` só Confirmar e
+  Cancelar; `scheduled`/`confirmed` Confirmar (só `scheduled`), Chegada, Finalizar, Cancelar e
+  "Faltou" só depois do horário; `arrived` Finalizar e Cancelar; `completed` não pago só pagamento;
+  `completed` pago, `canceled`, `no_show`: item desabilitado. Card e clique direito iguais.
+- [ ] Marcar "Faltou" num `confirmed` já passado: vira `no_show`, card atualiza sem F5.
+- [ ] Mudar status pelo menu do dashboard: card atualiza sem recarregar (bug 3).
+- [ ] Duas abas: aba B (desatualizada) tenta Chegada depois de A finalizar: toast com "alterado por
+  outra pessoa" (não sucesso).
+- [ ] Cancelar um `scheduled` pelo menu: toast de sucesso; cancelar quando a action recusa: toast de erro.
+- [ ] Agenda: clicar num card `completed`/`arrived` não abre diálogo; num `scheduled` abre; lixeira
+  só nos status que permitem cancelar.
+- [ ] Finanças "a prazo": "Baixar" só nos itens pagáveis; erro de pagamento mostra a mensagem.
+- [ ] Tour (demo): anchors `data-tour` e eventos `eliza:appointment-*` preservados (não foram tocados).
