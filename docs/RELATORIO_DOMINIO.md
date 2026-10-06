@@ -403,5 +403,14 @@ depois do deploy do PR #39 (produção conferida servindo o código novo: HTML d
 - `/marcar/admin` em produção: 200, profissionais listados.
 - Grep: nenhum outro caminho anônimo lê `professionals` (o resto é rota logada ou service role).
 
-Pendente: `20261006120200` (D9, `authenticated` só lê `appointments`) — depois de
-confirmar em produção que o painel cria, edita, muda status e paga normalmente.
+## D9 — migration aplicada em produção (2026-10-06)
+
+`20261006120200_appointments_readonly_for_authenticated` aplicada via MCP depois de o
+Sérgio testar o painel em produção (criar, editar, mudar status, pagar).
+
+- Antes: uma policy só, `Org access appointments` (ALL).
+- Depois: uma policy só, `Org members read appointments` (SELECT, `get_user_org_id()`);
+  `authenticated` sem INSERT/UPDATE/DELETE, com SELECT; `service_role` mantém escrita.
+- Prova: `set local role authenticated; update appointments ... where false` →
+  42501 `permission denied for table appointments` (nenhuma linha tocada).
+- Produção: `/marcar/admin` e `/login` respondem 200.
