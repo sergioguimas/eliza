@@ -11,6 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Copy, KeyRound, Loader2, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { createApiKey, revokeApiKey } from "@/app/actions/api-keys"
+import type { ApiScope } from "@/contracts/api-v1"
+import { ROTULO_ESCOPO } from "@/lib/api/escopos"
 
 export type ApiKeyRow = {
   id: string
@@ -39,13 +41,19 @@ const fmt = (iso: string | null) =>
 
 export function ApiKeysSettings({ keys, logs }: { keys: ApiKeyRow[]; logs: ApiLogRow[] }) {
   const [name, setName] = useState("")
-  const [canWrite, setCanWrite] = useState(true)
+  // `read` é sempre incluído; escrita e baixa de pagamento são opt-in (D5).
+  const [canWrite, setCanWrite] = useState(false)
+  const [canPay, setCanPay] = useState(false)
   const [newKey, setNewKey] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
   function handleCreate() {
     startTransition(async () => {
-      const result = await createApiKey({ name, scopes: canWrite ? ["read", "write"] : ["read"] })
+      const scopes: ApiScope[] = ["read"]
+      if (canWrite) scopes.push("write")
+      if (canPay) scopes.push("payments")
+
+      const result = await createApiKey({ name, scopes })
 
       if ("error" in result && result.error) {
         toast.error(result.error)
@@ -122,6 +130,10 @@ export function ApiKeysSettings({ keys, logs }: { keys: ApiKeyRow[]; logs: ApiLo
               <Checkbox id="api-key-write" checked={canWrite} onCheckedChange={(v) => setCanWrite(v === true)} />
               <Label htmlFor="api-key-write">Permitir escrita</Label>
             </div>
+            <div className="flex items-center gap-2 pb-2">
+              <Checkbox id="api-key-payments" checked={canPay} onCheckedChange={(v) => setCanPay(v === true)} />
+              <Label htmlFor="api-key-payments">Permitir baixa de pagamento</Label>
+            </div>
             <Button onClick={handleCreate} disabled={pending || !name.trim()}>
               {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Gerar chave
@@ -154,7 +166,9 @@ export function ApiKeysSettings({ keys, logs }: { keys: ApiKeyRow[]; logs: ApiLo
                   <TableRow key={key.id}>
                     <TableCell>{key.name}</TableCell>
                     <TableCell className="font-mono text-xs">{key.key_prefix}…</TableCell>
-                    <TableCell>{key.scopes.join(", ")}</TableCell>
+                    <TableCell>
+                      {key.scopes.map((scope) => ROTULO_ESCOPO[scope as ApiScope] ?? scope).join(", ")}
+                    </TableCell>
                     <TableCell>{fmt(key.last_used_at)}</TableCell>
                     <TableCell>
                       {key.revoked_at ? (

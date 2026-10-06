@@ -1,10 +1,12 @@
 import "server-only"
 
 import { createHash, randomBytes } from "node:crypto"
+import { ApiScope } from "@/contracts/api-v1"
 
 export const API_KEY_PREFIX = "elz_live_"
-export const API_SCOPES = ["read", "write"] as const
-export type ApiScope = (typeof API_SCOPES)[number]
+// Fonte única dos escopos: o enum do contrato (api-v1/comum.ts). Reexportado aqui para quem já importa de keys.
+export const API_SCOPES = ApiScope.options
+export type { ApiScope }
 
 export function hashApiKey(plain: string) {
   return createHash("sha256").update(plain).digest("hex")
