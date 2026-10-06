@@ -124,8 +124,15 @@ type Profissional = { id: string; nome: string; especialidade: string | null }
   `professionals` com o client anon e passa o resultado inteiro para um
   componente client. Se o grant de coluna permitir, telefone e registro do
   profissional vão parar no HTML público. A página passa a usar
-  `listarProfissionaisAtivos`, e isso fecha o problema. Registrar no relatório
-  o que o grant atual permite.
+  `listarProfissionaisAtivos`, e isso fecha o vazamento **pela página**.
+  **Confirmado no banco em 2026-10-06:** `anon` tem SELECT em `phone`,
+  `license_number` e `user_id` de `professionals`, e a policy
+  `Public professionals are viewable by everyone` (`is_active = true`, sem
+  filtro de org) libera as linhas. Ou seja, com a anon key (pública) dá para
+  ler esses campos de **todos os tenants** via REST, sem passar pela página.
+  O fechamento é uma migration de `REVOKE` de coluna, que **só pode ir depois
+  do deploy deste passo**: o `select('*')` atual como anon quebraria com 42501
+  (regra "código antes de migration que revoga").
 - **Não existe vínculo serviço ↔ profissional.** Todo profissional ativo
   atende todo serviço. Não inventar.
 
