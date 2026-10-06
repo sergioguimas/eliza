@@ -235,3 +235,19 @@ curl -si $B/me -H "Authorization: Bearer $P"                                    
 curl -si $B/me -H "Authorization: Bearer $R"                                                                       # 403 PLAN_REQUIRED "O plano da organização não inclui acesso à API"
 # painel: Configurações -> API mostra o aviso e o botão fica desabilitado; voltar a constante para "todos"
 ```
+
+## Etapa 4 — verificação do orquestrador (2026-10-06)
+
+- Migration `20261006120100` (escopo `payments`) aplicada via MCP; CHECK conferido:
+  `scopes <@ ARRAY['read','write','payments'] AND cardinality(scopes) > 0`.
+- Curl: `POST /appointments/{id}/payment` com chave `read,write` → 403 `FORBIDDEN`
+  "A chave não tem o escopo \"payments\"".
+- Gate de plano: com `PLANOS_COM_API = ["pro"]` e a org `admin` em `free`,
+  `GET /me` → 403 `PLAN_REQUIRED` "O plano da organização não inclui acesso à API".
+  Constante revertida para `"todos"` (sem diff no arquivo); `GET /me` voltou a 200.
+- Tipos: `generate_typescript_types` (MCP) comparado com `utils/database.types.ts`.
+  O trecho de `api_keys`/`api_request_logs` escrito à mão na `a0ff88a` é
+  **idêntico** ao gerado, e as demais tabelas/funções batem com o gerado. Nada a
+  regenerar; o arquivo passa a corresponder ao banco.
+- Pendente: curl com uma chave `read,payments` (200 no pagamento, 403 no POST) e a
+  tela de chaves com os dois checkboxes — precisa de uma chave criada pelo painel.
