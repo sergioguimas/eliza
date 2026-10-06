@@ -5,6 +5,8 @@ import { createClient } from "@/utils/supabase/server"
 import { createAdminClient } from "@/utils/supabase/admin"
 import { Database } from "@/utils/database.types"
 import { API_SCOPES, generateApiKey, type ApiScope } from "@/lib/api/keys"
+import { MENSAGEM_PLANO_SEM_API } from "@/lib/api/planos"
+import { organizacaoTemApi } from "@/lib/api/plano-da-org"
 
 const MAX_ACTIVE_KEYS = 10
 
@@ -40,6 +42,9 @@ async function requireOrgAdmin() {
 export async function createApiKey(input: { name: string; scopes: ApiScope[]; expiresInDays?: number | null }) {
   const auth = await requireOrgAdmin()
   if ("error" in auth) return { error: auth.error }
+
+  // A regra vale aqui, não só na tela: a UI esconde o botão, mas a action é chamável direto.
+  if (!(await organizacaoTemApi(auth.organizationId))) return { error: `${MENSAGEM_PLANO_SEM_API}.` }
 
   const name = input.name?.trim()
 

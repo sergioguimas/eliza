@@ -8,6 +8,7 @@ import { ApiKeysSettings, type ApiKeyRow, type ApiLogRow } from "@/components/se
 import { ProfessionalProfileForm } from "@/components/settings/professional-profile-form";
 import { Building, UserPen, NotebookPen, BotMessageSquare, KeyRound } from "lucide-react";
 import { Database } from "@/utils/database.types";
+import { organizacaoTemApi } from "@/lib/api/plano-da-org";
 import { getDictionary } from "@/lib/dictionaries/get-dictionary";
 
 type ProfileWithOrg = Database["public"]["Tables"]["profiles"]["Row"] & {
@@ -90,8 +91,11 @@ export default async function SettingsPage() {
   // é quem escopa. key_hash não é legível por `authenticated` (grant de coluna).
   let apiKeys: ApiKeyRow[] = [];
   let apiLogs: ApiLogRow[] = [];
+  let apiAllowed = true;
 
   if (showWhatsappTab) {
+    apiAllowed = await organizacaoTemApi(typedProfile.organization_id);
+
     const [keysResult, logsResult] = await Promise.all([
       supabase
         .from("api_keys")
@@ -174,7 +178,7 @@ export default async function SettingsPage() {
 
             {showWhatsappTab && (
               <TabsContent value="api">
-                <ApiKeysSettings keys={apiKeys} logs={apiLogs} />
+                <ApiKeysSettings keys={apiKeys} logs={apiLogs} planAllowsApi={apiAllowed} />
               </TabsContent>
             )}
 

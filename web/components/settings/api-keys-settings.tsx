@@ -13,6 +13,7 @@ import { toast } from "sonner"
 import { createApiKey, revokeApiKey } from "@/app/actions/api-keys"
 import type { ApiScope } from "@/contracts/api-v1"
 import { ROTULO_ESCOPO } from "@/lib/api/escopos"
+import { MENSAGEM_PLANO_SEM_API } from "@/lib/api/planos"
 
 export type ApiKeyRow = {
   id: string
@@ -39,7 +40,15 @@ export type ApiLogRow = {
 const fmt = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "—"
 
-export function ApiKeysSettings({ keys, logs }: { keys: ApiKeyRow[]; logs: ApiLogRow[] }) {
+export function ApiKeysSettings({
+  keys,
+  logs,
+  planAllowsApi,
+}: {
+  keys: ApiKeyRow[]
+  logs: ApiLogRow[]
+  planAllowsApi: boolean
+}) {
   const [name, setName] = useState("")
   // `read` é sempre incluído; escrita e baixa de pagamento são opt-in (D5).
   const [canWrite, setCanWrite] = useState(false)
@@ -115,6 +124,12 @@ export function ApiKeysSettings({ keys, logs }: { keys: ApiKeyRow[]; logs: ApiLo
             </div>
           )}
 
+          {!planAllowsApi && (
+            <p className="rounded-md border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
+              {MENSAGEM_PLANO_SEM_API}.
+            </p>
+          )}
+
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex-1 space-y-2">
               <Label htmlFor="api-key-name">Nome da chave</Label>
@@ -134,7 +149,7 @@ export function ApiKeysSettings({ keys, logs }: { keys: ApiKeyRow[]; logs: ApiLo
               <Checkbox id="api-key-payments" checked={canPay} onCheckedChange={(v) => setCanPay(v === true)} />
               <Label htmlFor="api-key-payments">Permitir baixa de pagamento</Label>
             </div>
-            <Button onClick={handleCreate} disabled={pending || !name.trim()}>
+            <Button onClick={handleCreate} disabled={pending || !planAllowsApi || !name.trim()}>
               {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Gerar chave
             </Button>

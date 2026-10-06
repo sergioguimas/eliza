@@ -4,6 +4,7 @@ import { consumeRateLimit, hashIdentifier } from "@/lib/demo/rate-limit"
 import type { Db } from "@/lib/domain/db"
 import { ApiError, internalError } from "@/lib/http/erros"
 import type { Autenticador, RegistroRequisicao } from "@/lib/http/rota"
+import { MENSAGEM_PLANO_SEM_API, planoPermiteApi } from "./planos"
 import { hashApiKey, isWellFormedApiKey, type ApiScope } from "./keys"
 
 /** O que a rota recebe da chave. O tenant sai SÓ daqui: nunca de body, query ou header. */
@@ -22,7 +23,7 @@ const LAST_USED_REFRESH_MS = 60 * 1000
 
 /**
  * Autenticação por API key (api-v1 §2). Ordem das checagens: header -> chave
- * existe -> revogada/expirada -> escopo -> org (demo/suspensa) -> rate limit.
+ * existe -> revogada/expirada -> escopo -> org (demo/suspensa) -> plano -> rate limit.
  *
  * Chave ausente/inexistente não gera log de tenant (não há tenant a quem
  * atribuir): só aviso no console, com o IP.
@@ -65,14 +66,13 @@ export function autenticarChave(escopo: ApiScope): Autenticador<ContextoChave, C
       throw new ApiError("UNAUTHORIZED", "API key revogada ou expirada.")
     }
 
-    // TODO(etapa 4, D5): o escopo `payments` entra em ApiScope/API_SCOPES e a rota de pagamento passa a exigi-lo.
     if (!chave.scopes.includes(escopo)) {
       throw new ApiError("FORBIDDEN", `A chave não tem o escopo "${escopo}".`)
     }
 
     const { data: org } = await db
       .from("organizations")
-      .select("subscription_status, is_demo")
+      .select("subscription_status, is_demo, plan")
       .eq("id", chave.organization_id)
       .maybeSingle()
 
@@ -80,8 +80,10 @@ export function autenticarChave(escopo: ApiScope): Autenticador<ContextoChave, C
       throw new ApiError("ORGANIZATION_SUSPENDED", "Organização indisponível para uso da API.")
     }
 
-    // TODO(etapa 4, D7): gate de plano entra AQUI, depois da suspensão e antes do rate limit:
-    // se PLANOS_COM_API !== "todos" e organizations.plan não estiver na lista -> 403 PLAN_REQUIRED.
+    // Gate de plano (D7): depois da suspensão e antes do rate limit, para chave de plano sem API não gastar cota.
+    if (!planoPermiteApi(org.plan)) {
+      throw new ApiError("PLAN_REQUIRED", MENSAGEM_PLANO_SEM_API)
+    }
 
     const limite = await consumeRateLimit(db, hashIdentifier("api-key", chave.id), RATE_LIMIT)
 
