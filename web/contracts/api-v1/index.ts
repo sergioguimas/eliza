@@ -1,6 +1,6 @@
 /**
  * API v1 B2B — contrato. Documentação: docs/contratos/api-v1/README.md
- * Substitui web/lib/api/schemas.ts (apagar ao migrar as rotas).
+ * Substituiu web/lib/api/schemas.ts (apagado na etapa 3).
  */
 export * from "./comum"
 export * from "./catalogo"

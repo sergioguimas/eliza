@@ -48,7 +48,7 @@ export type Ator = {
   pushName?: string | null
 }
 
-// Mesmo shape de `serializeAppointment` (lib/api/domain/appointments.ts), com
+// Mesmo shape de `serializeAppointment` (lib/api/domain/appointments.ts, apagado na etapa 3), com
 // início e fim como Momento (UTC + relógio local).
 export type AgendamentoCompleto = {
   id: string
