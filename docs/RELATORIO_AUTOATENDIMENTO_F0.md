@@ -205,3 +205,167 @@ aa $TN -i -X PATCH $B/cadastro -H "Content-Type: application/json" -d '{"telefon
 
 Observação para o orquestrador: o 05 diz "`PATCH` de documento quando já existe um → 409". O código responde
 `INVALID_TRANSITION`, que em `HTTP_STATUS_BY_CODE` é 409, então o status confere.
+
+## Bloco B
+
+Escopo: README §7 passo 4 (da escrita de agendamentos em diante) e passo 5 (ramo do webhook). Nenhuma
+migration. `web/.env.local` não foi tocado e nenhuma linha de `autoatendimento_config` foi criada.
+
+### Feito
+
+| Grupo | Rotas / peças |
+|---|---|
+| 1. Escrita de agendamentos (04) | `POST /agendamentos`, `POST /agendamentos/{id}/remarcar`, `/cancelar`, `/confirmar` |
+| 2. Mensagens (06) | `POST /mensagens` |
+| 3. Escalonamentos (06) | `POST /escalonamentos` |
+| 4. Encaminhamento (06) | `lib/autoatendimento/encaminhar.ts` + um ramo no webhook |
+
+Ordem em toda escrita: body (422) -> limites -> identificação -> posse/regras. Erro de body não consome limite
+(mesma ordem do cadastro, bloco A). Erros do canal em português, sem dado de outro cliente.
+
+### Arquivos
+
+Novos: `lib/autoatendimento/escrita.ts` (criar/remarcar/cancelar/confirmar do cliente, regras do canal),
+`corpo.ts` (corpo opcional), `mensagens.ts`, `escalonamento.ts`, `encaminhar.ts`;
+`lib/whatsapp/extrair-mensagem.ts`; rotas `agendamentos/[id]/{remarcar,cancelar,confirmar}`, `mensagens`, `escalonamentos`.
+
+Alterados: `agendamentos/route.ts` (POST), `lib/autoatendimento/agendamentos.ts` (`carregarDoCliente` = posse,
+`resumoDeCompleto`, `contarAtivosFuturos`, `buscarRetentativa`), `lib/autoatendimento/horarios.ts` (só `export` de
+`somarDias`), `lib/domain/agendamentos.ts` (ver decisões), `app/api/webhooks/whatsapp/[[...slug]]/route.ts`.
+
+### Commits
+
+| Hash | Conteúdo |
+|---|---|
+| `35f7f37` | escrita de agendamentos |
+| `36b3483` | `POST /mensagens` |
+| `0c8dbfd` | `POST /escalonamentos` |
+| `905841c` | encaminhamento no webhook |
+| (último, ver `git log`) | este relatório |
+
+### Verificações
+
+- `npx tsc --noEmit -p .` limpo antes e depois de cada commit; `npm run build` ok (as 11 rotas do canal aparecem como dinâmicas, o webhook também).
+- `npx eslint` limpo nos arquivos tocados. O `route.ts` do webhook mantém os 2 `no-explicit-any` que já tinha (`body: any`, `catch (error: any)`); os extratores movidos ganharam um `eslint-disable` de arquivo com justificativa (payload externo sem schema).
+- Script descartável fora do repo (`jiti` do `web/node_modules`, banco falso em memória, domínio/gateway/fetch falsos, segredos gerados no script; nada tocou o banco real nem enviou WhatsApp), 100% OK:
+  - criar: Ator (`autoatendimento`, `origem`, `podeNotificar null`), `status pending`, cliente do ticket, antecedência da config; C5 (retentativa devolve o MESMO id sem chamar o domínio; corrida: o domínio acusa `SLOT_UNAVAILABLE` e a rota devolve o do mesmo cliente; mesmo horário de OUTRO cliente, criado há 20 min, outro profissional, cancelado -> `SLOT_UNAVAILABLE`); `ACTIVE_LIMIT_REACHED` (cancelado e de outro cliente não contam); `OUT_OF_WINDOW` (+40 dias, ontem); `NOTICE_TOO_SHORT`; serviço/profissional de outra org -> `NOT_FOUND`;
+  - posse: cancelar/remarcar/confirmar agendamento de outro cliente, id inexistente e id não-UUID -> `NOT_FOUND`, sem nenhuma escrita tentada;
+  - cancelar (fora/dentro da antecedência, já cancelado), remarcar (antecedência, status final, janela, profissional opcional, sem `servicoId`), confirmar (`pending` -> `INVALID_TRANSITION`, `confirmed` -> idempotente sem escrita, `scheduled` -> `mudarStatus`, já iniciado -> `INVALID_TRANSITION`);
+  - limites `aa-escrita` (21ª) e `aa-criar` (6ª) -> `RATE_LIMITED` com `Retry-After`; contador por telefone;
+  - mensagens: entrega no telefone do ticket, `mensagemId` (ou `null`), falha da Evolution -> `WHATSAPP_UNAVAILABLE` 502 sem vazar o motivo; escalonamento: sem contato -> `false`, com contato -> texto e destino certos, falha -> `false`;
+  - encaminhamento: 202 -> `true`; assinatura recalculada sobre o corpo recebido bate, corpo alterado em 1 byte não bate; corpo valida no Zod; ticket validado por `validarTicket` (org, tel, inst, msg, TTL 30 min); `fromMe` -> `deMim true`, `ticket null`; `remoteJidAlt`; `nao_suportado`; 500, 200, erro de rede e timeout real de 3 s -> `false` com `[autoatendimento:encaminhar] fallback <motivo>`; `deMim` com falha -> `false` sem a palavra "fallback"; sem config / inativa / demo / grupo / `status@broadcast` / mensagem > 10 min / instância sem org / `ATENDENTE_URL` vazia (sem tocar no banco) / segredo ausente -> nunca envia; erro inesperado nunca lança;
+  - webhook (rota real, sem `ATENDENTE_URL`): `fromMe` -> `ignored_from_me`, mensagem velha -> `ignored_old_message`, sem texto -> `no_text_content`, evento que não é mensagem -> `ignored_not_message`.
+- NÃO testado (depende de banco/servidor/Evolution): rate limit no Postgres, queries reais (inclusive a exclusion constraint), `validarHorario` real com `exigirGrade`, shape final das respostas HTTP, o webhook inteiro com org e config reais. Ficam nos curls abaixo.
+- Painel: nenhuma página do painel está estática (o build lista todas como dinâmicas), então as rotas novas não precisam de `revalidate`.
+
+### Divergências contrato × código
+
+1. **Aceite 06 "ticket da org A usado depois de a org A trocar de instância -> 401"** x **README §2 "`ADDON_INACTIVE`"** (403). O bloco A implementou o §2 (`autenticarTicket` já confere `inst`), então o `POST /mensagens` herda: `403 ADDON_INACTIVE`, não 401. O passo 2 do 06 ("senão `TICKET_INVALID`") fica coberto por essa checagem e não repeti no handler. Recomendação: corrigir o texto do aceite (ou do §2), não o código.
+2. **06 / gateway:** o contrato diz `gateway.enviarTexto({ orgId, ... })`; o gateway do bloco A usa `organizationId`. Usei o que existe.
+3. **Escalonamento, "Motivo: <motivo>"**: o motivo do Zod é um enum (`reclamacao`...). Mandei o rótulo em português na mensagem para a equipe, não o valor cru.
+4. **`podeRemarcar` falso (04 remarcar passo 1)**: "NOTICE_TOO_SHORT se o motivo for tempo; INVALID_TRANSITION se for status". Implementado checando o status primeiro (`INVALID_TRANSITION`), depois a antecedência (`NOTICE_TOO_SHORT`). O mesmo vale para cancelar.
+5. **Id da rota que não é UUID** responde `NOT_FOUND` (igual ao registro inexistente), não `VALIDATION_ERROR`: o Zod `AgendamentoIdParams` existe, mas a posse diz que a API não confirma nada.
+6. **Cancelar e confirmar com corpo vazio**: o `body()` do `criarRota` rejeita corpo vazio (`INVALID_JSON`). Cancelar tem corpo opcional e confirmar tem corpo vazio por contrato, então criei `corpoOpcional` (vazio vale `{}`; o resto valida igual).
+
+### Decisões fora do contrato
+
+- **Mudança mínima no domínio:** `EntradaEdicao` ganhou `antecedenciaMinutos?` e `editarAgendamento` passa para `corteDeHorario`, igual a `criarAgendamento`. Sem isso, a remarcação validava com `naoAntesDe = agora` e as `sugestoes` de `SLOT_UNAVAILABLE` podiam oferecer horário que a rota depois recusa por antecedência (C4 quebrada). Opcional e sem efeito nos outros canais.
+- **C5 em dois pontos:** o contrato manda procurar o agendamento só quando vem `SLOT_UNAVAILABLE`. Mas o "criar duas vezes seguidas" do aceite não chega à constraint (o `validarHorario` já recusa o horário que o primeiro pedido ocupou) e, com `max_agendamentos_ativos` baixo, a retentativa cairia em `ACTIVE_LIMIT_REACHED`. Por isso a busca roda ANTES do limite de ativos (caso comum) e de novo ao receber `SLOT_UNAVAILABLE` (corrida real). Custa 1 query por criação. A busca só considera status ativo (`pending`/`scheduled`/`confirmed`): devolver um cancelado como "sucesso" seria errado. A retentativa responde 201 (mesmo corpo).
+- **Limite de ativos** = futuros com status `pending`/`scheduled`/`confirmed`, o mesmo filtro da listagem e do contexto.
+- **Ordem de checagem na criação:** serviço/profissional (`NOT_FOUND`) -> C5 -> limite de ativos -> janela/antecedência -> domínio, como o 04, com o C5 encaixado.
+- **Remarcar para o mesmo horário e o mesmo profissional** não é recusado (o contrato não manda): o domínio não vê "mudança de horário", mas, no canal, volta o status a `pending` mesmo assim. Achado: um `confirmed` remarcado "para o mesmo horário" vira `pending` sem reagendar nada. Vale decidir no domínio se isso deve ser recusado.
+- **`tipoOriginal`** de `nao_suportado` ignora a chave `messageContextInfo` (envelope, não conteúdo); sem chave, `"desconhecido"`.
+- **Encaminhamento:** mensagem com mais de 10 min não é encaminhada (mesma guarda do webhook; o ticket afirma "escreveu há menos de 30 min", e ticket novo em mensagem velha furaria isso). Sem `ATENDENTE_ENCAMINHAMENTO_SECRET` (qualquer tamanho acima de zero) ou com segredo do ticket inválido: fallback com log. O ramo roda ANTES do descarte de `fromMe` (precisa dele, para a org com add-on) e é a única coisa que consulta a org/config antes do classificador; com `ATENDENTE_URL` vazia não toca no banco e o webhook fica byte a byte como era. Com `ATENDENTE_URL` setada, toda mensagem passa a custar 2 queries (org + config) antes do fluxo antigo.
+- **`deMim` com falha:** não há fluxo antigo a cumprir (`fromMe` já era descartado), então só loga `deMim descartado <motivo>`, sem a palavra `fallback`.
+- **Refatoração do webhook** limitada a mover `extractMessageText`, `extractIncomingNumber` e `extractInstanceName` (sem alterar uma linha delas) para `lib/whatsapp/extrair-mensagem.ts`, para o encaminhamento usar "a mesma extração" sem copiar. Resposta do webhook quando o atendente aceita: `200 { "status": "forwarded_to_attendant" }`.
+- Não gravei `appointment_logs` por conta própria: o log `created`/`rescheduled`/`canceled`/`confirmed` com `source = 'autoatendimento'` vem do domínio (`registrarLog`), com `raw_message` = motivo no cancelamento.
+
+### Curls
+
+Pré-requisitos e helpers `ticket` / `aa` / `$B`: ver "Como rodar os curls" do bloco A. Além disso, `$SERV` e `$PROF` (ids ativos da org), `$D` um dia útil dentro da janela e um horário livre `$H` (de `GET /horarios`), no formato `AAAA-MM-DDTHH:mm`. Use um telefone com cadastro (`$T`) e outro, de outro cliente da mesma org (`$T2`), para a posse. `max_agendamentos_ativos`, `janela_maxima_dias` e `antecedencia_minima_minutos` vêm da linha de config da org.
+
+**Aceite 04 (escrita)**
+
+```bash
+J='Content-Type: application/json'
+# criar no horário livre -> 201, status pending; no banco: appointment_logs.action='created', source='autoatendimento'; nenhum WhatsApp enviado
+aa $T -i -X POST $B/agendamentos -H "$J" -d "{\"servicoId\":\"$SERV\",\"profissionalId\":\"$PROF\",\"inicio\":\"${D}T$H\",\"observacao\":\"primeira vez\"}"
+# a mesma chamada de novo -> 201 com o MESMO id (C5)
+# horário que não aparece em /horarios -> 409 SLOT_UNAVAILABLE com details.sugestoes
+aa $T -i -X POST $B/agendamentos -H "$J" -d "{\"servicoId\":\"$SERV\",\"profissionalId\":\"$PROF\",\"inicio\":\"${D}T03:10\"}"
+# cliente já no máximo de ativos -> 409 ACTIVE_LIMIT_REACHED (crie até chegar em max_agendamentos_ativos e tente outro horário)
+# fora da janela -> 422 OUT_OF_WINDOW ; dentro da antecedência (ex.: daqui a 10 min) -> 422 NOTICE_TOO_SHORT
+aa $T -i -X POST $B/agendamentos -H "$J" -d "{\"servicoId\":\"$SERV\",\"profissionalId\":\"$PROF\",\"inicio\":\"$(date -d '+400 days' +%F)T10:00\"}"
+# body com campo extra -> 422 VALIDATION_ERROR
+aa $T -i -X POST $B/agendamentos -H "$J" -d "{\"servicoId\":\"$SERV\",\"profissionalId\":\"$PROF\",\"inicio\":\"${D}T$H\",\"customerId\":\"x\"}"
+aa $T -i -X POST $B/agendamentos -H "$J" -d "{\"servicoId\":\"$SERV\",\"profissionalId\":\"$PROF\",\"inicio\":\"${D}T$H\",\"organizationId\":\"$ORG\"}"
+# cliente desconhecido -> 409 CUSTOMER_NOT_IDENTIFIED ; ambíguo -> 409 CUSTOMER_AMBIGUOUS
+# 21 escritas na hora -> 429 RATE_LIMITED ; 6 criações em 24 h -> 429
+
+ID=<id do agendamento criado>
+# remarcar para 30 min depois do próprio horário (sobreposto) -> 200, status volta a pending, mesmo id
+aa $T -i -X POST $B/agendamentos/$ID/remarcar -H "$J" -d "{\"inicio\":\"${D}T<hora+30min>\"}"
+#   no banco: reminder_sent_at e reminder_morning_sent_at = null; log action='rescheduled', raw_message='<antigo> -> <novo>'
+# remarcar com outro profissional; com profissional de outra org -> 404
+aa $T -i -X POST $B/agendamentos/$ID/remarcar -H "$J" -d "{\"inicio\":\"${D}T$H\",\"profissionalId\":\"$PROF2\"}"
+# posse: cancelar/remarcar/confirmar o agendamento de OUTRO cliente da mesma org -> 404 NOT_FOUND
+aa $T2 -i -X POST $B/agendamentos/$ID/cancelar
+aa $T2 -i -X POST $B/agendamentos/$ID/remarcar -H "$J" -d "{\"inicio\":\"${D}T$H\"}"
+aa $T2 -i -X POST $B/agendamentos/$ID/confirmar
+# cancelar dentro da antecedência -> 422 NOTICE_TOO_SHORT (agendamento daqui a menos que antecedencia_minima)
+# cancelar fora da antecedência -> 200 status canceled; o registro continua existindo; log action='canceled', raw_message=motivo
+aa $T -i -X POST $B/agendamentos/$ID/cancelar -H "$J" -d '{"motivo":"imprevisto"}'
+aa $T -i -X POST $B/agendamentos/$ID/cancelar      # de novo -> 409 INVALID_TRANSITION
+# confirmar pending -> 409 INVALID_TRANSITION (o tenant aprova no painel: pending -> scheduled)
+aa $T -i -X POST $B/agendamentos/$ID2/confirmar
+# confirmar scheduled -> 200 confirmed; de novo -> 200 sem 2º log (appointment_logs: 1 linha 'confirmed')
+aa $T -i -X POST $B/agendamentos/$ID2/confirmar
+aa $T -i -X POST $B/agendamentos/$ID2/confirmar
+# painel e página pública: criar um agendamento pelos dois e conferir status, mensagem e log como antes
+```
+
+**Aceite 06 (mensagens, escalonamento, encaminhamento)**
+
+```bash
+# POST /mensagens: o texto chega no telefone do ticket (use o SEU número no ticket); a resposta traz mensagemId
+aa $T -i -X POST $B/mensagens -H "$J" -d '{"texto":"teste do atendente"}'
+# campo de destino no body -> 422
+aa $T -i -X POST $B/mensagens -H "$J" -d '{"texto":"oi","telefone":"5511999999999"}'
+# ticket da org cuja instância foi trocada (update organizations set whatsapp_instance_name=...) -> 403 ADDON_INACTIVE (divergência 1)
+# 61 mensagens na hora -> 429 (aa-msg-contato)
+# escalonamento sem contato_humano_telefone na config -> 200 { equipeNotificada: false }
+aa $T -i -X POST $B/escalonamentos -H "$J" -d '{"motivo":"pedido_do_cliente","resumo":"Quer falar com uma pessoa"}'
+# com contato_humano_telefone preenchido (SEU número) -> 200 true e a mensagem chega, pelo WhatsApp da org
+# 4º escalonamento na hora -> 429 ; ticket de cliente ambíguo/desconhecido também escala (não exige identificação)
+# a resposta nunca traz o contato_humano_telefone
+aa $T -X POST $B/escalonamentos -H "$J" -d '{"motivo":"outro","resumo":"x"}' | grep -c contato_humano   # esperado 0
+```
+
+Encaminhamento sem enviar mensagem real: o webhook aceita POST com o segredo no caminho e o payload da Evolution.
+**Não use o telefone de um cliente real com texto "sim"/"cancelar" no caminho de fallback** (ele confirma/cancela e responde pelo WhatsApp de verdade); use um número sem cadastro (cai em `customer_not_found`, nada é enviado).
+
+```bash
+# 1. servidor de eco local (o "atendente"): confere a assinatura e responde o status de $RESP (padrão 202)
+cd web && set -a; . ./.env.local; set +a
+RESP=202 node -e "const h=require('http'),c=require('crypto');h.createServer((q,r)=>{let b='';q.on('data',d=>b+=d);q.on('end',()=>{const s=c.createHmac('sha256',process.env.ATENDENTE_ENCAMINHAMENTO_SECRET).update(q.headers['x-eliza-timestamp']+'.'+b).digest('hex');console.log(q.url,'assinatura valida:',s===q.headers['x-eliza-assinatura']);console.log(b);r.statusCode=+(process.env.RESP||202);r.end('{\"aceito\":true}')})}).listen(4100)" &
+# 2. no web/.env.local (você faz): ATENDENTE_URL=http://localhost:4100 e ATENDENTE_ENCAMINHAMENTO_SECRET=<64 hex>; reiniciar o dev server
+# 3. helper de payload (instância = whatsapp_instance_name da org que tem config ativa)
+W=http://localhost:3000/api/webhooks/whatsapp/$WHATSAPP_WEBHOOK_SECRET
+msg() {  # uso: msg <instancia> <jid> <fromMe true|false> <texto>
+  curl -s -X POST $W -H 'Content-Type: application/json' -d "{\"event\":\"messages.upsert\",\"instance\":\"$1\",\"data\":{\"key\":{\"id\":\"TESTE$RANDOM\",\"remoteJid\":\"$2\",\"fromMe\":$3},\"pushName\":\"Teste\",\"message\":{\"conversation\":\"$4\"},\"messageTimestamp\":$(date +%s)}}"
+}
+# org ativa, mensagem do cliente -> {"status":"forwarded_to_attendant"}; o eco imprime 'assinatura valida: true' e o corpo com ticket
+msg "$INST" 5511900000009@s.whatsapp.net false "oi, quero marcar"
+# o token do ticket do corpo é aceito pela API: aa <token> $B/contexto | jq
+# org ativa, fromMe -> forwarded, corpo com deMim:true e ticket:null
+msg "$INST" 5511900000009@s.whatsapp.net true "ja te respondo"
+# grupo e status -> nunca encaminha (o eco não imprime nada; segue o fluxo antigo)
+msg "$INST" 120363000000@g.us false "oi"
+msg "$INST" status@broadcast false "oi"
+# atendente fora do ar: reinicie o eco com RESP=500 (ou pare-o) e mande de um número SEM cadastro:
+#   {"status":"processed_confirmation","result":{"ok":false,"reason":"customer_not_found"}} e, no log do servidor, [autoatendimento:encaminhar] fallback ...
+msg "$INST" 5511900000009@s.whatsapp.net false "sim"
+# fromMe com o atendente fora do ar -> {"status":"ignored_from_me"} e log 'deMim descartado'
+# org sem linha de config / ativo=false / org demo com config ativa -> nunca encaminha (eco mudo); fromMe -> ignored_from_me
+# "sim" ao lembrete com o atendente fora do ar ainda confirma pelo fluxo antigo: só com um cliente de TESTE seu, com agendamento scheduled futuro e o número no seu WhatsApp
+```
