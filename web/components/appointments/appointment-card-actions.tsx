@@ -18,6 +18,7 @@ import {
   QrCode,
   CreditCard,
   Banknote,
+  UserX,
 } from "lucide-react"
 import { toast } from "sonner"
 import { updateAppointmentStatus } from "@/app/actions/update-appointment-status"
@@ -26,6 +27,13 @@ import { useRouter } from "next/navigation"
 import { updateAppointmentPayment } from "@/app/actions/update-appointment-payment"
 import { useKeckleon } from "@/providers/keckleon-provider"
 import { cn } from "@/lib/utils"
+import { STATUS_CONFIG } from "@/lib/appointment-config"
+import {
+  acoesDoAgendamento,
+  lancarSeErro,
+  METODOS_NOS_MENUS,
+  rotuloMetodo,
+} from "@/components/appointments/acoes-agendamento"
 
 export function AppointmentCardActions({
   appointment,
@@ -41,10 +49,15 @@ export function AppointmentCardActions({
   const labels = dict.actions || {}
   const messages = dict.messages || {}
 
+  // Única fonte do que mostrar: a máquina de status (ver acoes-agendamento.ts).
+  const acoes = acoesDoAgendamento(appointment)
+  const temAcao =
+    acoes.confirmar || acoes.chegou || acoes.finalizar || acoes.faltou || acoes.pagar || acoes.cancelar
+
   async function handleStatusChange(status: string) {
     const result = await updateAppointmentStatus(appointment.id, status)
 
-    if (result.success) {
+    if (!result.error) {
       // Genérico, não específico de demo: barato para todo tenant (ninguém
       // escuta fora do tour) e dá ao tour um sinal de que o status mudou de
       // verdade, em vez de confiar num clique em "Entendi".
@@ -80,25 +93,28 @@ export function AppointmentCardActions({
         router.refresh()
       }
     } else {
-      toast.error(messages.error_update_status || "Erro ao atualizar status")
+      // Mensagem do domínio (ex.: "alterado por outra pessoa"), não a genérica.
+      toast.error(result.error || messages.error_update_status || "Erro ao atualizar status")
     }
   }
 
   async function handleCancel() {
-    toast.promise(cancelAppointment(appointment.id), {
+    // `lancarSeErro`: a action devolve `{ error }` sem lançar; sem isto o toast
+    // mostraria sucesso mesmo com a recusa.
+    toast.promise(lancarSeErro(cancelAppointment(appointment.id)), {
       loading: messages.canceling || "Cancelando...",
       success: () => {
         router.refresh()
         return messages.canceled_success || "Agendamento cancelado!"
       },
-      error: messages.cancel_error || "Erro ao cancelar",
+      error: (e: Error) => e.message || messages.cancel_error || "Erro ao cancelar",
     })
   }
 
   async function handlePayment(method: string) {
     const result = await updateAppointmentPayment(appointment.id, method)
 
-    if (result.success) {
+    if (!result.error) {
       window.dispatchEvent(new CustomEvent("eliza:appointment-paid"))
 
       toast.success(
@@ -106,7 +122,7 @@ export function AppointmentCardActions({
       )
       router.refresh()
     } else {
-      toast.error(messages.payment_error || "Erro ao processar pagamento")
+      toast.error(result.error || messages.payment_error || "Erro ao processar pagamento")
     }
   }
 
@@ -129,96 +145,107 @@ export function AppointmentCardActions({
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-56">
-        {appointment.status === 'canceled' ? (
+        {!temAcao ? (
+          // Nada a oferecer (finalizado e pago, cancelado, faltou...): em vez de
+          // um menu vazio, um item desabilitado diz o porquê.
           <DropdownMenuItem disabled>
-            <Ban className="mr-2 h-4 w-4 text-destructive" />
+            {appointment.payment_status === 'paid' ? (
+              <CheckCircle2 className="mr-2 h-4 w-4 text-success" />
+            ) : (
+              <Ban className="mr-2 h-4 w-4 text-muted-foreground" />
+            )}
             <span>
-              {messages.canceled || "Cancelado"}
+              {appointment.payment_status === 'paid'
+                ? messages.payment_done || "Pagamento concluído"
+                : STATUS_CONFIG[appointment.status]?.label || messages.canceled || "Sem ações"}
             </span>
           </DropdownMenuItem>
-
-        ) : appointment.status === 'completed' && appointment.payment_status !== 'paid' ? (
-          <>
-            <DropdownMenuLabel>
-              {labels.confirm_payment || "Confirmar pagamento"}
-            </DropdownMenuLabel>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem onClick={() => handlePayment('pix')}>
-              <QrCode className="mr-2 h-4 w-4 text-muted-foreground" />
-              <span>Pix</span>
-            </DropdownMenuItem>
-
-            <DropdownMenuItem onClick={() => handlePayment('cartao_credito')}>
-              <CreditCard className="mr-2 h-4 w-4 text-muted-foreground" />
-              <span>
-                {labels.credit_card || "Cartão de crédito"}
-              </span>
-            </DropdownMenuItem>
-
-            <DropdownMenuItem onClick={() => handlePayment('cartao_debito')}>
-              <CreditCard className="mr-2 h-4 w-4 text-muted-foreground" />
-              <span>
-                {labels.debit_card || "Cartão de débito"}
-              </span>
-            </DropdownMenuItem>
-
-            <DropdownMenuItem onClick={() => handlePayment('dinheiro')}>
-              <Banknote className="mr-2 h-4 w-4 text-muted-foreground" />
-              <span>
-                {labels.cash || "Dinheiro"}
-              </span>
-            </DropdownMenuItem>
-          </>
-        ) : appointment.payment_status === 'paid' ? (
-          <DropdownMenuItem disabled>
-            <CheckCircle2 className="mr-2 h-4 w-4 text-success" />
-            <span>
-              {messages.payment_done || "Pagamento concluído"}
-            </span>
-          </DropdownMenuItem>
-
         ) : (
           <>
-            <DropdownMenuLabel>
-              {labels.quick_actions || "Ações rápidas"}
-            </DropdownMenuLabel>
+            {(acoes.confirmar || acoes.chegou || acoes.finalizar || acoes.faltou) && (
+              <>
+                <DropdownMenuLabel>
+                  {labels.quick_actions || "Ações rápidas"}
+                </DropdownMenuLabel>
 
-            <DropdownMenuSeparator />
+                <DropdownMenuSeparator />
+              </>
+            )}
 
-            <DropdownMenuItem onClick={() => handleStatusChange('confirmed')}>
-              <Check className="mr-2 h-4 w-4 text-info" />
-              <span>
-                {labels.confirm || "Confirmar"}
-              </span>
-            </DropdownMenuItem>
+            {acoes.confirmar && (
+              <DropdownMenuItem onClick={() => handleStatusChange('confirmed')}>
+                <Check className="mr-2 h-4 w-4 text-info" />
+                <span>
+                  {labels.confirm || "Confirmar"}
+                </span>
+              </DropdownMenuItem>
+            )}
 
-            <DropdownMenuItem onClick={() => handleStatusChange('arrived')}>
-              <UserCheck className="mr-2 h-4 w-4 text-warning" />
-              <span>
-                {labels.arrived || "Chegada confirmada"}
-              </span>
-            </DropdownMenuItem>
+            {acoes.chegou && (
+              <DropdownMenuItem onClick={() => handleStatusChange('arrived')}>
+                <UserCheck className="mr-2 h-4 w-4 text-warning" />
+                <span>
+                  {labels.arrived || "Chegada confirmada"}
+                </span>
+              </DropdownMenuItem>
+            )}
 
-            <DropdownMenuItem onClick={() => handleStatusChange('completed')}>
-              <CheckCircle2 className="mr-2 h-4 w-4 text-success" />
-              <span>
-                {labels.complete || "Finalizar"}
-              </span>
-            </DropdownMenuItem>
+            {acoes.finalizar && (
+              <DropdownMenuItem onClick={() => handleStatusChange('completed')}>
+                <CheckCircle2 className="mr-2 h-4 w-4 text-success" />
+                <span>
+                  {labels.complete || "Finalizar"}
+                </span>
+              </DropdownMenuItem>
+            )}
 
-            <DropdownMenuSeparator />
+            {acoes.faltou && (
+              <DropdownMenuItem onClick={() => handleStatusChange('no_show')}>
+                <UserX className="mr-2 h-4 w-4 text-warning" />
+                <span>
+                  {labels.no_show || "Faltou"}
+                </span>
+              </DropdownMenuItem>
+            )}
 
-            <DropdownMenuItem
-              onClick={handleCancel}
-              className="text-destructive"
-            >
-              <Ban className="mr-2 h-4 w-4" />
-              <span>
-                {labels.cancel || "Cancelar"}
-              </span>
-            </DropdownMenuItem>
+            {acoes.pagar && (
+              <>
+                <DropdownMenuLabel>
+                  {labels.confirm_payment || "Confirmar pagamento"}
+                </DropdownMenuLabel>
+
+                <DropdownMenuSeparator />
+
+                {METODOS_NOS_MENUS.map((metodo) => (
+                  <DropdownMenuItem key={metodo} onClick={() => handlePayment(metodo)}>
+                    {metodo === 'dinheiro' ? (
+                      <Banknote className="mr-2 h-4 w-4 text-muted-foreground" />
+                    ) : metodo === 'pix' ? (
+                      <QrCode className="mr-2 h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <CreditCard className="mr-2 h-4 w-4 text-muted-foreground" />
+                    )}
+                    <span>{rotuloMetodo(metodo, labels)}</span>
+                  </DropdownMenuItem>
+                ))}
+              </>
+            )}
+
+            {acoes.cancelar && (
+              <>
+                <DropdownMenuSeparator />
+
+                <DropdownMenuItem
+                  onClick={handleCancel}
+                  className="text-destructive"
+                >
+                  <Ban className="mr-2 h-4 w-4" />
+                  <span>
+                    {labels.cancel || "Cancelar"}
+                  </span>
+                </DropdownMenuItem>
+              </>
+            )}
           </>
         )}
       </DropdownMenuContent>
