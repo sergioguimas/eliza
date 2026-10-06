@@ -1,21 +1,30 @@
 'use server'
 
-import { createClient } from "@/utils/supabase/server"
+import { createAdminClient } from "@/utils/supabase/admin"
 import { revalidatePath } from "next/cache"
+import { Database } from "@/utils/database.types"
+import { registrarPagamento } from "@/lib/domain/agendamentos"
+import { DomainError } from "@/lib/domain/erros"
+import { atorDoPainel, organizacaoDaSessao } from "@/lib/painel-sessao"
 
-export async function updateAppointmentPayment(appointmentId: string, method?: string) {
-  const supabase = await createClient()
+// `method` é obrigatório e precisa estar no enum do banco. O antigo default
+// 'Outros' violava o CHECK de payment_method e só quebrava em chamada direta.
+export async function updateAppointmentPayment(appointmentId: string, method: string) {
+  // A org vem do perfil da sessão, nunca de argumento: o domínio roda em service role.
+  const sessao = await organizacaoDaSessao()
 
-  const { error } = await supabase
-    .from('appointments')
-    .update({ 
-      payment_status: 'paid',
-      paid_at: new Date().toISOString(), 
-      payment_method: method || 'Outros'
-    })
-    .eq('id', appointmentId)
+  if ("error" in sessao) return { error: sessao.error }
 
-  if (error) {
+  try {
+    await registrarPagamento(
+      createAdminClient<Database>(),
+      atorDoPainel(sessao.organizationId, false),
+      appointmentId,
+      { metodo: method, status: "paid" }
+    )
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message }
+
     console.error("Erro ao baixar pagamento:", error)
     return { error: "Falha ao processar pagamento." }
   }

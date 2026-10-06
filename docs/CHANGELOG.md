@@ -1,5 +1,67 @@
 # Changelog
 
+## 2026-10-06
+
+### API v1 (etapa 4: escopo `payments`, gate de plano e documentação)
+
+- Novo escopo de chave `payments`: `POST /api/v1/appointments/{id}/payment` passa a exigir `payments` (`write` não
+  basta; `payments` sem `write` é válido). Chaves existentes não o ganham. A migration `20261006120100` já amplia o
+  CHECK de `api_keys.scopes`.
+- Configurações → API: o checkbox "Permitir escrita" virou dois ("Permitir escrita" e "Permitir baixa de pagamento"),
+  ambos desmarcados por padrão (`read` sempre vai). A tabela mostra os escopos por extenso (Leitura, Escrita, Baixa de
+  pagamento).
+- Gate de plano (D7): `web/lib/api/planos.ts` com `PLANOS_COM_API` (hoje `"todos"`, sem mudança de comportamento).
+  Com lista e plano fora dela: 403 `PLAN_REQUIRED` no autenticador de chave (depois da suspensão, antes do rate
+  limit), a server action de criar chave recusa, e a tela avisa e bloqueia o botão. Regra numa função só
+  (`planoPermiteApi`).
+- `docs/API.md` reescrito conforme o contrato: escopos, rotas com escopo, envelope e catálogo de erros
+  (`PLAN_REQUIRED`, `CUSTOMER_AMBIGUOUS`, horário passado = 409 `SLOT_UNAVAILABLE` com `sugestoes`), `DELETE`
+  removido, `notify` só para cliente existente com teto de 60/h e `meta.notify_skipped`, `service_id` obrigatório em
+  `/availability`, `method` de pagamento como enum e a regra de status D4.
+
+### Domínio de agendamento (etapa 2: status, clientes e agendamentos; passos 3-4)
+
+- `lib/domain/` ganha `status.ts` (máquina D4), `clientes.ts`, `mensagens.ts` e `agendamentos.ts`.
+  Criar, editar, mudar status, cancelar, aprovar pedido, pagar e a resposta do webhook do WhatsApp
+  passam todos por ele; `deleteAppointment` (DELETE físico) foi removido.
+- Mudanças de comportamento desejadas:
+  - Não se muda status fora da tabela: `completed`, `no_show` e `canceled` são finais; `pending` não
+    vira `arrived`/`completed`; `arrived` não volta para `confirmed` nem vira `no_show`.
+  - `no_show` só depois do horário de início, em qualquer canal. `STATUS_CONFIG` ganha "Faltou".
+  - Remarcar/editar só em `pending`/`scheduled`/`confirmed`; remarcar valida ocupação, expediente e
+    horário passado. O cliente só é avisado por WhatsApp se o horário mudou.
+  - Criar no painel também recusa horário passado, ocupado ou fora do expediente.
+  - Pagamento: método obrigatório e dentro do enum do banco; `canceled` e `no_show` não recebem; sinal
+    antes de concluir é permitido; pagar duas vezes não reescreve `paid_at`.
+  - Financeiro "a prazo" deixa de contar `pending` e `no_show`.
+  - Toda escrita em `appointments` grava `appointment_logs` com `source` = origem (painel, publico,
+    whatsapp_webhook).
+  - Escrita condicionada ao status lido: alteração concorrente devolve "O agendamento foi alterado
+    por outra pessoa; atualize a tela".
+  - Cliente novo é procurado por telefone em qualquer forma BR (com/sem DDI e 9º dígito) e por
+    documento: reusa o cadastro; mais de um casamento recusa com "Há mais de um cadastro...".
+  - O webhook do WhatsApp só confirma agendamento `scheduled` (resposta "sim" a um `pending` não
+    aprova mais o pedido).
+
+### Domínio de agendamento (etapa 1: tempo, catálogo e horários)
+
+- Nova `web/lib/domain/` (erros, tempo, catálogo, horários). Conversão de fuso numa
+  fonte só (`lib/domain/tempo.ts`); `lib/api/tempo.ts` removido.
+- Mudanças de comportamento desejadas:
+  - A página pública `/marcar/[slug]` deixa de oferecer horário que já passou hoje.
+  - Serviço longo deixa de ser oferecido onde não cabe: a janela testada é a duração do
+    serviço, não a do passo da organização (serviço de 60 min não aparece às 11:30 com
+    almoço às 12:00). O formulário público passa a enviar o serviço escolhido.
+  - Ocupado passa a ser o conjunto de status ativos (`pending`, `scheduled`, `confirmed`,
+    `arrived`), o mesmo da exclusion constraint; `completed` e `no_show` não bloqueiam mais.
+  - `GET /api/v1/availability` exige `service_id` (sem ele, 422) e passa a responder
+    `{ date, professional_id, service_id, slots, empty_reason }` com
+    `meta: { timezone, grid_step_minutes }`; `message` e `example_start_time` saíram.
+  - Data/hora de relógio inválida (30/02, 25h) passa a ser recusada em vez de "rolar" para
+    outro dia.
+- A página pública lê serviços e profissionais por colunas explícitas: `phone`,
+  `license_number` e `user_id` do profissional não vão mais ao HTML.
+
 ## 2026-09-28 (tema escuro)
 
 ### Visual (tema escuro)

@@ -4,9 +4,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { PreferencesForm } from "@/components/settings/preferences-form";
 import { WhatsappSettings } from "@/components/settings/whatsapp-settings";
+import { ApiKeysSettings, type ApiKeyRow, type ApiLogRow } from "@/components/settings/api-keys-settings";
 import { ProfessionalProfileForm } from "@/components/settings/professional-profile-form";
-import { Building, UserPen, NotebookPen, BotMessageSquare } from "lucide-react";
+import { Building, UserPen, NotebookPen, BotMessageSquare, KeyRound } from "lucide-react";
 import { Database } from "@/utils/database.types";
+import { organizacaoTemApi } from "@/lib/api/plano-da-org";
 import { getDictionary } from "@/lib/dictionaries/get-dictionary";
 
 type ProfileWithOrg = Database["public"]["Tables"]["profiles"]["Row"] & {
@@ -85,6 +87,31 @@ export default async function SettingsPage() {
     organizationSettings = settings;
   }
 
+  // Chaves e logs vêm pelo client de sessão: o RLS (admin/owner do tenant)
+  // é quem escopa. key_hash não é legível por `authenticated` (grant de coluna).
+  let apiKeys: ApiKeyRow[] = [];
+  let apiLogs: ApiLogRow[] = [];
+  let apiAllowed = true;
+
+  if (showWhatsappTab) {
+    apiAllowed = await organizacaoTemApi(typedProfile.organization_id);
+
+    const [keysResult, logsResult] = await Promise.all([
+      supabase
+        .from("api_keys")
+        .select("id, name, key_prefix, scopes, created_at, expires_at, revoked_at, last_used_at")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("api_request_logs")
+        .select("id, key_prefix, method, path, status_code, duration_ms, ip, created_at")
+        .order("created_at", { ascending: false })
+        .limit(50),
+    ]);
+
+    apiKeys = keysResult.data ?? [];
+    apiLogs = logsResult.data ?? [];
+  }
+
   const defaultTab = isAdminOrOwner ? "organization" : "profile";
 
   return (
@@ -127,6 +154,13 @@ export default async function SettingsPage() {
               WhatsApp
             </TabsTrigger>
           )}
+
+          {showWhatsappTab && (
+            <TabsTrigger value="api" className="gap-2">
+              <KeyRound className="h-4 w-4" />
+              API
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {isAdminOrOwner && organization && (
@@ -141,6 +175,12 @@ export default async function SettingsPage() {
                 organizationId={organization.id}
               />
             </TabsContent>
+
+            {showWhatsappTab && (
+              <TabsContent value="api">
+                <ApiKeysSettings keys={apiKeys} logs={apiLogs} planAllowsApi={apiAllowed} />
+              </TabsContent>
+            )}
 
             {showWhatsappTab && (
               <TabsContent value="whatsapp">

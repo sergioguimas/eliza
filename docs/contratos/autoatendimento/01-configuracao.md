@@ -14,10 +14,6 @@ create table public.autoatendimento_config (
   organization_id uuid primary key
     references public.organizations(id) on delete cascade,
   ativo boolean not null default false,
-  -- A1 do CHATBOT.md ainda aberta: 'pending' é o padrão seguro (igual à
-  -- página pública). Mudar o default depois é uma migration de uma linha.
-  status_inicial text not null default 'pending'
-    check (status_inicial in ('pending', 'scheduled')),
   antecedencia_minima_minutos integer not null default 120
     check (antecedencia_minima_minutos between 0 and 10080),
   janela_maxima_dias integer not null default 60
@@ -75,10 +71,13 @@ carregarConfig(orgId: string): Promise<ConfigAutoatendimento | null>
 ```
 
 Lê com service role e devolve `null` se não há linha **ou** se
-`ativo = false`. Quem recebe `null` responde `ADDON_INATIVO`.
+`ativo = false`. Quem recebe `null` responde `ADDON_INACTIVE`.
 
-Mapeamento para `Contexto.politica` (02): `status_inicial` → `statusInicial`,
-e assim por diante, em camelCase. `contato_humano_telefone` **não** vai para
+Mapeamento para `Contexto.politica` (02): colunas em camelCase
+(`antecedencia_minima_minutos` → `antecedenciaMinimaMinutos` etc.).
+
+**Sem `status_inicial`** (revisão de 2026-10-06, D8): o agendamento do bot
+nasce **sempre** `pending`, igual à página pública. Não é configurável por org. `contato_humano_telefone` **não** vai para
 o contexto; só o Eliza o usa (escalonamento).
 
 ## Variáveis de ambiente (Eliza)

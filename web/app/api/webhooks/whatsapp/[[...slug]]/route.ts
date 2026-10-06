@@ -4,6 +4,9 @@ import { NextResponse } from "next/server"
 import { sendWhatsAppMessage } from "@/app/actions/send-whatsapp"
 import { Database } from "@/utils/database.types"
 import { brPhoneVariants } from "@/lib/phone-br"
+import { mudarStatus } from "@/lib/domain/agendamentos"
+import { DomainError } from "@/lib/domain/erros"
+import { respostaWebhookCancelamento, respostaWebhookConfirmacao } from "@/lib/domain/mensagens"
 
 const CONFIRMATION_KEYWORDS = [
   "sim",
@@ -118,14 +121,6 @@ function classifyIntent(text: string): "confirmed" | "canceled" | null {
   }
 
   return null
-}
-
-function renderMessage(template: string | null | undefined, vars: Record<string, string>) {
-  if (!template) return null
-
-  return template.replace(/\{\{?\s*(\w+)\s*\}?\}/g, (_, key) => {
-    return vars[key] ?? ""
-  })
 }
 
 /**
@@ -354,24 +349,51 @@ async function handleStatusChange(
 
   console.log(`📅 [Webhook] Buscando próximo agendamento para cliente ${foundCustomer.id}`)
 
-  const { data: appointment, error: appointmentError } = await supabase
-    .from("appointments")
-    .select(`
-      id,
-      status,
-      start_time,
-      organization_id,
-      customer_id,
-      professional:professionals(name),
-      service:services(title)
-    `)
-    .eq("organization_id", organizationId)
-    .eq("customer_id", foundCustomer.id)
-    .in("status", ["pending", "scheduled", "confirmed"])
-    .gte("start_time", now)
-    .order("start_time", { ascending: true })
-    .limit(1)
-    .maybeSingle()
+  // O alvo depende da intenção. "Sim" só confirma `scheduled` (pedido `pending`
+  // é aprovado pelo tenant, D8): se a busca incluísse `pending`, um pedido mais
+  // próximo roubava o "sim" do agendamento que recebeu o lembrete, e a troca era
+  // recusada sem resposta ao cliente. Sem `scheduled` futuro, cai no `confirmed`
+  // mais próximo só para o "sim" repetido receber a resposta de novo
+  // (idempotente). "Cancelar" vale para qualquer agendamento ativo futuro.
+  const statusAlvo =
+    newStatus === "confirmed" ? [["scheduled"], ["confirmed"]] : [["pending", "scheduled", "confirmed"]]
+
+  let appointment: {
+    id: string
+    status: string | null
+    start_time: string
+    organization_id: string
+    customer_id: string
+    professional: { name: string } | null
+    service: { title: string } | null
+  } | null = null
+  let appointmentError: unknown = null
+
+  for (const statuses of statusAlvo) {
+    const resultado = await supabase
+      .from("appointments")
+      .select(`
+        id,
+        status,
+        start_time,
+        organization_id,
+        customer_id,
+        professional:professionals(name),
+        service:services(title)
+      `)
+      .eq("organization_id", organizationId)
+      .eq("customer_id", foundCustomer.id)
+      .in("status", statuses)
+      .gte("start_time", now)
+      .order("start_time", { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    appointmentError = resultado.error
+    appointment = resultado.data
+
+    if (appointmentError || appointment) break
+  }
 
   if (appointmentError) {
     console.error("🔥 [Webhook] Erro ao buscar agendamento:", appointmentError)
@@ -391,36 +413,41 @@ async function handleStatusChange(
     }
   }
 
-  const { error: updateError } = await supabase
-    .from("appointments")
-    .update({
-      status: newStatus,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", appointment.id)
+  // A troca de status passa pelo domínio: ele confere a transição para o canal
+  // do cliente (só "vou" e "cancelar") e grava condicionado ao status lido, então
+  // se o tenant finalizar/cancelar entre a busca e a escrita nada é sobrescrito.
+  // O log (source/raw_message/push_name) também é escrito por ele.
+  try {
+    await mudarStatus(
+      supabase,
+      {
+        canal: "whatsapp_webhook",
+        organizationId,
+        origem: "whatsapp_webhook",
+        // A resposta ao cliente é a abaixo (texto do webhook), não a do painel.
+        podeNotificar: null,
+        pushName: body.data?.pushName || "Desconhecido",
+      },
+      appointment.id,
+      newStatus,
+      { motivo: text }
+    )
+  } catch (error) {
+    if (error instanceof DomainError) {
+      console.warn(`⚠️ [Webhook] Troca de status recusada pelo domínio (${error.codigo}): ${error.message}`)
 
-  if (updateError) {
-    console.error("🔥 [Webhook] Erro ao atualizar agendamento:", updateError)
+      return {
+        ok: false,
+        reason: error.codigo === "INVALID_TRANSITION" ? "transition_not_allowed" : "appointment_update_error",
+      }
+    }
+
+    console.error("🔥 [Webhook] Erro ao atualizar agendamento:", error)
 
     return {
       ok: false,
       reason: "appointment_update_error",
     }
-  }
-
-  const { error: logError } = await supabase
-    .from("appointment_logs")
-    .insert({
-      appointment_id: appointment.id,
-      customer_id: foundCustomer.id,
-      action: newStatus,
-      source: "whatsapp_webhook",
-      raw_message: text,
-      push_name: body.data?.pushName || "Desconhecido",
-    })
-
-  if (logError) {
-    console.warn("⚠️ [Webhook] Agendamento atualizado, mas falhou ao gravar log:", logError)
   }
 
   console.log(`🎉 [Webhook] Agendamento ${appointment.id} atualizado para: ${newStatus.toUpperCase()}`)
@@ -440,17 +467,11 @@ async function handleStatusChange(
   let replyMessage = ""
 
   if (newStatus === "confirmed") {
-    replyMessage = `✅ *Confirmado, ${firstName || "tudo certo"}!* Já deixei seu agendamento confirmado na agenda. Te aguardamos!`
+    replyMessage = respostaWebhookConfirmacao(firstName)
   }
 
   if (newStatus === "canceled") {
-    const customCanceledMessage = renderMessage(settings?.msg_appointment_canceled, {
-      name: firstName,
-    })
-
-    replyMessage =
-      customCanceledMessage ||
-      `👌 *Entendido, ${firstName || "tudo certo"}.* O agendamento foi cancelado. Quando quiser remarcar, é só chamar!`
+    replyMessage = respostaWebhookCancelamento(settings?.msg_appointment_canceled, firstName)
   }
 
   if (replyMessage) {

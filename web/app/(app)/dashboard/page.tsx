@@ -21,9 +21,11 @@ import {
   formatSaoPauloTime,
   getFinancialMonthRange,
 } from "@/lib/utils"
+import { limitesDoDiaUtc } from "@/lib/domain/tempo"
 import { AppointmentCardActions } from "@/components/appointments/appointment-card-actions"
 import { RealtimeAppointments } from "@/components/layout/realtime-appointments"
 import { Database } from "@/utils/database.types"
+import { STATUS_CONFIG } from "@/lib/appointment-config"
 import {
   Dialog,
   DialogContent,
@@ -46,9 +48,12 @@ function getBrazilDateStr(date: Date) {
 }
 
 function getBrazilDayBounds(dateStr: string) {
+  const limites = limitesDoDiaUtc(dateStr)
+  // limites.fim é exclusivo (meia-noite UTC do dia seguinte); subtraímos 1ms
+  // para manter semântica inclusiva com .lte() nas queries.
   return {
-    start: `${dateStr}T00:00:00-03:00`,
-    end: `${dateStr}T23:59:59-03:00`,
+    start: limites.inicio.toISOString(),
+    end: new Date(limites.fim.getTime() - 1).toISOString(),
   }
 }
 
@@ -56,12 +61,14 @@ function getBrazilDayBounds(dateStr: string) {
 // misturar compromissos de dias diferentes. Curto de propósito: cabe ao
 // lado do horário sem quebrar o layout do card.
 function formatShortDayLabel(dateStr: string) {
+  // Meio-dia UTC cai no mesmo dia de calendário em São Paulo com ou sem horário
+  // de verão, então serve de âncora para formatar o dia sem deslocamento literal.
   return new Intl.DateTimeFormat("pt-BR", {
     timeZone: "America/Sao_Paulo",
     weekday: "short",
     day: "2-digit",
     month: "2-digit",
-  }).format(new Date(`${dateStr}T12:00:00-03:00`))
+  }).format(new Date(`${dateStr}T12:00:00Z`))
 }
 
 export const dynamic = "force-dynamic"
@@ -156,8 +163,7 @@ export default async function DashboardPage() {
       .from("appointments")
       .select("status")
       .eq("organization_id", orgId)
-      .neq("status", "canceled")
-      .neq("status", "cancelled"),
+      .neq("status", "canceled"),
 
     // Mesmos filtros do `recebido` de `getFinancialSummary`, para o card bater
     // com o "Recebido (Caixa)" da /dashboard/financas que ele abre.
@@ -479,19 +485,20 @@ function AppointmentRow({
                   "text-warning border-warning/40",
                 app.status === "confirmed" &&
                   "text-info border-info/40",
+                app.status === "no_show" &&
+                  "text-warning border-warning/40",
                 app.status === "completed" &&
                   (app.payment_status === "paid"
                     ? "text-success border-success/40"
                     : "text-warning border-warning/40")
               )}
             >
-              {app.status === "scheduled" && "Agendado"}
-              {app.status === "arrived" && "Na recepção"}
-              {app.status === "confirmed" && "Confirmado"}
-              {app.status === "completed" &&
-                (app.payment_status === "paid"
+              {/* Rótulo por STATUS_CONFIG (cobre pending e no_show); só o finalizado detalha o pagamento */}
+              {app.status === "completed"
+                ? app.payment_status === "paid"
                   ? `Finalizado (${app.payment_method || "Pago"})`
-                  : "Finalizado (Pendente)")}
+                  : "Finalizado (Pendente)"
+                : STATUS_CONFIG[app.status]?.label || app.status}
             </span>
 
             <div className="relative z-10">

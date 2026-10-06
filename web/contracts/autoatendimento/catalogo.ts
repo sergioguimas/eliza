@@ -3,7 +3,7 @@
  * Documentação: docs/contratos/autoatendimento/03-catalogo-e-horarios.md
  */
 import { z } from "zod"
-import { DataLocal, HoraLocal, Uuid, respostaOk } from "./comum"
+import { DataLocal, HoraLocal, Uuid, apiSuccess } from "./comum"
 
 export const Servico = z.object({
   id: Uuid,
@@ -21,12 +21,12 @@ export const Profissional = z.object({
 })
 
 // GET /api/v1/autoatendimento/servicos
-export const ListarServicosResposta = respostaOk(
+export const ListarServicosResposta = apiSuccess(
   z.object({ servicos: z.array(Servico) })
 )
 
 // GET /api/v1/autoatendimento/profissionais
-export const ListarProfissionaisResposta = respostaOk(
+export const ListarProfissionaisResposta = apiSuccess(
   z.object({ profissionais: z.array(Profissional) })
 )
 
@@ -49,7 +49,7 @@ export const MotivoSemHorario = z.enum([
   "antecedencia_minima",
 ])
 
-export const HorariosResposta = respostaOk(
+export const HorariosResposta = apiSuccess(
   z.object({
     data: DataLocal,
     servicoId: Uuid,

@@ -49,7 +49,7 @@ Monta, em paralelo quando possível:
 | `agendamentos` | Se identificado: status `pending`/`scheduled`/`confirmed` com `start_time >= agora`, ordem crescente, máx. 10, no formato `AgendamentoResumo` (04) |
 | `aguardandoConfirmacao` | ids dentre os `agendamentos` com `status = 'scheduled'` e `reminder_sent_at is not null` |
 
-Erros possíveis: os de autenticação, `ADDON_INATIVO` e `ERRO_INTERNO`.
+Erros possíveis: os de autenticação, `ADDON_INACTIVE` e `INTERNAL_ERROR`.
 `desconhecido` e `ambiguo` **não** são erro aqui; são dados.
 
 ## O que o contexto nunca contém
@@ -70,4 +70,4 @@ Erros possíveis: os de autenticação, `ADDON_INATIVO` e `ERRO_INTERNO`.
 - [ ] Agendamento `canceled` ou passado não aparece.
 - [ ] `aguardandoConfirmacao` contém só `scheduled` com lembrete enviado.
 - [ ] Org de nicho `oficina` (sem dicionário) devolve termos do `base` sem quebrar.
-- [ ] Add-on com `ativo=false` → 403 `ADDON_INATIVO`.
+- [ ] Add-on com `ativo=false` → 403 `ADDON_INACTIVE`.

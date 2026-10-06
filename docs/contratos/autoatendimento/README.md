@@ -4,6 +4,9 @@
 > **Versão do contrato:** 1 (`CONTRATO_VERSAO` em `web/contracts/autoatendimento/comum.ts`)
 > **Escrito em:** 2026-09-23 · **Contexto de produto:** [../../CHATBOT.md](../../CHATBOT.md)
 > **Fase:** F0 do Atendente Eliza
+> **Revisado em 2026-10-06** ([../DECISOES_API.md](../DECISOES_API.md)): envelope e erros únicos com a API v1 (D3),
+> agendamento do bot nasce sempre `pending` (D8), domínio em [../00-dominio](../00-dominio/README.md),
+> C6/C7 confirmados. Onde este contrato e o 00-dominio divergirem sobre regra de agendamento, o 00-dominio vence.
 
 ## Para quem executa
 
@@ -16,10 +19,9 @@ Onde este contrato der um valor fechado, use o valor. Onde der um critério,
 aplique o critério. Se o código contradisser uma premissa daqui, o código
 vence: pare, registre e siga o que é correto.
 
-**Pré-requisito:** as correções de segurança de 2026-09-23 precisam estar
-commitadas antes de começar (`createAppointmentCore` + `BookingContext` em
-`create-appointment.ts`, `lib/phone-br.ts`, webhook autenticado). Este contrato
-parte delas.
+**Pré-requisito:** [00-dominio](../00-dominio/README.md) executado. As
+correções de segurança de 2026-09-23 já estão commitadas (`19fff0e`, `a221383`,
+`223edd9`, `9673a56`).
 
 ## Índice
 
@@ -72,9 +74,9 @@ X-Autoatendimento-Versao: 1
 
 | Camada | Prova | Falha |
 |---|---|---|
-| Token de serviço | Que quem chama é o atendente | `TOKEN_INVALIDO` |
-| Ticket de conversa | **Qual org e qual telefone**, e que esse telefone mandou mensagem há menos de 30 min | `TICKET_AUSENTE` / `TICKET_INVALIDO` / `TICKET_EXPIRADO` |
-| Versão | Mesma versão de contrato nos dois lados | `VERSAO_INCOMPATIVEL` |
+| Token de serviço | Que quem chama é o atendente | `UNAUTHORIZED` |
+| Ticket de conversa | **Qual org e qual telefone**, e que esse telefone mandou mensagem há menos de 30 min | `TICKET_MISSING` / `TICKET_INVALID` / `TICKET_EXPIRED` |
+| Versão | Mesma versão de contrato nos dois lados | `VERSION_MISMATCH` |
 
 **Organização e telefone saem SÓ do ticket.** Nenhum endpoint aceita
 `organizationId`, `customerId` ou telefone em header, query ou body. Os Zod
@@ -91,7 +93,7 @@ convencido por injeção de prompt, só age sobre quem mandou mensagem de fato.
   o atendente usa sempre o mais recente.
 - Validação: assinatura com `crypto.timingSafeEqual` e `exp` > agora. Depois
   disso a org do ticket **ainda precisa** ter a instância `inst` e o add-on
-  ativo (senão `ADDON_INATIVO`). Isso cobre o add-on desligado no meio da
+  ativo (senão `ADDON_INACTIVE`). Isso cobre o add-on desligado no meio da
   conversa e o número trocado de org.
 - Sem biblioteca de JWT: `node:crypto` basta. O formato é propositalmente
   mínimo.
@@ -101,49 +103,59 @@ dois lados.
 
 ## 3. Envelope e erros
 
-Toda resposta, sucesso ou erro, usa o mesmo envelope:
+**O mesmo da API v1** (D3). Fonte: `web/contracts/comum/envelope.ts`,
+documentado em [api-v1 §3–§4](../api-v1/README.md).
 
 ```jsonc
-{ "ok": true,  "dados": { ... } }
-{ "ok": false, "erro": { "codigo": "HORARIO_INDISPONIVEL", "mensagem": "...", "detalhes": { } } }
+{ "data": { ... }, "meta": { ... } }
+{ "error": { "code": "SLOT_UNAVAILABLE", "message": "...", "details": { }, "request_id": "..." } }
 ```
 
-- O status HTTP segue `STATUS_HTTP_POR_CODIGO` (`comum.ts`).
-- `mensagem` é em português, escrita para o atendente repassar ao cliente,
+- O status HTTP vem de `HTTP_STATUS_BY_CODE`. Os códigos exclusivos deste
+  canal (`TICKET_*`, `VERSION_MISMATCH`, `ADDON_INACTIVE`,
+  `CUSTOMER_NOT_IDENTIFIED`, `ACTIVE_LIMIT_REACHED`, `OUT_OF_WINDOW`,
+  `NOTICE_TOO_SHORT`) estão no mesmo catálogo.
+- `message` é em português, escrita para o atendente repassar ao cliente,
   e **nunca** contém dado de outro cliente.
-- Agendamento ou cadastro de outro cliente responde `NAO_ENCONTRADO`, nunca
+- Agendamento ou cadastro de outro cliente responde `NOT_FOUND`, nunca
   "proibido": a API não confirma que o registro existe.
-- Erro inesperado responde `ERRO_INTERNO`, com o detalhe só no log do
+- Erro inesperado responde `INTERNAL_ERROR`, com o detalhe só no log do
   servidor. Log com prefixo `[autoatendimento:<rota>]` e sem string de erro
   repetida em dois `return` da mesma função (lição registrada no DEPLOY).
+- Os **corpos** de request/response continuam em português camelCase
+  (`servicoId`, `inicio`, `Momento`). D3 unifica envelope e erros, não o
+  vocabulário dos recursos.
+
+**Wrapper:** as rotas usam `criarRota` de `web/lib/http/rota.ts` (api-v1 §3)
+com `autenticarTicket` (`lib/autoatendimento/autenticar.ts`), que valida os três headers da §2 e
+devolve `{ org, telefone, config }`. Não há wrapper próprio do canal.
 
 ## 4. Horário
 
 - **Entrada:** hora de relógio em `America/Sao_Paulo`, sem offset
   (`"2026-10-05T14:30"`). É a forma que o cliente fala e que o LLM erra menos.
 - **Saída:** todo instante vem como `Momento` = `{ utc, local }`.
-- A conversão usa a função que já existe em `create-appointment.ts`
-  (`parseAppointmentWallTimeToUtc`), movida para `lib/domain/tempo.ts`.
-  Não reimplementar.
+- A conversão é `horaLocalParaUtc` / `momento` de `lib/domain/tempo.ts`
+  ([00-dominio §2](../00-dominio/README.md)). Não reimplementar.
 
-## 5. O que se reaproveita da página pública
+## 5. O que se reaproveita
 
-A página `/marcar/[slug]` já resolve boa parte do problema: um visitante sem
-sessão consultando catálogo e horários e pedindo agendamento. O
-autoatendimento é esse mesmo fluxo, com o cliente identificado pelo telefone
-em vez de anônimo.
+Toda a regra de agendamento vem de [00-dominio](../00-dominio/README.md):
+catálogo, horários (`listarHorariosLivres` / `validarHorario` com
+`exigirGrade: true`), máquina de status, `resolverCliente`, `criarAgendamento`,
+`editarAgendamento` e `mudarStatus`, chamados com
+`Ator { canal: "autoatendimento", origem: "autoatendimento" }`. Este contrato
+só acrescenta o que é do canal: ticket, identificação, política
+(`autoatendimento_config`), limites e encaminhamento.
 
-| Peça existente (AS-IS) | Destino | O que muda |
-|---|---|---|
-| Consulta de serviços e profissionais ativos em `marcar/[slug]/page.tsx` | `lib/domain/catalogo.ts` | Colunas explícitas em vez de `select('*')`. A página pública passa a chamar a função. |
-| `getAvailableSlots` (`actions/get-available-slots.ts`) | `lib/domain/horarios.ts` | Passa a considerar a **duração do serviço** (hoje o slot só cabe `appointment_duration` da org) e a descartar horários passados e fora da antecedência e da janela. A action vira um wrapper fino. Detalhes em 03. |
-| `createAppointmentCore` + `BookingContext` (sessão de segurança) | `lib/domain/agendamentos.ts` → `criarAgendamento` | O contexto ganha `canal`, `statusInicial`, `notificar` e `clienteId` já resolvido. Painel e página pública continuam passando por ela. |
-| `parseAppointmentWallTimeToUtc` e helpers de fuso | `lib/domain/tempo.ts` | Só move. |
-| `brPhoneVariants` (`lib/phone-br.ts`) | Identificação (02) | Só usa. |
-| `consumeRateLimit` / `hashIdentifier` (`lib/demo/rate-limit.ts`) | Limites de taxa | Prefixos próprios `aa-*`. |
-| Dicionário Keckleon (`lib/dictionaries/niches.ts`) | `Contexto.organizacao.termos` | Só lê `entities` e `gender`. |
-| Exclusion constraint `appointments_professional_overlap_idx` | Garantia final contra sobreposição | Nada; `23P01` vira `HORARIO_INDISPONIVEL`. |
-| `sendWhatsAppMessage` | `lib/whatsapp/gateway.ts` → `enviarTexto` | Encapsula; devolve o id da mensagem na Evolution. |
+| Peça existente (AS-IS) | Uso aqui |
+|---|---|
+| `brPhoneVariants` (`lib/phone-br.ts`) | Identificação (02), via `buscarPorTelefone` |
+| `consumeRateLimit` / `hashIdentifier` (`lib/demo/rate-limit.ts`) | Limites de taxa, prefixos `aa-*` |
+| Dicionário Keckleon (`lib/dictionaries/niches.ts`) | `Contexto.organizacao.termos`. Só lê `entities` e `gender`. |
+| Exclusion constraint `appointments_professional_overlap_idx` | Garantia final; `23P01` → `SLOT_UNAVAILABLE` (no domínio) |
+| `sendWhatsAppMessage` | `lib/whatsapp/gateway.ts` → `enviarTexto`. Encapsula e devolve o id da mensagem na Evolution. |
+| `criarRota` (`lib/http/rota.ts`, api-v1 §3) | Wrapper das rotas, com `autenticarTicket` |
 
 **Não reaproveitar:**
 
@@ -168,32 +180,26 @@ Reusar `consumeRateLimit`. Identificador = `hashIdentifier(prefixo, org + ":" + 
 | `aa-msg-org` | enviar mensagem (id = só a org) | 1 h | 600 |
 | `aa-escalar` | escalonamento | 1 h | 3 |
 
-Esgotou: `LIMITE_TAXA`, com `detalhes.tenteNovamenteEm` (UTC). Estes limites
+Esgotou: `RATE_LIMITED`, com `Retry-After` e `details.retry_after_seconds` (igual à v1). Estes limites
 contêm um atendente em loop, não o cliente. Regra de negócio (máximo de
 agendamentos ativos por cliente) fica em 04.
 
 ## 7. Ordem de execução (F0)
 
-Cada passo termina com o app funcionando igual para painel e página pública.
+**Pré-requisitos:** [00-dominio](../00-dominio/README.md) concluído e o passo 2
+da [api-v1 §8](../api-v1/README.md) feito (`lib/http/rota.ts`).
 
-1. **`lib/domain/tempo.ts`, `catalogo.ts`, `horarios.ts`**: extrair e apontar
-   a página pública e a action para eles. Verificar `/marcar/[slug]` no
-   browser: mesmos serviços; horários iguais para serviço de duração igual à
-   da org; menos horários (e corretos) para serviço mais longo.
-2. **`lib/domain/agendamentos.ts`**: mover `createAppointmentCore` e
-   generalizar o contexto. Criar pelo painel e pela página pública, e conferir
-   status, mensagem de WhatsApp e `appointment_logs`.
-3. **Migration de `autoatendimento_config`** (01). É aditiva e não revoga
+1. **Migration de `autoatendimento_config`** (01). É aditiva e não revoga
    nada, então não há ordem de deploy a respeitar.
-4. **`lib/whatsapp/gateway.ts`**.
-5. **`lib/autoatendimento/`**: `ticket.ts`, `autenticar.ts` (wrapper de rota
-   que valida os headers e devolve `{ org, telefone, config }`),
-   `resposta.ts` (envelope) e `identificar.ts` (02).
-6. **Rotas, nesta ordem:** contexto → servicos/profissionais/horarios →
+2. **`lib/whatsapp/gateway.ts`**.
+3. **`lib/autoatendimento/`**: `ticket.ts`, `autenticar.ts`
+   (`autenticarTicket`: valida os headers e devolve `{ org, telefone, config }`),
+   `config.ts` e `identificar.ts` (02).
+4. **Rotas, nesta ordem:** contexto → servicos/profissionais/horarios →
    agendamentos (GET) → cadastro → escrita de agendamentos → mensagens →
    escalonamentos.
-7. **Ramo de encaminhamento no webhook** (06).
-8. **`supabase gen types`** depois da migration (`utils/database.types.ts`),
+5. **Ramo de encaminhamento no webhook** (06).
+6. **`supabase gen types`** depois da migration (`utils/database.types.ts`),
    nunca à mão.
 
 **Verificação:** o repo não tem framework de teste. Cada `.md` de domínio

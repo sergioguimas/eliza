@@ -3,7 +3,7 @@
  * Documentação: docs/contratos/autoatendimento/05-cadastro.md
  */
 import { z } from "zod"
-import { DataLocal, Uuid, respostaOk } from "./comum"
+import { DataLocal, Uuid, apiSuccess } from "./comum"
 
 /** Só dígitos (CPF) ou alfanumérico (CNPJ novo); a API normaliza. */
 const Documento = z.string().trim().min(11).max(18)
@@ -18,7 +18,7 @@ export const Cadastro = z.object({
 })
 
 // GET /api/v1/autoatendimento/cadastro
-export const CadastroResposta = respostaOk(z.object({ cadastro: Cadastro }))
+export const CadastroResposta = apiSuccess(z.object({ cadastro: Cadastro }))
 
 // POST /api/v1/autoatendimento/cadastro
 export const CriarCadastroBody = z

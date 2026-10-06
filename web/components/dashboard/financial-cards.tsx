@@ -34,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useKeckleon } from "@/providers/keckleon-provider"
+import { acoesDoAgendamento } from "@/components/appointments/acoes-agendamento"
 
 export function FinancialCards({ data }: { data: any }) {
   const { dict } = useKeckleon()
@@ -54,10 +55,11 @@ export function FinancialCards({ data }: { data: any }) {
   const confirmPayment = async (appointmentId: string, method: string) => {
     const res = await updateAppointmentPayment(appointmentId, method)
 
-    if (res.success) {
+    if (!res.error) {
       toast.success(messages.payment_success || "Pagamento confirmado!")
     } else {
-      toast.error(messages.payment_error || "Erro ao processar pagamento.")
+      // Mensagem do domínio (ex.: faltou/cancelado não recebe), não a genérica.
+      toast.error(res.error || messages.payment_error || "Erro ao processar pagamento.")
     }
   }
 
@@ -290,7 +292,8 @@ export function FinancialCards({ data }: { data: any }) {
                     </Badge>
                   </div>
 
-                  {item.payment_status !== "paid" && (
+                  {/* "Baixar" só onde a máquina de status aceita pagamento */}
+                  {acoesDoAgendamento(item).pagar && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button

@@ -67,10 +67,10 @@ Body `EnviarMensagemBody`. Autenticação normal (README §2).
 
 1. `aa-msg-contato` e `aa-msg-org`.
 2. Destino = telefone do ticket. Instância = `inst` do ticket, que precisa
-   ainda ser a `whatsapp_instance_name` da org (se não for, `TICKET_INVALIDO`).
+   ainda ser a `whatsapp_instance_name` da org (se não for, `TICKET_INVALID`).
    **Não existe campo de destino no body.**
 3. `gateway.enviarTexto({ orgId, telefone, texto })`.
-4. Falha da Evolution → `WHATSAPP_INDISPONIVEL` (502).
+4. Falha da Evolution → `WHATSAPP_UNAVAILABLE` (502).
 5. Sucesso → `{ mensagemId }` com o id que a Evolution devolveu (`key.id` da
    resposta de `/message/sendText`), ou `null` se ela não devolver. O
    atendente usa esse id para reconhecer o próprio eco quando ele voltar como
