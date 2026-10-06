@@ -1,10 +1,10 @@
+import { ConfirmBody } from "@/contracts/api-v1"
 import { apiRoute } from "@/lib/api/handler"
-import { changeStatus } from "@/lib/api/domain/appointments"
-import { confirmBody } from "@/lib/api/schemas"
+import { mudarStatusPelaChave } from "@/lib/api/mudar-status"
 
-/** pending/scheduled -> confirmed. */
+/** pending/scheduled -> confirmed (máquina de status do domínio). */
 export const POST = apiRoute("write", async ({ db, organizationId, keyPrefix, params, body }) => {
-  const { notify } = await body(confirmBody)
+  const { notify } = await body(ConfirmBody)
 
-  return { data: await changeStatus(db, organizationId, { keyPrefix }, params.id, "confirmed", { notify }) }
+  return mudarStatusPelaChave(db, { organizationId, keyPrefix }, params.id, "confirmed", { notify })
 })

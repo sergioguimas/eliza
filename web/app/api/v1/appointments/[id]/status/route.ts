@@ -1,10 +1,10 @@
+import { StatusBody } from "@/contracts/api-v1"
 import { apiRoute } from "@/lib/api/handler"
-import { changeStatus } from "@/lib/api/domain/appointments"
-import { statusBody } from "@/lib/api/schemas"
+import { mudarStatusPelaChave } from "@/lib/api/mudar-status"
 
-/** Mudança de status com validação de transição (chegou, finalizado, faltou...). */
+/** Mudança de status pela máquina do domínio (chegou, finalizado, faltou...). */
 export const POST = apiRoute("write", async ({ db, organizationId, keyPrefix, params, body }) => {
-  const { status, notify, reason } = await body(statusBody)
+  const { status, reason, notify } = await body(StatusBody)
 
-  return { data: await changeStatus(db, organizationId, { keyPrefix }, params.id, status, { notify, reason }) }
+  return mudarStatusPelaChave(db, { organizationId, keyPrefix }, params.id, status, { motivo: reason, notify })
 })

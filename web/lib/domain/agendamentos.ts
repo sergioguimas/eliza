@@ -31,13 +31,19 @@ import { momento, utcParaHoraLocal, type Momento } from "./tempo"
 
 export type Canal = "painel" | "publico" | "api" | "autoatendimento" | "whatsapp_webhook"
 
+/** O que o ator precisa saber para decidir se a mensagem sai. */
+export type ContextoNotificacao = { clienteCriado: boolean }
+
 export type Ator = {
   canal: Canal
   organizationId: string
   /** vai para appointment_logs.source: "painel", "publico", "api:elz_live_ab12cd", "autoatendimento", "whatsapp_webhook" */
   origem: string
-  /** null = não notifica. Função = notifica se devolver true (teto por org do público, D6 da API). */
-  podeNotificar: null | (() => Promise<boolean>)
+  /**
+   * null = não notifica. Função = notifica se devolver true (teto por org do público, D6 da API).
+   * Recebe `clienteCriado` (só a criação pode criar cliente) para o ator recusar quem acabou de nascer (D6).
+   */
+  podeNotificar: null | ((contexto: ContextoNotificacao) => Promise<boolean>)
   /** Nome do contato no canal (push_name do WhatsApp); só vai para o log. */
   pushName?: string | null
 }
@@ -183,12 +189,17 @@ async function registrarLog(
  * Envia se o ator permite e o cliente tem telefone. Falha de envio NUNCA
  * desfaz a escrita: o agendamento já mudou, então só loga. Devolve se saiu.
  */
-async function notificar(ator: Ator, telefone: string | null | undefined, mensagem: () => string) {
+async function notificar(
+  ator: Ator,
+  telefone: string | null | undefined,
+  mensagem: () => string,
+  contexto: ContextoNotificacao = { clienteCriado: false }
+) {
   if (!ator.podeNotificar || !telefone) return false
 
   try {
-    if (!(await ator.podeNotificar())) {
-      console.warn("[domain:notificar] Teto de envios atingido; mensagem não enviada.", {
+    if (!(await ator.podeNotificar(contexto))) {
+      console.warn("[domain:notificar] Envio recusado pelo ator (teto ou cliente novo); mensagem não enviada.", {
         organizationId: ator.organizationId,
       })
       return false
@@ -333,8 +344,11 @@ export async function criarAgendamento(
     const pendente = entrada.status === "pending"
     const template = pendente ? templates?.msg_appointment_pending : templates?.msg_appointment_created
 
-    notificado = await notificar(ator, linha.customers?.phone, () =>
-      mensagemCriacao(pendente, template, dadosDaMensagem(linha))
+    notificado = await notificar(
+      ator,
+      linha.customers?.phone,
+      () => mensagemCriacao(pendente, template, dadosDaMensagem(linha)),
+      { clienteCriado: cliente.criado }
     )
   }
 

@@ -1,10 +1,10 @@
-import { AppointmentStatus, ListAppointmentsQuery } from "@/contracts/api-v1"
+import { AppointmentStatus, CreateAppointmentBody, ListAppointmentsQuery } from "@/contracts/api-v1"
 import { apiRoute } from "@/lib/api/handler"
-import { createAppointment } from "@/lib/api/domain/appointments"
 import { listarAgendamentos } from "@/lib/api/leitura-agendamentos"
+import { atorDaChave, prepararNotificacao } from "@/lib/api/notificacao"
 import { paraAppointment } from "@/lib/api/serializar"
+import { criarAgendamento } from "@/lib/domain/agendamentos"
 import { validation } from "@/lib/http/erros"
-import { createAppointmentBody } from "@/lib/api/schemas"
 import { horaLocalParaUtc, limitesDoDiaUtc } from "@/lib/domain/tempo"
 
 const dateOnly = /^\d{4}-\d{2}-\d{2}$/
@@ -39,18 +39,41 @@ export const GET = apiRoute("read", async ({ db, organizationId, parseQuery }) =
   return { data: itens.map(paraAppointment), meta: { total, limit: f.limit, offset: f.offset } }
 })
 
+/**
+ * Cria o agendamento pelo domínio: canal "api" aceita horário fora da grade (E1),
+ * não exige documento do cliente e recusa horário passado/ocupado (409 com sugestões).
+ * `notify` só envia para cliente que já existia, com teto por org (D6).
+ */
 export const POST = apiRoute("write", async ({ db, organizationId, keyPrefix, body }) => {
-  const input = await body(createAppointmentBody)
+  const input = await body(CreateAppointmentBody)
+  const notificacao = prepararNotificacao(db, organizationId, input.notify)
+  const c = input.customer
 
-  const appointment = await createAppointment(db, organizationId, { keyPrefix }, {
-    customer: input.customer,
-    professional_id: input.professional_id,
-    service_id: input.service_id,
-    start: horaLocalParaUtc(input.start_time),
-    notes: input.notes,
-    status: input.status,
-    notify: input.notify,
-  })
+  const { agendamento, notificado } = await criarAgendamento(
+    db,
+    atorDaChave({ organizationId, keyPrefix }, notificacao.podeNotificar),
+    {
+      cliente:
+        "customer_id" in c
+          ? { id: c.customer_id }
+          : {
+              nome: c.name,
+              telefone: c.phone,
+              documento: c.document,
+              dataNascimento: c.birth_date,
+              genero: c.gender,
+            },
+      profissionalId: input.professional_id,
+      servicoId: input.service_id,
+      inicio: horaLocalParaUtc(input.start_time),
+      observacao: input.notes,
+      status: input.status,
+    }
+  )
 
-  return { data: appointment, status: 201 }
+  return {
+    data: paraAppointment(agendamento),
+    status: 201,
+    meta: notificacao.meta(notificado, true, agendamento.customer.phone),
+  }
 })
