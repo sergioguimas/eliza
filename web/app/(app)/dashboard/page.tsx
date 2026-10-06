@@ -25,6 +25,7 @@ import { limitesDoDiaUtc } from "@/lib/domain/tempo"
 import { AppointmentCardActions } from "@/components/appointments/appointment-card-actions"
 import { RealtimeAppointments } from "@/components/layout/realtime-appointments"
 import { Database } from "@/utils/database.types"
+import { STATUS_CONFIG } from "@/lib/appointment-config"
 import {
   Dialog,
   DialogContent,
@@ -162,8 +163,7 @@ export default async function DashboardPage() {
       .from("appointments")
       .select("status")
       .eq("organization_id", orgId)
-      .neq("status", "canceled")
-      .neq("status", "cancelled"),
+      .neq("status", "canceled"),
 
     // Mesmos filtros do `recebido` de `getFinancialSummary`, para o card bater
     // com o "Recebido (Caixa)" da /dashboard/financas que ele abre.
@@ -485,19 +485,20 @@ function AppointmentRow({
                   "text-warning border-warning/40",
                 app.status === "confirmed" &&
                   "text-info border-info/40",
+                app.status === "no_show" &&
+                  "text-warning border-warning/40",
                 app.status === "completed" &&
                   (app.payment_status === "paid"
                     ? "text-success border-success/40"
                     : "text-warning border-warning/40")
               )}
             >
-              {app.status === "scheduled" && "Agendado"}
-              {app.status === "arrived" && "Na recepção"}
-              {app.status === "confirmed" && "Confirmado"}
-              {app.status === "completed" &&
-                (app.payment_status === "paid"
+              {/* Rótulo por STATUS_CONFIG (cobre pending e no_show); só o finalizado detalha o pagamento */}
+              {app.status === "completed"
+                ? app.payment_status === "paid"
                   ? `Finalizado (${app.payment_method || "Pago"})`
-                  : "Finalizado (Pendente)")}
+                  : "Finalizado (Pendente)"
+                : STATUS_CONFIG[app.status]?.label || app.status}
             </span>
 
             <div className="relative z-10">

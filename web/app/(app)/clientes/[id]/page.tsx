@@ -29,6 +29,7 @@ import { AppointmentContextMenu } from "@/components/appointments/appointment-co
 import { AppointmentCardActions } from "@/components/appointments/appointment-card-actions"
 import { ReturnModalWrapper } from "@/components/appointments/return-modal-wrapper"
 import { getDictionary } from "@/lib/dictionaries/get-dictionary"
+import { STATUS_CONFIG } from "@/lib/appointment-config"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
@@ -216,17 +217,10 @@ export default async function CustomerPage({
                             </span>
 
                             <Badge variant="outline" className={getStatusBadgeStyle(apt.status)}>
-                              {apt.status === "confirmed"
-                                ? "Confirmado"
-                                : apt.status === "canceled"
-                                ? "Cancelado"
-                                : apt.status === "completed" &&
-                                  apt.payment_status === "pending"
-                                ? "Finalizado"
-                                : apt.status === "completed" &&
-                                  apt.payment_status === "paid"
+                              {/* Rótulo por STATUS_CONFIG (cobre pending e no_show); só o "Pago" é específico */}
+                              {apt.status === "completed" && apt.payment_status === "paid"
                                 ? "Pago"
-                                : ""}
+                                : STATUS_CONFIG[apt.status]?.label || ""}
                             </Badge>
                           </div>
 
@@ -452,6 +446,7 @@ function getStatusBadgeStyle(status: string | null) {
     case "completed":
       return "text-success border-success/40"
     case "arrived":
+    case "no_show":
       return "text-warning border-warning/40"
     default:
       return "text-muted-foreground border-border"
