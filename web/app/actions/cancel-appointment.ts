@@ -1,36 +1,38 @@
 'use server'
 
-import { createClient } from "@/utils/supabase/server"
+import { createAdminClient } from "@/utils/supabase/admin"
 import { revalidatePath } from "next/cache"
-import { sendAppointmentCancellation } from "./whatsapp-messages"
 import { Database } from "@/utils/database.types"
+import { mudarStatus } from "@/lib/domain/agendamentos"
+import { DomainError } from "@/lib/domain/erros"
+import { atorDoPainel, organizacaoDaSessao } from "@/lib/painel-sessao"
 
+// Única action de cancelamento do painel (antes havia duas, em arquivos
+// diferentes, com textos e regras diferentes). Cancelar um agendamento
+// finalizado ou faltoso é recusado pela máquina de status.
 export async function cancelAppointment(appointmentId: string) {
-  const supabase = await createClient<Database>()
+  // A org vem do perfil da sessão, nunca de argumento: o domínio roda em service role.
+  const sessao = await organizacaoDaSessao()
 
-  const { error } = await (supabase.from('appointments'))
-    .update({ status: 'canceled' })
-    .eq('id', appointmentId)
+  if ("error" in sessao) return { error: sessao.error }
 
-  if (error) {
-    console.error("Erro ao cancelar:", error)
-    return { error: error.message }
-  }
-
-  // Tenta enviar a mensagem (sem travar se falhar)
   try {
-    if (sendAppointmentCancellation) {
-        sendAppointmentCancellation(appointmentId).catch(err => 
-            console.error("Falha background whatsapp:", err)
-        )
-    }
-  } catch (e) {
-    console.error("Erro ao tentar enviar WPP", e)
+    await mudarStatus(
+      createAdminClient<Database>(),
+      atorDoPainel(sessao.organizationId, true),
+      appointmentId,
+      "canceled"
+    )
+  } catch (error) {
+    if (error instanceof DomainError) return { error: error.message }
+
+    console.error("Erro ao cancelar:", error)
+    return { error: "Erro ao cancelar agendamento" }
   }
 
   revalidatePath('/agendamentos')
   revalidatePath('/dashboard')
   revalidatePath('/')
-  
+
   return { success: true }
 }

@@ -19,7 +19,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { updateAppointmentStatus } from "@/app/actions/update-appointment-status"
-import { cancelAppointment } from "@/app/actions/delete-appointment"
+import { cancelAppointment } from "@/app/actions/cancel-appointment"
 import { useRouter } from "next/navigation"
 import { updateAppointmentPayment } from "@/app/actions/update-appointment-payment"
 import { useKeckleon } from "@/providers/keckleon-provider"
