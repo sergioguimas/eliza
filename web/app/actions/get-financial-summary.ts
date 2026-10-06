@@ -2,6 +2,11 @@
 
 import { createClient } from "@/utils/supabase/server"
 import { getFinancialMonthRange } from "@/lib/utils"
+import type { Status } from "@/lib/domain/status"
+
+// "A prazo" é receita esperada de atendimento que existe ou existiu de fato:
+// pending (pedido ainda não aprovado) e no_show (falta, sem taxa) não contam (D10).
+const STATUS_A_PRAZO: Status[] = ["scheduled", "confirmed", "arrived", "completed"]
 
 export async function getFinancialSummary(organizationId: string, dateParam?: string) {
   const supabase = await createClient()
@@ -51,7 +56,7 @@ export async function getFinancialSummary(organizationId: string, dateParam?: st
         metrics.listaRecebidos.push(a) // Adiciona à lista de recebidos
         const method = a.payment_method || 'outro'
         metrics.porMetodo[method] = (metrics.porMetodo[method] || 0) + val
-      } else {
+      } else if (STATUS_A_PRAZO.includes(a.status as Status)) {
         metrics.aPrazo += val 
         metrics.listaPrazo.push(a) // Adiciona à lista de a prazo
       }

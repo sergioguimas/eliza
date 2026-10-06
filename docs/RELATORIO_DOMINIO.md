@@ -153,3 +153,156 @@ O que o `db` falso **não** prova: filtros reais do PostgREST (`.lt/.gt/.in/.neq
   `appointments` visível ao service role inclui os `pending`.
 - Liberada a migration de `REVOKE` de colunas de `professionals` para `anon` (1b), depois do
   deploy deste passo.
+
+
+## Etapa 2 (passos 3-4)
+
+Escopo: 00-dominio §10 passos 3 e 4. Branch `development`, sem push, sem migration.
+Os componentes (passo 5) e as rotas v1 (passo 6) **não** foram tocados.
+
+### O que foi feito
+
+**Passo 3 (`lib/domain/`)**
+
+- `status.ts` (puro, sem `server-only`): `STATUS`, `ATIVOS`, `EDITAVEIS`, `FINAIS`, `TRANSICOES`,
+  `podeTransicionar` (-> `no_show` só com `inicio <= agora`, D11), `podeEditar`,
+  `podeReceberPagamento`, `METODOS_PAGAMENTO`, `acoesDisponiveis` (só das três funções, sem `if`
+  próprio). Extras: `ehStatus`, `STATUS_DE_PAGAMENTO`, tipos `MetodoPagamento`/`StatusPagamento`/
+  `AcoesDisponiveis`. `horarios.ts` usa `ATIVOS` no lugar do `STATUS_ATIVOS` local.
+- `STATUS_CONFIG` ganhou `no_show` ("Faltou", laranja, ícone `UserX`).
+- `clientes.ts`: `buscarPorTelefone` (`phone_normalized IN brPhoneVariants`, `deleted_at IS NULL`),
+  `resolverCliente` (0 cria, 1 reusa sem sobrescrever, 2+ `CUSTOMER_AMBIGUOUS`; telefone de um e
+  documento de outro também conta como 2). Documento normalizado como o trigger do banco
+  (`[^0-9A-Za-z]` removido), conferido em `normalize_customer_fields`. Corrida no insert (23505)
+  refaz a busca; sem resolver, `CUSTOMER_CONFLICT`.
+- `mensagens.ts`: textos centralizados (criação pendente/criada com template + fallback, alteração,
+  cancelamento com template `msg_appointment_canceled`, confirmação, pedido aprovado/recusado,
+  respostas do webhook). Datas formatadas por `utcParaHoraLocal` (nada de fuso fora de `tempo.ts`).
+- `agendamentos.ts`: `Canal`, `Ator` (campo opcional `pushName`), `AgendamentoCompleto`,
+  `criarAgendamento`, `editarAgendamento`, `mudarStatus`, `registrarPagamento` com os passos do
+  §6: validação de horário por canal (`exigirGrade` só publico/autoatendimento, `naoAntesDe` = agora),
+  escrita condicionada ao status lido (E6, 0 linhas -> `INVALID_TRANSITION` "O agendamento foi
+  alterado por outra pessoa; atualize a tela."), log com `source = ator.origem` em toda escrita (E4),
+  23P01 -> `SLOT_UNAVAILABLE`, notificação via `ator.podeNotificar` sem desfazer a escrita, pagamento
+  idempotente (paid -> paid não reescreve `paid_at` nem método).
+
+**Passo 4 (um commit por item)**
+
+| Item | Commit |
+|---|---|
+| passo 3 (domain) | `ef52bc1` |
+| criar (`createAppointment` + `createPublicAppointment`) | `83508d0` |
+| editar (`update-appointment.ts`, + `lib/painel-sessao.ts`) | `2be383c` |
+| status | `b3e2e85` |
+| cancelar unificado | `9ccb32d` |
+| remover `deleteAppointment` (arquivo apagado) | `24fa9fe` |
+| pedido pendente | `6c41edb` |
+| pagamento | `53e2fb1` |
+| webhook WhatsApp | `88528f2` |
+| "a prazo" + relatório + CHANGELOG | último commit |
+
+`lib/painel-sessao.ts` (novo, `server-only`, sem `'use server'`): `organizacaoDaSessao()` (org do
+perfil da sessão) e `atorDoPainel()`. As actions do painel migradas o usam; a org nunca vem de
+FormData/argumento (`createAppointment` mantém a leitura própria que já tinha). `DomainError` vira
+`{ error: message }`; `revalidatePath` e o formato de retorno (`{ success: true }` / `{ error }`)
+ficaram como estavam.
+
+### Verificação
+
+| Verificação | Resultado |
+|---|---|
+| `npx tsc --noEmit -p .` antes | limpo |
+| `npx tsc --noEmit -p .` depois de cada commit e no fim | limpo |
+| `npm run build` | passou |
+| `eslint` nos arquivos tocados | sem erro novo. Restam `no-explicit-any` já existentes em `lib/appointment-config.ts` (3), `get-financial-summary.ts` (2) e no webhook (5) |
+| `'use server'` em `lib/domain/` | zero |
+| `status.ts` sem `server-only` e sem imports | sim (puro) |
+| Toda query de `lib/domain/` filtra `organization_id` | sim (o log insere com o id do agendamento já carregado por id + org) |
+| grep de `from("appointments")` com insert/update/delete fora do domínio | restam só: cron de lembretes (`reminder_*`), `lib/demo/seed.ts`, `lib/api/domain/appointments.ts` (passo 6) e `calendar-view.tsx:346` (passo 5) |
+| Script descartável (fora do repo) contra db falso | 165 casos passaram, 0 falharam |
+
+O script transpila `lib/domain` e cobre: as 49 combinações de transição (antes e depois do horário;
+`no_show` antes do horário recusado e exatamente no horário aceito; `arrived -> no_show` recusado),
+`acoesDisponiveis` para os 7 status (incluindo "Faltou" só depois do horário e `pagar` sumindo quando
+pago), `podeEditar`, `podeReceberPagamento`; `buscarPorTelefone` (sem DDI, sem 9, outra org, apagado);
+`resolverCliente` com 0, 1 e 2 matches, sem sobrescrever, `exigirDocumento`, `{id}` de outra org e
+apagado; `mudarStatus` (idempotência sem escrita/log, transições inválidas, rótulos na mensagem, canal
+webhook, push_name/raw_message no log, outra org -> NOT_FOUND, **concorrência: status alterado entre
+leitura e escrita -> 0 linhas -> INVALID_TRANSITION sem log**); `registrarPagamento` (no_show/canceled
+recusados, método fora do enum, sinal em `scheduled`, segundo pagamento não muda `paid_at`/método,
+log `payment:paid`); validações de `criarAgendamento`. **Não prova**: `validarHorario` dentro de
+criar/editar (já coberto na etapa 1), filtros reais do PostgREST, o select com joins do banco real,
+envio real de WhatsApp (o stub só confere o texto).
+
+### Divergências entre contrato e código
+
+1. `delete-appointment.ts` tinha o `cancelAppointment` com mensagem fixa; `cancel-appointment.ts`
+   usava `sendAppointmentCancellation` (template `msg_appointment_canceled` com `{name}` só primeiro
+   nome, fallback "Consulta"). Unifiquei no texto "foi *cancelado*" com **template da org quando
+   houver** (`msg_appointment_canceled`, mesmas variáveis). `whatsapp-messages.ts` ficou **órfão**
+   (`sendAppointmentCancellation` e `sendAppointmentConfirmation` sem chamador); não apaguei, fora do
+   escopo.
+2. O webhook buscava o próximo agendamento em `pending/scheduled/confirmed` e confirmava qualquer um.
+   Pela tabela "Quem pode o quê" (§5), o cliente só confirma `scheduled`; então "sim" para um `pending`
+   agora **não muda nada** (o webhook responde `transition_not_allowed` e não manda resposta). Antes
+   era auto-aprovação de pedido pelo cliente.
+3. `get-financial-summary.ts` lê com o client de sessão (RLS) e recebe `organizationId` por argumento.
+   É leitura, não escrita (D9 só fecha escrita), então não mudei; vale revisar. `porProfissional` e
+   `porProcedimento` ainda somam todo agendamento não cancelado (inclusive `pending` e `no_show`); o
+   contrato só manda mudar o "a prazo".
+4. Editar exige serviço e profissional **ativos** (contrato §6.2): se o serviço do agendamento foi
+   desativado depois, nem editar a observação passa (`NOT_FOUND` "Serviço não encontrado."). Antes
+   passava.
+5. Criar no painel recusa horário no passado (`naoAntesDe = agora`, tabela do §4). Antes o painel não
+   olhava.
+
+### Decisões fora do contrato
+
+- `Ator.pushName?` (opcional) para o `push_name` do log do webhook.
+- `EntradaCriacao.antecedenciaMinutos?` (opcional) para o corte do autoatendimento
+  ("agora + antecedência"); hoje nada passa.
+- `mudarStatus(..., { motivo?, aoResponderPedido? })`: `aoResponderPedido` escolhe os textos de
+  pedido aprovado/recusado (com nome da organização) que `handleAppointmentRequest` já usava, sem
+  adivinhar pelo status anterior.
+- **`updateAppointmentStatus` não avisa o cliente** (`podeNotificar: null`), como antes: o contrato
+  manda notificar em `confirmed`/`canceled`, mas a action nunca mandou WhatsApp e confirmar pelo menu
+  passaria a mandar. Se o dono quiser, é trocar `false` por `true` numa linha.
+  `cancelAppointment` e `handleAppointmentRequest` notificam (como antes).
+- Status inicial por canal validado em `criarAgendamento` (painel `scheduled`, público/autoatendimento
+  `pending`, api os três, webhook nenhum); fora disso `VALIDATION_ERROR`.
+- Pagamento na criação do painel: só entra se o form mandar `payment_method` (validado no enum) e/ou
+  `payment_status = paid`; senão `pending/null`.
+- Log de edição sem mudança de horário usa `action = "updated"`; com mudança, `rescheduled`.
+  `mudarStatus` loga `action = <novo status>` (vocabulário do webhook), não `status:<x>`/`canceled`
+  da API v1; o passo 6 unifica.
+- O texto de alteração usa "Seu agendamento" (maiúsculo, como o painel); a v1 usava "seu".
+- `appointment_logs.push_name` fica `null` fora do webhook.
+
+### Pendente (browser / curl; o orquestrador verifica)
+
+Aceite que depende de browser, com o app rodando em `development`:
+
+- [ ] Painel: criar agendamento (cliente existente e novo com documento) funciona; linha em
+  `appointment_logs` com `source='painel'`, `action='created'`. Criar com horário passado ou ocupado
+  -> erro.
+- [ ] Painel: remarcar um `scheduled` funciona e manda WhatsApp só se o horário mudou; remarcar para
+  cima de outro agendamento -> erro "ocupado"; remarcar um `completed` -> erro.
+- [ ] Painel: Confirmar, Chegou e Finalizar pelos menus (card e clique direito) funcionam em
+  `scheduled`/`confirmed`; em `pending` os itens Chegou/Finalizar ainda **aparecem** (menus só mudam no
+  passo 5), mas a action devolve erro (o menu mostra "Erro ao atualizar status").
+- [ ] Mudar `completed` para `scheduled` chamando a action direto -> erro, sem alterar.
+- [ ] `no_show` antes do horário pela action direta -> erro; depois do horário -> ok.
+- [ ] Cancelar pelo menu e pelo diálogo: cancela e manda WhatsApp (se a org tiver número); cancelar
+  `completed` -> erro e a receita continua no financeiro. **Atenção:** os menus usam
+  `toast.promise(cancelAppointment(...))`, que trata `{ error }` como sucesso; corrigir no passo 5.
+- [ ] Pagar: `scheduled` (sinal) ok; `no_show`/`canceled` erro; pagar duas vezes não muda `paid_at`
+  (conferir no banco); método vazio/`Outros` -> erro.
+- [ ] Dashboard: aprovar/recusar pedido pendente manda os textos de "Agendamento Confirmado!" /
+  "Atualização de Agendamento".
+- [ ] Finanças "a prazo" não lista `pending`, `canceled` nem `no_show`.
+- [ ] Duas abas: aba A finaliza, aba B (desatualizada) tenta "Chegou" -> "alterado por outra pessoa".
+- [ ] Público (`/marcar/<slug>`): cliente cadastrado como `11987654321` agenda com `(11) 98765-4321`
+  -> reusa o cadastro (sem duplicar); duas pessoas com o mesmo telefone em formas diferentes ->
+  "Há mais de um cadastro com esses dados; informe o cliente."; horário fora da grade -> erro.
+- [ ] Webhook: "confirmo" a um `scheduled` confirma, loga `source='whatsapp_webhook'` com
+  `push_name`/`raw_message`; a um `completed` (ou `pending`) não muda nada; "cancelar" cancela.

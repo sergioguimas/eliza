@@ -2,6 +2,30 @@
 
 ## 2026-10-06
 
+### Domínio de agendamento (etapa 2: status, clientes e agendamentos; passos 3-4)
+
+- `lib/domain/` ganha `status.ts` (máquina D4), `clientes.ts`, `mensagens.ts` e `agendamentos.ts`.
+  Criar, editar, mudar status, cancelar, aprovar pedido, pagar e a resposta do webhook do WhatsApp
+  passam todos por ele; `deleteAppointment` (DELETE físico) foi removido.
+- Mudanças de comportamento desejadas:
+  - Não se muda status fora da tabela: `completed`, `no_show` e `canceled` são finais; `pending` não
+    vira `arrived`/`completed`; `arrived` não volta para `confirmed` nem vira `no_show`.
+  - `no_show` só depois do horário de início, em qualquer canal. `STATUS_CONFIG` ganha "Faltou".
+  - Remarcar/editar só em `pending`/`scheduled`/`confirmed`; remarcar valida ocupação, expediente e
+    horário passado. O cliente só é avisado por WhatsApp se o horário mudou.
+  - Criar no painel também recusa horário passado, ocupado ou fora do expediente.
+  - Pagamento: método obrigatório e dentro do enum do banco; `canceled` e `no_show` não recebem; sinal
+    antes de concluir é permitido; pagar duas vezes não reescreve `paid_at`.
+  - Financeiro "a prazo" deixa de contar `pending` e `no_show`.
+  - Toda escrita em `appointments` grava `appointment_logs` com `source` = origem (painel, publico,
+    whatsapp_webhook).
+  - Escrita condicionada ao status lido: alteração concorrente devolve "O agendamento foi alterado
+    por outra pessoa; atualize a tela".
+  - Cliente novo é procurado por telefone em qualquer forma BR (com/sem DDI e 9º dígito) e por
+    documento: reusa o cadastro; mais de um casamento recusa com "Há mais de um cadastro...".
+  - O webhook do WhatsApp só confirma agendamento `scheduled` (resposta "sim" a um `pending` não
+    aprova mais o pedido).
+
 ### Domínio de agendamento (etapa 1: tempo, catálogo e horários)
 
 - Nova `web/lib/domain/` (erros, tempo, catálogo, horários). Conversão de fuso numa
