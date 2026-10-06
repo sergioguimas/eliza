@@ -456,8 +456,15 @@ export async function editarAgendamento(
     mudancas.reminder_morning_sent_at = null
   }
 
-  // O "confirmado" valia para o horário antigo (D8): o cliente que remarca volta a pedido.
-  if (ator.canal === "autoatendimento") mudancas.status = "pending"
+  if (ator.canal === "autoatendimento") {
+    // "Remarcar" para o mesmo horário e profissional não muda nada. Sem esta
+    // saída, a linha abaixo rebaixava um `confirmed` para `pending` sem
+    // reagendar coisa alguma. Idempotente: devolve o agendamento como está.
+    if (!mudouHorario) return { agendamento: completo(atual), notificado: false }
+
+    // O "confirmado" valia para o horário antigo (D8): o cliente que remarca volta a pedido.
+    mudancas.status = "pending"
+  }
 
   // E6: só grava se o status continua o que lemos.
   const { data: escrito, error } = await db
