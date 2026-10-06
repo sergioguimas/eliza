@@ -4,8 +4,10 @@ import { NextResponse } from "next/server"
 import { sendWhatsAppMessage } from "@/app/actions/send-whatsapp"
 import { Database } from "@/utils/database.types"
 import { brPhoneVariants } from "@/lib/phone-br"
+import { extractIncomingNumber, extractInstanceName, extractMessageText } from "@/lib/whatsapp/extrair-mensagem"
 import { mudarStatus } from "@/lib/domain/agendamentos"
 import { DomainError } from "@/lib/domain/erros"
+import { encaminharParaAtendente } from "@/lib/autoatendimento/encaminhar"
 import { respostaWebhookCancelamento, respostaWebhookConfirmacao } from "@/lib/domain/mensagens"
 
 const CONFIRMATION_KEYWORDS = [
@@ -47,65 +49,6 @@ function normalizeText(value: string) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-}
-
-function extractMessageText(messageContent: any) {
-  if (messageContent?.conversation) {
-    return messageContent.conversation
-  }
-
-  if (messageContent?.extendedTextMessage?.text) {
-    return messageContent.extendedTextMessage.text
-  }
-
-  if (messageContent?.buttonsResponseMessage?.selectedButtonId) {
-    return messageContent.buttonsResponseMessage.selectedButtonId
-  }
-
-  if (messageContent?.buttonsResponseMessage?.selectedDisplayText) {
-    return messageContent.buttonsResponseMessage.selectedDisplayText
-  }
-
-  if (messageContent?.listResponseMessage?.singleSelectReply?.selectedRowId) {
-    return messageContent.listResponseMessage.singleSelectReply.selectedRowId
-  }
-
-  if (messageContent?.listResponseMessage?.title) {
-    return messageContent.listResponseMessage.title
-  }
-
-  return ""
-}
-
-/**
- * Número de quem mandou a mensagem, só para conversa 1:1.
- *
- * `body.sender` NÃO entra: no payload da Evolution ele é o número da própria
- * instância (o tenant), não o do cliente. Grupo (`@g.us`) e JID `@lid` sem
- * `remoteJidAlt` não identificam um telefone e são descartados.
- */
-function extractIncomingNumber(body: any) {
-  const key = body.data?.key
-  const candidates = [key?.remoteJidAlt, key?.remoteJid]
-
-  for (const jid of candidates) {
-    if (typeof jid === "string" && jid.endsWith("@s.whatsapp.net")) {
-      return jid.replace(/@.*/, "").replace(/\D/g, "")
-    }
-  }
-
-  return ""
-}
-
-function extractInstanceName(body: any) {
-  return (
-    body.instance ||
-    body.instanceName ||
-    body.data?.instance ||
-    body.data?.instanceName ||
-    body.server_url ||
-    null
-  )
 }
 
 function classifyIntent(text: string): "confirmed" | "canceled" | null {
@@ -189,6 +132,14 @@ export async function POST(
 
     if (!messageData || !key) {
       return NextResponse.json({ status: "ignored_invalid_payload" })
+    }
+
+    // Add-on de autoatendimento (06): org com o add-on ativo e ATENDENTE_URL
+    // configurada tem a mensagem (inclusive `fromMe`, como `deMim`) entregue ao
+    // atendente. Sem add-on, ou com o atendente fora do ar (só mensagem do
+    // cliente), segue o fluxo abaixo exatamente como era.
+    if (await encaminharParaAtendente(body)) {
+      return NextResponse.json({ status: "forwarded_to_attendant" })
     }
 
     if (key.fromMe) {
