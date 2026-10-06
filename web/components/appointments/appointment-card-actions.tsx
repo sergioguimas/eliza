@@ -95,6 +95,9 @@ export function AppointmentCardActions({
     } else {
       // Mensagem do domínio (ex.: "alterado por outra pessoa"), não a genérica.
       toast.error(result.error || messages.error_update_status || "Erro ao atualizar status")
+      // Recusa costuma ser tela desatualizada (outra aba, webhook): recarrega
+      // para o card mostrar o status real.
+      router.refresh()
     }
   }
 
@@ -123,6 +126,9 @@ export function AppointmentCardActions({
       router.refresh()
     } else {
       toast.error(result.error || messages.payment_error || "Erro ao processar pagamento")
+      // Recusa costuma ser tela desatualizada (outra aba, webhook): recarrega
+      // para o card mostrar o status real.
+      router.refresh()
     }
   }
 
