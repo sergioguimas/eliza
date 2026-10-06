@@ -1,9 +1,9 @@
 import { z } from "zod"
 import { apiRoute } from "@/lib/api/handler"
-import { parseApiDateTime, validation } from "@/lib/api/http"
+import { validation } from "@/lib/http/erros"
 import { APPOINTMENT_STATUSES, type AppointmentStatus, createAppointment, listAppointments } from "@/lib/api/domain/appointments"
 import { createAppointmentBody } from "@/lib/api/schemas"
-import { limitesDoDiaUtc } from "@/lib/domain/tempo"
+import { horaLocalParaUtc, limitesDoDiaUtc } from "@/lib/domain/tempo"
 
 const listQuery = z.object({
   status: z.string().optional(),
@@ -23,7 +23,7 @@ const bound = (v: string, edge: "from" | "to") =>
     ? edge === "from"
       ? limitesDoDiaUtc(v).inicio
       : limitesDoDiaUtc(v).fim
-    : parseApiDateTime(v, edge)
+    : horaLocalParaUtc(v, edge)
 
 export const GET = apiRoute("read", async ({ db, organizationId, query }) => {
   const parsed = listQuery.safeParse(Object.fromEntries(query))
@@ -59,7 +59,7 @@ export const POST = apiRoute("write", async ({ db, organizationId, keyPrefix, bo
     customer: input.customer,
     professional_id: input.professional_id,
     service_id: input.service_id,
-    start: parseApiDateTime(input.start_time),
+    start: horaLocalParaUtc(input.start_time),
     notes: input.notes,
     status: input.status,
     notify: input.notify,

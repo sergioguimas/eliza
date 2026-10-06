@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { apiRoute } from "@/lib/api/handler"
-import { ApiError, validation } from "@/lib/api/http"
+import { ApiError, validation } from "@/lib/http/erros"
 
 const q = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
@@ -32,7 +32,7 @@ export const GET = apiRoute("read", async ({ db, organizationId, apiKeyId, query
 
   if (error) {
     console.error("[api:logs]", error.message)
-    throw new ApiError(500, "INTERNAL_ERROR", "Erro interno.")
+    throw new ApiError("INTERNAL_ERROR", "Erro interno.")
   }
 
   return { data, meta: { total: count ?? 0, limit, offset } }

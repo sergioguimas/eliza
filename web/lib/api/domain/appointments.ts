@@ -2,8 +2,8 @@ import "server-only"
 
 import { checkOrganizationBusinessHours, checkProfessionalAvailability } from "@/lib/appointment-config"
 import { sendWhatsAppMessage } from "@/app/actions/send-whatsapp"
-import { ApiError, notFound } from "../http"
-import type { Db } from "../handler"
+import { ApiError, notFound } from "@/lib/http/erros"
+import type { Db } from "@/lib/domain/db"
 import { utcParaHoraLocal as toLocalString } from "@/lib/domain/tempo"
 
 export const APPOINTMENT_STATUSES = [
@@ -99,7 +99,7 @@ async function loadRow(db: Db, organizationId: string, id: string): Promise<Appo
     // 22P02: id que não é UUID.
     if (error.code === "22P02") throw notFound("Agendamento")
     console.error("[api:appointments:load]", error.message)
-    throw new ApiError(500, "INTERNAL_ERROR", "Erro interno.")
+    throw new ApiError("INTERNAL_ERROR", "Erro interno.")
   }
 
   if (!data) throw notFound("Agendamento")
@@ -141,7 +141,7 @@ export async function listAppointments(
 
   if (error) {
     console.error("[api:appointments:list]", error.message)
-    throw new ApiError(500, "INTERNAL_ERROR", "Erro interno.")
+    throw new ApiError("INTERNAL_ERROR", "Erro interno.")
   }
 
   return { items: (data as unknown as AppointmentRow[]).map(serializeAppointment), total: count ?? 0 }
@@ -190,11 +190,11 @@ async function notifyCustomer(organizationId: string, row: AppointmentRow, messa
 
 function mapInsertError(error: { code?: string; message: string }): never {
   if (error.code === "23P01") {
-    throw new ApiError(409, "SLOT_UNAVAILABLE", "Este horário acabou de ser ocupado. Escolha outro.")
+    throw new ApiError("SLOT_UNAVAILABLE", "Este horário acabou de ser ocupado. Escolha outro.")
   }
 
   console.error("[api:appointments:write]", error.message)
-  throw new ApiError(500, "INTERNAL_ERROR", "Erro ao salvar agendamento.")
+  throw new ApiError("INTERNAL_ERROR", "Erro ao salvar agendamento.")
 }
 
 async function assertBookable(
@@ -205,14 +205,14 @@ async function assertBookable(
   end: Date
 ) {
   if (start.getTime() < Date.now()) {
-    throw new ApiError(422, "VALIDATION_ERROR", "O horário informado já passou.")
+    throw new ApiError("VALIDATION_ERROR", "O horário informado já passou.")
   }
 
   const org = await checkOrganizationBusinessHours(db, organizationId, start, end)
-  if (!org.available) throw new ApiError(409, "SLOT_UNAVAILABLE", org.message as string)
+  if (!org.available) throw new ApiError("SLOT_UNAVAILABLE", org.message as string)
 
   const prof = await checkProfessionalAvailability(db, professionalId, start, end)
-  if (!prof.available) throw new ApiError(409, "SLOT_UNAVAILABLE", prof.message as string)
+  if (!prof.available) throw new ApiError("SLOT_UNAVAILABLE", prof.message as string)
 }
 
 async function requireProfessional(db: Db, organizationId: string, id: string) {
@@ -263,7 +263,7 @@ async function resolveCustomer(db: Db, organizationId: string, input: CustomerIn
   const phone = digits(input.phone)
   const document = digits(input.document)
 
-  if (!phone) throw new ApiError(422, "VALIDATION_ERROR", "Telefone do cliente inválido.")
+  if (!phone) throw new ApiError("VALIDATION_ERROR", "Telefone do cliente inválido.")
 
   const filters = [`phone.eq.${phone}`, document ? `document.eq.${document}` : null].filter(Boolean).join(",")
 
@@ -295,7 +295,7 @@ async function resolveCustomer(db: Db, organizationId: string, input: CustomerIn
 
   if (error || !created) {
     console.error("[api:appointments:customer]", error?.message)
-    throw new ApiError(500, "INTERNAL_ERROR", "Erro ao cadastrar o cliente.")
+    throw new ApiError("INTERNAL_ERROR", "Erro ao cadastrar o cliente.")
   }
 
   return created.id
@@ -376,14 +376,14 @@ export async function rescheduleAppointment(
   const row = await loadRow(db, organizationId, id)
 
   if (!EDITABLE.includes(row.status as AppointmentStatus)) {
-    throw new ApiError(409, "INVALID_TRANSITION", `Agendamento com status "${row.status}" não pode ser alterado.`)
+    throw new ApiError("INVALID_TRANSITION", `Agendamento com status "${row.status}" não pode ser alterado.`)
   }
 
   const serviceId = input.service_id ?? row.service_id
   const professionalId = input.professional_id ?? row.professional_id
 
   if (!serviceId || !professionalId) {
-    throw new ApiError(422, "VALIDATION_ERROR", "Agendamento sem serviço ou profissional: informe ambos.")
+    throw new ApiError("VALIDATION_ERROR", "Agendamento sem serviço ou profissional: informe ambos.")
   }
 
   const [service] = await Promise.all([
@@ -451,7 +451,7 @@ export async function changeStatus(
   if (current === next) return serializeAppointment(row)
 
   if (!TRANSITIONS[current]?.includes(next)) {
-    throw new ApiError(409, "INVALID_TRANSITION", `Não é possível mudar de "${current}" para "${next}".`)
+    throw new ApiError("INVALID_TRANSITION", `Não é possível mudar de "${current}" para "${next}".`)
   }
 
   const { error } = await db
@@ -488,7 +488,7 @@ export async function registerPayment(
   const row = await loadRow(db, organizationId, id)
 
   if (row.status === "canceled") {
-    throw new ApiError(409, "INVALID_TRANSITION", "Agendamento cancelado não recebe pagamento.")
+    throw new ApiError("INVALID_TRANSITION", "Agendamento cancelado não recebe pagamento.")
   }
 
   const { error } = await db
@@ -526,7 +526,7 @@ export async function deleteAppointment(
 
   if (error) {
     console.error("[api:appointments:delete]", error.message)
-    throw new ApiError(500, "INTERNAL_ERROR", "Erro ao excluir agendamento.")
+    throw new ApiError("INTERNAL_ERROR", "Erro ao excluir agendamento.")
   }
 
   if (opts.notify) {

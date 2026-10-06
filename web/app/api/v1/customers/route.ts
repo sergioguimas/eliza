@@ -1,5 +1,5 @@
 import { apiRoute } from "@/lib/api/handler"
-import { ApiError } from "@/lib/api/http"
+import { ApiError } from "@/lib/http/erros"
 import { brPhoneVariants } from "@/lib/phone-br"
 
 /** Busca de clientes do tenant: ?phone=, ?document= ou ?q= (nome). Máx. 20. */
@@ -9,7 +9,7 @@ export const GET = apiRoute("read", async ({ db, organizationId, query }) => {
   const q = query.get("q")?.trim()
 
   if (!phone && !document && !q) {
-    throw new ApiError(422, "VALIDATION_ERROR", 'Informe "phone", "document" ou "q".')
+    throw new ApiError("VALIDATION_ERROR", 'Informe "phone", "document" ou "q".')
   }
 
   let builder = db
@@ -38,7 +38,7 @@ export const GET = apiRoute("read", async ({ db, organizationId, query }) => {
 
   if (error) {
     console.error("[api:customers]", error.message)
-    throw new ApiError(500, "INTERNAL_ERROR", "Erro interno.")
+    throw new ApiError("INTERNAL_ERROR", "Erro interno.")
   }
 
   return { data }

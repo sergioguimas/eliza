@@ -1,6 +1,6 @@
 import { AvailabilityQuery } from "@/contracts/api-v1/catalogo"
 import { apiRoute } from "@/lib/api/handler"
-import { ApiError, validation } from "@/lib/api/http"
+import { ApiError, validation } from "@/lib/http/erros"
 import { exigirServicoAtivo } from "@/lib/domain/catalogo"
 import { DomainError } from "@/lib/domain/erros"
 import { listarHorariosLivres } from "@/lib/domain/horarios"
@@ -44,7 +44,7 @@ export const GET = apiRoute("read", async ({ db, organizationId, query: qs }) =>
     }
   } catch (error) {
     if (error instanceof DomainError) {
-      if (error.codigo === "NOT_FOUND") throw new ApiError(404, "NOT_FOUND", error.message)
+      if (error.codigo === "NOT_FOUND") throw new ApiError("NOT_FOUND", error.message)
       if (error.codigo === "VALIDATION_ERROR") throw validation(error.message)
     }
 

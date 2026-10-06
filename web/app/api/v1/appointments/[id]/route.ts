@@ -1,7 +1,7 @@
 import { apiRoute } from "@/lib/api/handler"
 import { deleteAppointment, getAppointment, rescheduleAppointment } from "@/lib/api/domain/appointments"
 import { updateAppointmentBody } from "@/lib/api/schemas"
-import { parseApiDateTime } from "@/lib/api/http"
+import { horaLocalParaUtc } from "@/lib/domain/tempo"
 import { z } from "zod"
 
 export const GET = apiRoute("read", async ({ db, organizationId, params }) => ({
@@ -13,7 +13,7 @@ export const PATCH = apiRoute("write", async ({ db, organizationId, keyPrefix, p
   const input = await body(updateAppointmentBody)
 
   const data = await rescheduleAppointment(db, organizationId, { keyPrefix }, params.id, {
-    start: input.start_time ? parseApiDateTime(input.start_time) : undefined,
+    start: input.start_time ? horaLocalParaUtc(input.start_time) : undefined,
     professional_id: input.professional_id,
     service_id: input.service_id,
     notes: input.notes,

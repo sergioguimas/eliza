@@ -1,5 +1,5 @@
 import { apiRoute } from "@/lib/api/handler"
-import { ApiError } from "@/lib/api/http"
+import { ApiError } from "@/lib/http/erros"
 
 export const GET = apiRoute("read", async ({ db, organizationId }) => {
   const { data, error } = await db
@@ -11,7 +11,7 @@ export const GET = apiRoute("read", async ({ db, organizationId }) => {
 
   if (error) {
     console.error("[api:professionals]", error.message)
-    throw new ApiError(500, "INTERNAL_ERROR", "Erro interno.")
+    throw new ApiError("INTERNAL_ERROR", "Erro interno.")
   }
 
   return { data }
