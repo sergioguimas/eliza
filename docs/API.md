@@ -1,8 +1,12 @@
 # API REST do Eliza (`/api/v1`)
 
 API multitenant para integrações externas (agentes, automações). Cobre as
-ações de agendamento, sem exclusão (cancelar resolve). Não confundir com o contrato TO-BE de autoatendimento
-(`docs/contratos/autoatendimento/`), que é voltado ao cliente final.
+ações de agendamento, sem exclusão (cancelar resolve). Não confundir com a API
+de Autoatendimento (`/api/v1/autoatendimento/*`), que é interna, usada pelo
+atendente de WhatsApp: ver [API_AUTOATENDIMENTO.md](API_AUTOATENDIMENTO.md).
+
+Referência interativa (Swagger/OpenAPI 3.1): `/api/v1/docs`. O documento cru
+está em `/api/v1/openapi.json`. Veja [Testando pelo Swagger](#testando-pelo-swagger).
 
 ## Autenticação
 
@@ -48,15 +52,16 @@ código. Códigos:
 
 | Código | HTTP | Quando |
 |---|---|---|
-| `INVALID_JSON` | 400 | Body não é JSON |
+| `INVALID_JSON` | 400 | Body não é JSON. Vale também para corpo **vazio** em `confirm`, `cancel`, `status` e `payment`: mande ao menos `{}` |
 | `UNAUTHORIZED` | 401 | Chave ausente, malformada, desconhecida, revogada ou expirada |
 | `FORBIDDEN` | 403 | Chave sem o escopo da rota |
 | `ORGANIZATION_SUSPENDED` | 403 | Organização suspensa ou demo |
 | `PLAN_REQUIRED` | 403 | O plano da organização não inclui acesso à API |
-| `NOT_FOUND` | 404 | Recurso inexistente ou de outro tenant |
+| `NOT_FOUND` | 404 | Recurso inexistente, de outro tenant ou `{id}` que não é UUID (nunca se diferencia) |
 | `SLOT_UNAVAILABLE` | 409 | Horário ocupado, fora do expediente/agenda, **já passado**, ou perdido numa corrida. `details: { motivo, sugestoes }` com horários próximos |
 | `INVALID_TRANSITION` | 409 | Transição de status proibida, edição fora de `pending`/`scheduled`/`confirmed`, pagamento em `canceled`/`no_show`, ou agendamento alterado por outra requisição no meio |
 | `CUSTOMER_AMBIGUOUS` | 409 | Mais de um cadastro casa com o telefone/documento enviado; mande `customer_id` |
+| `CUSTOMER_CONFLICT` | 409 | `POST /appointments` com `document` que já pertence a outro cadastro do tenant |
 | `VALIDATION_ERROR` | 422 | Body/query inválido. `details: [{ field, message }]` |
 | `RATE_LIMITED` | 429 | Com `Retry-After` e `details.retry_after_seconds` |
 | `INTERNAL_ERROR` | 500 | Erro inesperado (o detalhe fica só no log do servidor) |
@@ -115,7 +120,7 @@ tenant, mas só para cliente que **já existia** antes do request (por
 envios por hora por organização. Quando `notify: true` e a mensagem não sai, o
 agendamento é criado do mesmo jeito e `meta.notify_skipped` diz o motivo:
 `new_customer`, `org_limit`, `no_phone` ou `send_failed`. Toda escrita
-devolve `meta.notified`. O mesmo teto vale para `notify` em PATCH, confirm,
+devolve `meta.notified` (exceto `payment`, que não notifica e não traz `meta`). O mesmo teto vale para `notify` em PATCH, confirm,
 cancel e status.
 
 Validações: horário fora do expediente/agenda do profissional, já ocupado ou
@@ -177,8 +182,25 @@ só para o log do servidor (com IP).
   (envelope e erros), `web/lib/domain/**` (regra de agendamento),
   `web/app/api/v1/**` (rotas), `web/app/actions/api-keys.ts` (criar/revogar
   chave).
-- O middleware ignora `/api/v1` (não há sessão de cookie nessas rotas).
+- O middleware ignora `/api/v1` (não há sessão de cookie nessas rotas), o que cobre também `/api/v1/docs` e os `openapi.json`.
+- Documentação gerada: `web/lib/openapi/` monta o OpenAPI a partir dos Zod de `web/contracts/` (formas) e de textos escritos à mão (rotas, escopos, erros, exemplos). Rota nova ou campo novo: ajuste o Zod e o gerador juntos.
 - Retenção de `api_request_logs`: não há limpeza automática ainda.
+
+## Testando pelo Swagger
+
+Abra `https://<host>/api/v1/docs` (em desenvolvimento, `http://localhost:3000/api/v1/docs`). A página lista as
+rotas da API v1 com parâmetros, corpos de exemplo e os códigos de erro de cada uma.
+
+1. Gere uma chave em *Configurações → API* com os escopos de que precisa (`read` sempre; `write` e `payments` só se for testar essas rotas).
+2. Clique em **Authorize**, cole **só a chave** (`elz_live_…`, sem `Bearer`) em *ApiKey* e confirme. A autorização fica salva no navegador.
+3. Em qualquer rota, **Try it out → Execute**. Comece por `GET /me`: ele confirma o tenant e os escopos da chave.
+
+Avisos:
+
+- **Os testes escrevem dados reais** no tenant da chave: `POST /appointments`, `PATCH`, `confirm`, `cancel`, `status` e `payment` alteram a agenda de verdade. Use um tenant de teste ou cancele o que criar.
+- **`notify: true` envia WhatsApp real** a cliente que já existia, pela instância do tenant (teto de 60/hora por organização). Os exemplos do Swagger usam `notify: false`; só mude se for essa a intenção.
+- Cada clique conta no limite de 120 requisições/minuto e fica no `GET /logs`.
+- A API de Autoatendimento tem outro seletor no topo da página, mas só aparece em desenvolvimento ou com `API_DOCS_INTERNAS=true`.
 
 ## Exemplo
 

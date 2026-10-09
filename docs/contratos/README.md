@@ -14,6 +14,9 @@ Se discordarem, Zod vence para forma e `.md` para regra; registre a divergência
 Zod: `web/contracts/comum/envelope.ts` (envelope e erros únicos),
 `web/contracts/api-v1/`, `web/contracts/autoatendimento/`.
 
+Guias de consumo e Swagger (OpenAPI 3.1 em `/api/v1/docs`): [API.md](../API.md) (v1, para o tenant) e
+[API_AUTOATENDIMENTO.md](../API_AUTOATENDIMENTO.md) (para quem desenvolve o atendente).
+
 ## Ordem de execução
 
 Um passo por vez; cada um termina com painel, página pública e API v1
