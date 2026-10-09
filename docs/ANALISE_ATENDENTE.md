@@ -222,7 +222,7 @@ Sobre a base do bot:
 | E3 | Gemini 2.5 Flash-Lite em plano pago como padrão, com fastpath determinístico | ✅ Confirmada |
 | E4 | Histórico no schema `atendente` do Supabase do Eliza (mantém D4) | ✅ Confirmada |
 | E5 | Retenção: 90 dias de texto, depois só metadados (fecha A5) | ✅ Confirmada |
-| E6 | Confirmar qual Evolution o Eliza usa em produção (Sola ou Geti) | ✅ Verificar antes da F1 |
+| E6 | Confirmar qual Evolution o Eliza usa em produção (Sola ou Geti) | ✅ VPS da Sola, sem Geti |
 
 ## Fontes de preço
 
