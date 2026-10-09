@@ -406,8 +406,8 @@ arquivos tocados e `npm run build` limpos. As 12 marcações `x-atendente` confe
 | Passo | Desvio | Por quê | Pendência |
 |---|---|---|---|
 | 0 | Formato da Evolution **não verificado** antes do código | Evolution de dev (`100.64.0.2:8080`) inacessível do PC no momento | Confirmar no aceite do item 4; se o formato divergir, ajustar só `lib/whatsapp/gateway.ts → baixarMidia` |
-| 1 | Migration **não aplicada** | MCP do Supabase recusou (`You do not have permission`) e não há CLI local | Aplicar `20261009140000_autoatendimento_atendente.sql` pelo Studio (aditiva, sem ordem de deploy) |
-| 1 | `database.types.ts` editado **à mão** (11 colunas) | Sem `supabase gen types` disponível | Regenerar depois de aplicar a migration e comparar (deve sair idêntico) |
+| 1 | Migration aplicada depois do código | MCP do Supabase recusou na primeira tentativa | **Resolvido 09/10:** aplicada pelo MCP (versão `20261009145526`, arquivo renomeado), 11 colunas conferidas no catálogo, advisor sem alerta novo |
+| 1 | `database.types.ts` editado **à mão** (11 colunas) | Sem `supabase gen types` disponível | **Resolvido 09/10:** tipos gerados pelo MCP; bloco de `autoatendimento_config` idêntico ao escrito à mão |
 
 **Escolhas de implementação sem regra no contrato:**
 
@@ -418,5 +418,5 @@ arquivos tocados e `npm run build` limpos. As 12 marcações `x-atendente` confe
 - `respostas.cancelado` do template da org troca só `{name}`/`{{name}}`; outras variáveis do template
   ficam literais no contexto.
 
-**Aceite (§8 do 07): pendente** — depende da migration aplicada e de um servidor com a Evolution
+**Aceite (§8 do 07): pendente** — migration aplicada; falta deploy do código e uma Evolution
 alcançável para os itens 4.
