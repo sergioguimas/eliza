@@ -1,10 +1,17 @@
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
+import { createAdminClient } from "@/utils/supabase/admin"
 import { revalidatePath } from "next/cache"
 import { Database } from "@/utils/database.types"
 
 type MemberRole = "admin" | "professional" | "staff"
+
+// Quem chama é identificado pelo client de sessão; o membro alvo e todas as
+// gravações vão pelo service role. O RLS só deixa o usuário mexer no PRÓPRIO
+// perfil e não tem INSERT em professionals, e role/organization_id de profiles
+// não são graváveis pelo client (migration 20261009152509). A autorização
+// (papel de quem chama, mesma org, owner intocável) é a feita abaixo, em código.
 
 async function getCurrentProfile() {
   const supabase = await createClient<Database>()
@@ -62,7 +69,7 @@ function canChangeRole(actorRole: string | null, targetRole: string | null) {
 }
 
 export async function removeTeamMember(memberId: string) {
-  const { supabase, user, profile, error } = await getCurrentProfile()
+  const { user, profile, error } = await getCurrentProfile()
 
   if (error || !user || !profile) {
     return { error: error || "Não autorizado." }
@@ -80,7 +87,9 @@ export async function removeTeamMember(memberId: string) {
     return { error: "Você não pode remover a si mesmo da equipe." }
   }
 
-  const { data: targetMember, error: targetError } = await supabase
+  const admin = createAdminClient<Database>()
+
+  const { data: targetMember, error: targetError } = await admin
     .from("profiles")
     .select("id, organization_id, role")
     .eq("id", memberId)
@@ -102,7 +111,7 @@ export async function removeTeamMember(memberId: string) {
     return { error: "Administradores não podem remover outros administradores." }
   }
 
-  const { error: professionalsError } = await supabase
+  const { error: professionalsError } = await admin
     .from("professionals")
     .update({
       is_active: false,
@@ -116,7 +125,7 @@ export async function removeTeamMember(memberId: string) {
     return { error: "Erro ao desativar registro profissional." }
   }
 
-  const { error: profileError } = await supabase
+  const { error: profileError } = await admin
     .from("profiles")
     .update({
       organization_id: null,
@@ -140,7 +149,7 @@ export async function updateTeamMemberRole(
   memberId: string,
   role: MemberRole
 ) {
-  const { supabase, user, profile, error } = await getCurrentProfile()
+  const { user, profile, error } = await getCurrentProfile()
 
   if (error || !user || !profile) {
     return { error: error || "Não autorizado." }
@@ -148,9 +157,9 @@ export async function updateTeamMemberRole(
 
   if (!profile.organization_id) {
     return { error: "Organização não encontrada para o usuário atual." }
-    }  
+  }
 
-    const organizationId = profile.organization_id
+  const organizationId = profile.organization_id
 
   if (!canManageMembers(profile.role)) {
     return { error: "Você não tem permissão para alterar permissões." }
@@ -164,7 +173,9 @@ export async function updateTeamMemberRole(
     return { error: "Permissão inválida." }
   }
 
-  const { data: targetMember, error: targetError } = await supabase
+  const admin = createAdminClient<Database>()
+
+  const { data: targetMember, error: targetError } = await admin
     .from("profiles")
     .select("id, organization_id, role, full_name")
     .eq("id", memberId)
@@ -186,7 +197,7 @@ export async function updateTeamMemberRole(
     return { error: "A permissão do proprietário não pode ser alterada." }
   }
 
-  const { error: profileError } = await supabase
+  const { error: profileError } = await admin
     .from("profiles")
     .update({
       role,
@@ -201,7 +212,7 @@ export async function updateTeamMemberRole(
   }
 
   if (role === "professional" || role === "admin") {
-    const { data: existingProfessional } = await supabase
+    const { data: existingProfessional } = await admin
       .from("professionals")
       .select("id")
       .eq("user_id", memberId)
@@ -209,7 +220,7 @@ export async function updateTeamMemberRole(
       .maybeSingle()
 
     if (existingProfessional) {
-      const { error: professionalUpdateError } = await supabase
+      const { error: professionalUpdateError } = await admin
         .from("professionals")
         .update({
           is_active: true,
@@ -226,7 +237,7 @@ export async function updateTeamMemberRole(
         return { error: "Permissão atualizada, mas houve erro no profissional." }
       }
     } else {
-      const { error: professionalInsertError } = await supabase
+      const { error: professionalInsertError } = await admin
         .from("professionals")
         .insert({
           user_id: memberId,
@@ -244,7 +255,7 @@ export async function updateTeamMemberRole(
       }
     }
   } else {
-    const { error: professionalDeactivateError } = await supabase
+    const { error: professionalDeactivateError } = await admin
       .from("professionals")
       .update({
         is_active: false,
