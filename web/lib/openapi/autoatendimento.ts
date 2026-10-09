@@ -2,6 +2,7 @@ import {
   AgendamentoResposta,
   AgendamentoResumo,
   ApiErrorBody,
+  Atendente,
   AtualizarCadastroBody,
   Cadastro,
   CadastroResposta,
@@ -27,6 +28,7 @@ import {
   ListarProfissionaisResposta,
   ListarServicosResposta,
   MensagemEncaminhada,
+  MidiaResposta,
   MotivoSemHorario,
   Momento,
   Profissional,
@@ -36,6 +38,8 @@ import {
   StatusAgendamento,
   Termos,
   TicketEmitido,
+  VerificarNomeQuery,
+  VerificarNomeResposta,
 } from "@/contracts/autoatendimento"
 import {
   HEADERS_COMUNS,
@@ -104,6 +108,10 @@ agendar, remarcar, cancelar, confirmar presença, manter o cadastro, responder e
 
 > Este documento só é servido em desenvolvimento ou com \`API_DOCS_INTERNAS=true\`.
 
+## Operações do atendente (\`x-atendente\`)
+
+Operações com \`x-atendente: true\` são as que o atendente expõe ao modelo como ferramenta; a descrição de cada uma é a instrução que o modelo lê. As demais (\`obterContexto\`, \`enviarMensagem\`, \`escalarParaEquipe\`, \`baixarMidia\`) o atendente chama por conta própria e nunca as oferece ao modelo.
+
 ## Autenticação em duas camadas (três headers em toda chamada)
 
 | Header | Prova |
@@ -156,6 +164,8 @@ Entrada: \`AAAA-MM-DDTHH:mm\` no relógio de **São Paulo**, sem offset. Saída:
 | \`aa-msg-contato\` | enviar mensagem | 1 h | 60 |
 | \`aa-msg-org\` | enviar mensagem (conta a organização toda) | 1 h | 600 |
 | \`aa-escalar\` | escalonamento | 1 h | 3 |
+| \`aa-nome\` | verificar nome cadastrado | 1 h | 10 |
+| \`aa-midia\` | baixar mídia | 1 h | 30 |
 
 Esgotou: \`429 RATE_LIMITED\` com \`Retry-After\` e \`details.retry_after_seconds\`.
 `.trim()
@@ -173,6 +183,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
   c.registrar("output", "Profissional", Profissional)
   c.registrar("output", "Termos", Termos)
   c.registrar("output", "Identificacao", Identificacao)
+  c.registrar("output", "Atendente", Atendente)
   c.registrar("output", "Contexto", Contexto)
   c.registrar("output", "Cadastro", Cadastro)
   c.registrar("output", "MotivoSemHorario", MotivoSemHorario)
@@ -189,6 +200,8 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
   const rCadastro = c.registrar("output", "CadastroResposta", CadastroResposta)
   const rMensagem = c.registrar("output", "EnviarMensagemResposta", EnviarMensagemResposta)
   const rEscalonar = c.registrar("output", "EscalonarResposta", EscalonarResposta)
+  const rNome = c.registrar("output", "VerificarNomeResposta", VerificarNomeResposta)
+  const rMidia = c.registrar("output", "MidiaResposta", MidiaResposta)
 
   // --- entrada
   const bCriar = c.registrar("input", "CriarAgendamentoBody", CriarAgendamentoBody)
@@ -235,6 +248,14 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
   anotar(componentes, "Contexto", {
     agendamentos: "Futuros e ativos (`pending`/`scheduled`/`confirmed`), até 10. Vazio se não identificado.",
     aguardandoConfirmacao: "Ids de `agendamentos` já lembrados e ainda `scheduled`: um \"sim\" solto do cliente provavelmente responde a um deles.",
+    atendente: "Personalização do atendente desta organização, já combinada com os padrões do Eliza. Sempre presente; campo `null` = use o seu padrão.",
+  })
+  anotar(componentes, "Atendente", {
+    persona: "Nome com que o atendente se apresenta; `null` = não se apresenta por nome.",
+    tom: "Tom de voz em texto livre.",
+    pausaHumanaHoras: "Horas de pausa quando a equipe responde pelo celular; `null` = padrão do atendente.",
+    respostas: "Textos fixos; `{primeiroNome}` é substituído pelo atendente. `confirmado` e `cancelado` já vêm com o padrão do Eliza (o mesmo do fluxo antigo de palavra-chave).",
+    palavras: "Palavras que, sozinhas, confirmam ou cancelam o único agendamento aguardando confirmação; `null` = lista padrão do atendente.",
   })
 
   const seguranca = [{ TokenDeServico: [], Ticket: [], Versao: [] }]
@@ -273,6 +294,20 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
                   identificacao: { situacao: "identificado", cliente: { id: ID_EXEMPLO.cliente, primeiroNome: "Maria" } },
                   agendamentos: [{ ...resumo, status: "scheduled", podeConfirmar: true }],
                   aguardandoConfirmacao: [ID_EXEMPLO.agendamento],
+                  atendente: {
+                    persona: "Lia",
+                    tom: "Simpática e objetiva, sem gírias.",
+                    pausaHumanaHoras: null,
+                    respostas: {
+                      confirmado: "✅ *Confirmado, {primeiroNome}!* Já deixei seu agendamento confirmado na agenda. Te aguardamos!",
+                      cancelado: "👌 *Entendido, {primeiroNome}.* O agendamento foi cancelado. Quando quiser remarcar, é só chamar!",
+                      falhaTecnica: null,
+                      midiaNaoSuportada: null,
+                      audioLongo: null,
+                      equipeSemContato: null,
+                    },
+                    palavras: { confirmar: ["sim", "fechado"], cancelar: null },
+                  },
                 },
               },
             },
@@ -286,6 +321,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
       get: {
         tags: ["Catálogo e horários"],
         operationId: "listarServicos",
+        "x-atendente": true,
         summary: "Serviços ativos",
         description: "Serviços ativos da organização do ticket. Não exige cliente identificado: um desconhecido pode perguntar preço antes de se cadastrar. `preco: null` = não divulgar; preço `0` continua `0`.",
         ...comum,
@@ -305,6 +341,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
       get: {
         tags: ["Catálogo e horários"],
         operationId: "listarProfissionais",
+        "x-atendente": true,
         summary: "Profissionais ativos",
         description: "Profissionais ativos. Nunca expõe telefone nem registro profissional. **Não existe vínculo serviço ↔ profissional:** todo profissional ativo atende todo serviço.",
         ...comum,
@@ -319,6 +356,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
       get: {
         tags: ["Catálogo e horários"],
         operationId: "consultarHorarios",
+        "x-atendente": true,
         summary: "Horários livres de um serviço num dia",
         description:
           "Horários de **início** livres para a duração do serviço, um bloco por profissional (**incluindo** quem ficou sem horário, com `motivoVazio`, para você poder dizer \"com a Ana não há, com o Bruno há\"). Já aplica a antecedência mínima.\n\nÉ o mesmo predicado que valida a criação e a remarcação: **se está na lista, a API aceita; se não está, recusa.**\n\nA query é estrita (`organizationId`, telefone etc. dão `422`). Não exige cliente identificado.",
@@ -351,6 +389,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
       get: {
         tags: ["Agendamentos"],
         operationId: "listarAgendamentos",
+        "x-atendente": true,
         summary: "Agendamentos do cliente",
         description: "Futuros e ativos (`pending`/`scheduled`/`confirmed`) do cliente do ticket, até 20. A consulta filtra por organização **e** cliente: nada de outro cliente aparece. Exige `identificado`.",
         ...comum,
@@ -362,6 +401,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
       post: {
         tags: ["Agendamentos"],
         operationId: "criarAgendamento",
+        "x-atendente": true,
         summary: "Cria um agendamento (nasce pending)",
         description:
           "Cria um agendamento para o **cliente do ticket** (nunca do body). Nasce `pending`: aguarda o estabelecimento aprovar, então diga isso ao cliente. O preço vem do serviço. Nenhuma mensagem de WhatsApp é enviada pelo Eliza (quem responde é você).\n\nValidações, nesta ordem: serviço e profissional ativos (`NOT_FOUND`) → limite de agendamentos ativos (`ACTIVE_LIMIT_REACHED`) → janela (`OUT_OF_WINDOW`) → antecedência (`NOTICE_TOO_SHORT`) → horário livre e na grade (`SLOT_UNAVAILABLE`, com até 3 `sugestoes` do mesmo dia e profissional).\n\n**Idempotência:** repetir o mesmo pedido (mesmo cliente, profissional e início) em até 10 minutos devolve o agendamento já criado, com o mesmo `id`.\n\nLimites: `aa-escrita` (20/h) e `aa-criar` (5/24h)." +
@@ -387,6 +427,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
       post: {
         tags: ["Agendamentos"],
         operationId: "remarcarAgendamento",
+        "x-atendente": true,
         summary: "Remarca (volta a pending)",
         description:
           "Muda o horário (e, se vier, o profissional) do **mesmo registro**: histórico, pagamento e `id` continuam. O serviço nunca muda. O status **volta a `pending`** (um \"confirmado\" valia para o horário antigo; o estabelecimento aprova de novo) e os lembretes são zerados. Remarcar para outro horário que sobreponha o próprio atual é permitido.\n\nSó `pending`/`scheduled`/`confirmed` (`INVALID_TRANSITION` nos demais) e só fora da antecedência mínima (`NOTICE_TOO_SHORT`: escale para a equipe). Mesmas validações de janela, antecedência e horário da criação. Limite: `aa-escrita`.",
@@ -412,6 +453,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
       post: {
         tags: ["Agendamentos"],
         operationId: "cancelarAgendamento",
+        "x-atendente": true,
         summary: "Cancela mantendo o registro",
         description: "Muda o status para `canceled`. **Nunca apaga.** Só `pending`/`scheduled`/`confirmed` e só fora da antecedência mínima; dentro dela, `NOTICE_TOO_SHORT` e você deve escalar (a equipe decide exceções). Nenhuma mensagem é enviada pelo Eliza. Limite: `aa-escrita`.",
         ...comum,
@@ -434,6 +476,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
       post: {
         tags: ["Agendamentos"],
         operationId: "confirmarAgendamento",
+        "x-atendente": true,
         summary: "O cliente confirma presença",
         description: "Para quando o cliente diz \"vou\". Só vale em `scheduled` e antes do horário. **`pending` não se confirma:** ele ainda aguarda a aprovação do estabelecimento (`INVALID_TRANSITION`). Repetir em `confirmed` devolve `200` sem novo log. Limite: `aa-escrita`.",
         ...comum,
@@ -455,6 +498,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
       get: {
         tags: ["Cadastro"],
         operationId: "lerCadastro",
+        "x-atendente": true,
         summary: "Lê o próprio cadastro",
         description: "O cadastro do telefone do ticket. Exige `identificado`. Devolve o documento **mascarado** e só se há data de nascimento; nunca endereço, observações, gênero nem documento completo. Não existe busca por nome, documento ou outro telefone.",
         ...comum,
@@ -466,6 +510,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
       post: {
         tags: ["Cadastro"],
         operationId: "criarCadastro",
+        "x-atendente": true,
         summary: "Cria o cadastro do número do ticket",
         description:
           "Só quando a identificação é `desconhecido`. O telefone vem do ticket (nunca do body). Se o documento já existe na organização, `CUSTOMER_CONFLICT` **sem** vincular nem alterar o cadastro existente: o documento pode ser de outra pessoa e a equipe decide. Escale.\n\n`identificado` → `CUSTOMER_CONFLICT` (use PATCH); `ambiguo` → `CUSTOMER_AMBIGUOUS`. Limite: `aa-escrita`." +
@@ -484,6 +529,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
       patch: {
         tags: ["Cadastro"],
         operationId: "atualizarCadastro",
+        "x-atendente": true,
         summary: "Atualiza o próprio cadastro",
         description: "Exige `identificado`. Pelo menos um campo. `nome`, `email` e `dataNascimento` sobrescrevem. `documento` só é aceito se o cadastro **ainda não tem** (trocar documento por WhatsApp é o caminho de apropriar cadastro alheio). O telefone nunca muda por aqui. Limite: `aa-escrita`.",
         ...comum,
@@ -495,6 +541,28 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
             ...ERROS_DE_CLIENTE,
             ["INVALID_TRANSITION", "Tentativa de definir `documento` num cadastro que já tem um (mesmo valor igual)."],
             ["CUSTOMER_CONFLICT", "O documento enviado já pertence a outro cadastro."]
+          ),
+        },
+      },
+    },
+
+    "/api/v1/autoatendimento/cadastro/nome": {
+      get: {
+        tags: ["Cadastro"],
+        operationId: "verificarNomeCadastrado",
+        "x-atendente": true,
+        summary: "Já existe cadastro com este nome?",
+        description:
+          "Use só quando o contexto disser `desconhecido` e o cliente informar o nome. `existe: true` significa que já há um cadastro com esse nome **em outro número**: não tente acessá-lo nem cadastrar de novo; chame a equipe com o motivo `numero_novo`. `existe: false`: siga para `criarCadastro`.\n\nCompara o nome **completo**, sem diferenciar acento, caixa nem espaços repetidos; nunca prefixo nem semelhança. Devolve só `existe`: nunca id, contagem nem telefone. Limite: `aa-nome` (10/h).",
+        ...comum,
+        parameters: parametrosDeQuery(VerificarNomeQuery, { nome: "Nome completo informado pelo cliente (3 a 120 caracteres)." }),
+        responses: {
+          "200": respostaOk("Se há cadastro com esse nome.", rNome, { existe: { summary: "Há cadastro", value: { data: { existe: true } } }, naoExiste: { summary: "Não há", value: { data: { existe: false } } } }),
+          ...erros(
+            ["VALIDATION_ERROR", "`nome` ausente, com menos de 3 ou mais de 120 caracteres, ou parâmetro desconhecido."],
+            ["CUSTOMER_CONFLICT", "O número do ticket já tem cadastro: esta rota só atende `desconhecido`."],
+            ["CUSTOMER_AMBIGUOUS", "Mais de um cadastro bate com o telefone do ticket. Escale."],
+            "RATE_LIMITED"
           ),
         },
       },
@@ -513,6 +581,29 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
         responses: {
           "200": respostaOk("Mensagem enviada.", rMensagem, { exemplo: { summary: "Enviada", value: { data: { mensagemId: "3EB0A1B2C3D4E5F60718" } } } }),
           ...erros(...ERROS_DE_ESCRITA, "WHATSAPP_UNAVAILABLE"),
+        },
+      },
+    },
+
+    "/api/v1/autoatendimento/mensagens/{mensagemId}/midia": {
+      get: {
+        tags: ["Mensagens e escalonamento"],
+        operationId: "baixarMidia",
+        summary: "Baixa a mídia (áudio) da mensagem do ticket",
+        description:
+          "Devolve o arquivo da mensagem que gerou o ticket (hoje, o áudio encaminhado com `conteudo.tipo = \"audio\"`), em `base64` dentro do envelope. O ticket só abre a mídia **daquela** mensagem: outro `mensagemId` responde `NOT_FOUND`. A chave da Evolution nunca sai do Eliza.\n\nNada é gravado no Eliza. `tamanho` são os bytes já decodificados; acima de 16 MB, `MEDIA_TOO_LARGE`. Se a mídia expirou na Evolution, `NOT_FOUND`. Limite: `aa-midia` (30/h).",
+        ...comum,
+        parameters: [
+          { name: "mensagemId", in: "path", required: true, description: "Id da mensagem do ticket (`mensagemId` do encaminhamento).", schema: { type: "string" }, example: "3EB0A1B2C3D4E5F60718" },
+        ],
+        responses: {
+          "200": respostaOk("Mídia da mensagem.", rMidia, { exemplo: { summary: "Áudio opus", value: { data: { mime: "audio/ogg; codecs=opus", tamanho: 18432, base64: "T2dnUwACAAAAAAAAAAB..." } } } }),
+          ...erros(
+            ["NOT_FOUND", "`mensagemId` diferente do da mensagem do ticket, ou mídia que a Evolution não tem mais."],
+            "RATE_LIMITED",
+            ["MEDIA_TOO_LARGE", "A mídia decodificada passa de 16 MB."],
+            ["WHATSAPP_UNAVAILABLE", "Falha ao buscar a mídia na Evolution (o motivo fica só no log do Eliza)."]
+          ),
         },
       },
     },
@@ -561,7 +652,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
           operationId: "receberMensagem",
           summary: "Eliza encaminha uma mensagem ao atendente",
           description:
-            "**Esta é a rota que o atendente expõe** (`POST {ATENDENTE_URL}/v1/mensagens`), não uma rota do Eliza.\n\nO Eliza chama a cada mensagem de texto do cliente (e a cada mensagem enviada pelo número do estabelecimento, com `deMim: true`). Responda `202` assim que validar e enfileirar. Timeout do Eliza: 3 s, sem retentativa; **deduplique por `mensagemId`**.\n\n**Assinatura:** `" +
+            "**Esta é a rota que o atendente expõe** (`POST {ATENDENTE_URL}/v1/mensagens`), não uma rota do Eliza.\n\nO Eliza chama a cada mensagem do cliente (texto, áudio ou tipo não suportado) e a cada mensagem enviada pelo número do estabelecimento, com `deMim: true`). Responda `202` assim que validar e enfileirar. Timeout do Eliza: 3 s, sem retentativa; **deduplique por `mensagemId`**.\n\n**Assinatura:** `" +
             HEADER_ASSINATURA +
             "` = `hex(HMAC-SHA256(ATENDENTE_ENCAMINHAMENTO_SECRET, timestamp + \".\" + corpoBruto))`, calculada sobre o corpo **exato** recebido. `" +
             HEADER_TIMESTAMP +
@@ -587,6 +678,20 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
                       deMim: false,
                       conteudo: { tipo: "texto", texto: "Quero marcar um corte amanhã" },
                       ticket: { token: TICKET_EXEMPLO, expiraEm: "2026-10-02T13:30:00.000Z" },
+                    },
+                  },
+                  audioDoCliente: {
+                    summary: "Áudio do cliente",
+                    description: "Só metadados: nenhum byte de áudio vem aqui. Baixe com `GET /mensagens/{mensagemId}/midia`, usando o ticket desta mensagem.",
+                    value: {
+                      versao: 1,
+                      mensagemId: "3EB0C4D5E6F708192A3B",
+                      recebidaEm: "2026-10-02T13:02:00.000Z",
+                      organizacao: { id: ID_EXEMPLO.organizacao, nome: "Studio Exemplo" },
+                      contato: { telefone: "5511900000001", nomeExibicao: "Maria" },
+                      deMim: false,
+                      conteudo: { tipo: "audio", duracaoS: 12, mime: "audio/ogg; codecs=opus", tamanho: 18432, encaminhado: false },
+                      ticket: { token: TICKET_EXEMPLO, expiraEm: "2026-10-02T13:32:00.000Z" },
                     },
                   },
                   daEquipe: {

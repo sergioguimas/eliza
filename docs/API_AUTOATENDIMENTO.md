@@ -83,6 +83,11 @@ Isso é proposital. Não tente "ajudar" passando o telefone de novo.
 
 O Eliza **nunca desempata**. Em `ambiguo`, a equipe resolve: escale com `motivo: "cliente_ambiguo"`.
 
+Para `desconhecido` que diz o nome, **`GET /cadastro/nome?nome=...`** responde `{ "existe": true|false }`: `true` = já há um cadastro com esse
+nome completo (sem diferenciar acento, caixa nem espaços repetidos) **em outro número**. Não tente acessá-lo nem cadastrar de novo: escale com
+`motivo: "numero_novo"` e o nome informado no `resumo`. `false`: siga para `POST /cadastro`. A rota só atende `desconhecido`
+(`identificado` → `409 CUSTOMER_CONFLICT`, `ambiguo` → `409 CUSTOMER_AMBIGUOUS`), nunca devolve id nem dado do cadastro e tem limite próprio (10/h).
+
 Sem identificação, `GET/POST /agendamentos`, `/agendamentos/{id}/*` e `GET/PATCH /cadastro` respondem `409
 CUSTOMER_NOT_IDENTIFIED` (desconhecido) ou `409 CUSTOMER_AMBIGUOUS` (ambíguo). `POST /cadastro` faz o inverso: só vale
 para `desconhecido`.
@@ -100,6 +105,9 @@ para `desconhecido`.
 4. **`POST /agendamentos`** com `servicoId`, `profissionalId` e `inicio` (um dos horários oferecidos). Responde `201` com o agendamento em
    `pending`. Diga ao cliente que **aguarda a aprovação do estabelecimento**.
 5. **`POST /mensagens`** com o texto para o cliente.
+   `GET /contexto` traz também **`atendente`**: persona, tom, horas de pausa, textos fixos (`respostas`: `confirmado`, `cancelado`, `falhaTecnica`,
+   `midiaNaoSuportada`, `audioLongo`, `equipeSemContato`) e `palavras` (`confirmar`, `cancelar`), já combinados pelo Eliza (a configuração da
+   organização vence; `confirmado` e `cancelado` têm padrão do Eliza). `{primeiroNome}` nos textos é substituído pelo atendente; campo `null` = use o seu padrão.
 6. Mais tarde, no lembrete, o cliente responde "sim": o `contexto.aguardandoConfirmacao` lista os ids que esperam esse "sim".
    **`POST /agendamentos/{id}/confirmar`**.
 
@@ -175,15 +183,22 @@ encaminhamento com `deMim: true` e o mesmo id, e é assim que você diferencia o
 | `fora_da_politica` | Pedido que a política não permite (ex.: cancelar em cima da hora) |
 | `nao_entendi` | O atendente não entendeu |
 | `reclamacao` | Reclamação |
+| `numero_novo` | `desconhecido` que diz ser alguém já cadastrado (`GET /cadastro/nome` deu `existe: true`); a equipe confere e vincula o número |
+| `falha_tecnica` | Falha técnica do próprio atendente |
 | `outro` | Outro |
 
 O Eliza manda um WhatsApp para o contato humano do estabelecimento. `equipeNotificada: false` **não é erro**: a organização não
 configurou contato humano ou o envio falhou, então avise o cliente de outro jeito ("vou chamar alguém, aguarde"). O `resumo` não deve
 conter dado sensível além do necessário. Nada é gravado em tabela nesta versão.
 
+**Baixar a mídia de um áudio: `GET /mensagens/{mensagemId}/midia`** responde `{ "mime", "tamanho", "base64" }` (`tamanho` em bytes
+decodificados). O ticket só abre a mídia **da mensagem que o gerou**: outro `mensagemId` (ou o de uma mensagem anterior) responde `404 NOT_FOUND`,
+assim como mídia que a Evolution já não tem. Acima de 16 MB: `413 MEDIA_TOO_LARGE`. Falha na Evolution: `502 WHATSAPP_UNAVAILABLE`. O Eliza não
+guarda nada; a chave da Evolution continua só nele. Limite: 30/h.
+
 ## 9. Encaminhamento Eliza → atendente
 
-O atendente expõe **`POST {ATENDENTE_URL}/v1/mensagens`**. O Eliza chama a cada mensagem de texto do cliente e a cada mensagem
+O atendente expõe **`POST {ATENDENTE_URL}/v1/mensagens`**. O Eliza chama a cada mensagem do cliente (texto, áudio ou tipo não suportado) e a cada mensagem
 enviada pelo número do estabelecimento.
 
 ```jsonc
@@ -194,7 +209,7 @@ enviada pelo número do estabelecimento.
   "organizacao": { "id": "<uuid>", "nome": "Studio Exemplo" },
   "contato": { "telefone": "5511900000001", "nomeExibicao": "Maria" },
   "deMim": false,                                  // true = enviada PELO número do estabelecimento
-  "conteudo": { "tipo": "texto", "texto": "Quero marcar um corte amanhã" },   // ou { "tipo": "nao_suportado", "tipoOriginal": "audioMessage" }
+  "conteudo": { "tipo": "texto", "texto": "Quero marcar um corte amanhã" },   // ou { "tipo": "audio", ... } ou { "tipo": "nao_suportado", "tipoOriginal": "imageMessage" }
   "ticket": { "token": "<ticket>", "expiraEm": "2026-10-02T13:30:00.000Z" }   // null quando deMim = true
 }
 ```
@@ -220,6 +235,11 @@ function assinaturaValida(corpoBruto, timestamp, assinatura, segredo) {
 }
 ```
 
+**Áudio.** `conteudo` pode ser
+`{ "tipo": "audio", "duracaoS": 12, "mime": "audio/ogg; codecs=opus", "tamanho": 18432, "encaminhado": false }`: só metadados
+(`tamanho` 0 = a Evolution não informou; `encaminhado: true` = áudio reenviado de outra conversa). Nenhum byte de áudio passa pelo
+encaminhamento: para transcrever, baixe com `GET /mensagens/{mensagemId}/midia` usando o ticket **desta** mensagem (seção 8).
+
 **Resposta.** Devolva **`202 { "aceito": true }`** assim que validar e enfileirar; processe depois. O timeout do Eliza é de **3 s** e não há retentativa
 (a Evolution já retenta o webhook): **deduplique por `mensagemId`**.
 
@@ -229,7 +249,7 @@ pode ter perdido uma mensagem, então não presuma que viu a conversa inteira.
 
 **`deMim: true`.** Pode ser o eco do próprio atendente (o `mensagemId` bate com um que `POST /mensagens` devolveu) ou alguém da equipe respondendo
 pelo celular. Neste segundo caso o atendente deve **pausar** naquela conversa. Mensagens de grupo e de status nunca são encaminhadas;
-mídia, áudio e localização chegam como `nao_suportado`.
+imagem, documento, vídeo e localização chegam como `nao_suportado`.
 
 ## 10. Catálogo de erros
 
@@ -242,13 +262,14 @@ mídia, áudio e localização chegam como `nao_suportado`.
 | `TICKET_INVALID` | 401 | Ticket adulterado ou mal formado | Use o ticket recebido, sem alterar |
 | `TICKET_EXPIRED` | 401 | Passou de 30 min | Espere nova mensagem do cliente |
 | `ADDON_INACTIVE` | 403 | Atendimento desligado para o estabelecimento, ou a instância de WhatsApp mudou | Pare de responder; o Eliza assume (fallback) |
-| `NOT_FOUND` | 404 | Serviço, profissional ou agendamento inexistente, inativo ou de outro cliente | Refaça a consulta; não insista |
+| `NOT_FOUND` | 404 | Serviço, profissional ou agendamento inexistente, inativo ou de outro cliente; mídia de outra mensagem ou expirada | Refaça a consulta; não insista |
 | `SLOT_UNAVAILABLE` | 409 | Horário indisponível. `details: { motivo, sugestoes }` | Ofereça as `sugestoes` |
 | `INVALID_TRANSITION` | 409 | Status não permite (ex.: confirmar `pending`, cancelar `completed`, definir documento já existente) | Explique ao cliente com a `message` |
 | `CUSTOMER_NOT_IDENTIFIED` | 409 | Telefone sem cadastro | Ofereça `POST /cadastro` |
 | `CUSTOMER_AMBIGUOUS` | 409 | Mais de um cadastro com o telefone | Escale (`cliente_ambiguo`) |
 | `CUSTOMER_CONFLICT` | 409 | Telefone já cadastrado (no POST) ou documento de outro cadastro | Escale |
 | `ACTIVE_LIMIT_REACHED` | 409 | Máximo de agendamentos ativos | Sugira cancelar ou concluir um |
+| `MEDIA_TOO_LARGE` | 413 | Mídia acima de 16 MB decodificados | Trate como `midiaNaoSuportada` |
 | `VALIDATION_ERROR` | 422 | Body/query inválido ou com campo desconhecido. `details: [{ field, message }]` | Corrija a chamada |
 | `OUT_OF_WINDOW` | 422 | Data fora de [hoje, hoje + janela] | Peça outra data |
 | `NOTICE_TOO_SHORT` | 422 | Dentro da antecedência mínima | Escale (`fora_da_politica`) |
@@ -267,10 +288,21 @@ Contêm um atendente em loop, não o cliente. Esgotado: `429 RATE_LIMITED` com `
 | `aa-msg-contato` | `POST /mensagens` | 1 h | 60 |
 | `aa-msg-org` | `POST /mensagens` (conta a organização inteira) | 1 h | 600 |
 | `aa-escalar` | `POST /escalonamentos` | 1 h | 3 |
+| `aa-nome` | `GET /cadastro/nome` | 1 h | 10 |
+| `aa-midia` | `GET /mensagens/{mensagemId}/midia` | 1 h | 30 |
 
 Leituras (`GET`) não têm limite próprio de autoatendimento.
 
-## 12. Testando pelo Swagger
+## 12. Marcação `x-atendente` na OpenAPI
+
+Cada operação da spec pode trazer `"x-atendente": true`. É o que o **sola-agens** lê para decidir quais operações viram ferramenta do
+modelo (a descrição da operação é a instrução que o modelo lê). Estão marcadas: `listarServicos`, `listarProfissionais`,
+`consultarHorarios`, `listarAgendamentos`, `criarAgendamento`, `remarcarAgendamento`, `cancelarAgendamento`, `confirmarAgendamento`,
+`lerCadastro`, `criarCadastro`, `atualizarCadastro` e `verificarNomeCadastrado`. **Nunca** `obterContexto`, `enviarMensagem`,
+`escalarParaEquipe` e `baixarMidia`: o atendente as chama por conta própria, e o modelo não pode mandar mensagem nem escalar sem passar
+pelo motor.
+
+## 13. Testando pelo Swagger
 
 A spec do Autoatendimento só é servida em **desenvolvimento** ou com `API_DOCS_INTERNAS=true` no Eliza (é uma API interna). Em produção,
 sem a flag, `/api/v1/autoatendimento/openapi.json` responde `404` e o seletor da página não a mostra.

@@ -63,3 +63,34 @@ export function extractInstanceName(body: any) {
     null
   )
 }
+
+/** Inteiro >= 0 a partir de número ou string; objeto Long ({low, high}), inválido ou negativo vira 0. */
+function inteiroOuZero(valor: unknown) {
+  if (typeof valor !== "number" && typeof valor !== "string") return 0
+
+  const n = Number(valor)
+
+  return Number.isFinite(n) && n > 0 ? Math.trunc(n) : 0
+}
+
+/**
+ * Áudio (`message.audioMessage`) para o encaminhamento ao atendente (07 §4.1);
+ * `null` se a mensagem não for áudio. Só metadados: nenhum byte passa por aqui.
+ */
+export function extractAudio(messageContent: any) {
+  const audio = messageContent?.audioMessage
+
+  if (!audio || typeof audio !== "object") return null
+
+  const contexto = audio.contextInfo
+
+  return {
+    tipo: "audio" as const,
+    duracaoS: inteiroOuZero(audio.seconds),
+    // DECISÃO 07: sem mimetype o contrato (`mime.min(1)`) derrubaria o payload e o áudio cairia no fluxo antigo; o formato do WhatsApp é sempre ogg/opus.
+    mime: typeof audio.mimetype === "string" && audio.mimetype ? audio.mimetype : "audio/ogg",
+    // fileLength vem como número, string ou Long ({low, high}); só os dois primeiros são lidos.
+    tamanho: inteiroOuZero(audio.fileLength),
+    encaminhado: contexto?.isForwarded === true || (Number(contexto?.forwardingScore) || 0) > 0,
+  }
+}

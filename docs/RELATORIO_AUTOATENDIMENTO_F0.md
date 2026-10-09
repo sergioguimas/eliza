@@ -393,3 +393,30 @@ de palavra-chave responde ao cliente de verdade).
 
 Dados de teste na org `admin`: clientes "TESTE API Claude" e "TESTE F0 Outro"; agendamento
 `TESTE-F0` cancelado; `autoatendimento_config` ativa (sem efeito enquanto `ATENDENTE_URL` estiver vazia).
+
+## Revisão 07 (sola-agens) — 2026-10-09
+
+Contrato: [07-ajustes-sola-agens.md](contratos/autoatendimento/07-ajustes-sola-agens.md). Código
+escrito pelo Sonnet (passos 2–9), revisado pelo Opus contra o contrato. `tsc --noEmit`, eslint dos
+arquivos tocados e `npm run build` limpos. As 12 marcações `x-atendente` conferidas no
+`openapi.json` servido (e nenhuma nas 4 operações do motor).
+
+**Desvios do contrato, conscientes:**
+
+| Passo | Desvio | Por quê | Pendência |
+|---|---|---|---|
+| 0 | Formato da Evolution **não verificado** antes do código | Evolution de dev (`100.64.0.2:8080`) inacessível do PC no momento | Confirmar no aceite do item 4; se o formato divergir, ajustar só `lib/whatsapp/gateway.ts → baixarMidia` |
+| 1 | Migration **não aplicada** | MCP do Supabase recusou (`You do not have permission`) e não há CLI local | Aplicar `20261009140000_autoatendimento_atendente.sql` pelo Studio (aditiva, sem ordem de deploy) |
+| 1 | `database.types.ts` editado **à mão** (11 colunas) | Sem `supabase gen types` disponível | Regenerar depois de aplicar a migration e comparar (deve sair idêntico) |
+
+**Escolhas de implementação sem regra no contrato:**
+
+- `extractAudio`: áudio sem `mimetype` vira `audio/ogg` (sem isso o Zod derrubaria o payload e o
+  áudio cairia no fluxo de palavra-chave).
+- `baixarMidia`: "não encontrada" = HTTP 404 ou corpo de erro contendo "not found" (comportamento da
+  v2, não testado contra o servidor real). Data URI no `base64` é removido.
+- `respostas.cancelado` do template da org troca só `{name}`/`{{name}}`; outras variáveis do template
+  ficam literais no contexto.
+
+**Aceite (§8 do 07): pendente** — depende da migration aplicada e de um servidor com a Evolution
+alcançável para os itens 4.

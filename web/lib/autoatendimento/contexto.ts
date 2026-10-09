@@ -4,6 +4,7 @@ import type { z } from "zod"
 import { FUSO_HORARIO, type Contexto } from "@/contracts/autoatendimento"
 import { nicheDictionaries, type NicheKey } from "@/lib/dictionaries/niches"
 import type { Db } from "@/lib/domain/db"
+import { PADRAO_RESPOSTA_CANCELAMENTO, PADRAO_RESPOSTA_CONFIRMACAO } from "@/lib/domain/mensagens"
 import { momento } from "@/lib/domain/tempo"
 import { internalError } from "@/lib/http/erros"
 import { listarAgendamentosDoCliente } from "./agendamentos"
@@ -36,6 +37,33 @@ function termosDoNicho(nicho: string): ContextoDoTurno["organizacao"]["termos"] 
 const hhmm = (valor: string | null) => (valor ? valor.slice(0, 5) : null)
 
 /**
+ * Personalização do atendente (07 §5.3): a coluna da org vence; sem ela, o
+ * padrão do Eliza; sem padrão do Eliza, `null` (o atendente aplica o dele).
+ * Só confirmado e cancelado têm padrão aqui, os mesmos do webhook antigo.
+ * `templateCancelado` é o `msg_appointment_canceled` da org, que usa `{name}`.
+ */
+function montarAtendente(config: ConfigAutoatendimento, templateCancelado: string | null): ContextoDoTurno["atendente"] {
+  const canceladoDaOrg = templateCancelado?.trim()
+    ? templateCancelado.replace(/\{\{?\s*name\s*\}?\}/g, "{primeiroNome}")
+    : null
+
+  return {
+    persona: config.atendentePersona,
+    tom: config.atendenteTom,
+    pausaHumanaHoras: config.pausaHumanaHoras,
+    respostas: {
+      confirmado: config.respostaConfirmado ?? PADRAO_RESPOSTA_CONFIRMACAO,
+      cancelado: config.respostaCancelado ?? canceladoDaOrg ?? PADRAO_RESPOSTA_CANCELAMENTO,
+      falhaTecnica: config.respostaFalhaTecnica,
+      midiaNaoSuportada: config.respostaMidiaNaoSuportada,
+      audioLongo: config.respostaAudioLongo,
+      equipeSemContato: config.respostaEquipeSemContato,
+    },
+    palavras: { confirmar: config.palavrasConfirmar, cancelar: config.palavrasCancelar },
+  }
+}
+
+/**
  * Contexto do turno (02): uma chamada antes de cada resposta do atendente.
  * `desconhecido` e `ambiguo` são dados, não erro. Nunca inclui documento,
  * e-mail, endereço, prontuário, `contato_humano_telefone` nem dado de outro cliente.
@@ -48,7 +76,7 @@ export async function montarContexto(
     db.from("organizations").select("name, niche").eq("id", p.org).maybeSingle(),
     db
       .from("organization_settings")
-      .select("days_of_week, open_hours_start, open_hours_end, lunch_start, lunch_end")
+      .select("days_of_week, open_hours_start, open_hours_end, lunch_start, lunch_end, msg_appointment_canceled")
       .eq("organization_id", p.org)
       .maybeSingle(),
     identificarCliente(db, p.org, p.telefone),
@@ -101,5 +129,6 @@ export async function montarContexto(
     aguardandoConfirmacao: agendamentos
       .filter((a) => a.resumo.status === "scheduled" && a.lembreteEnviado)
       .map((a) => a.resumo.id),
+    atendente: montarAtendente(p.config, ajustes.data?.msg_appointment_canceled ?? null),
   }
 }

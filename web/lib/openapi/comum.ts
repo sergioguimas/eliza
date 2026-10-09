@@ -23,6 +23,7 @@ export const SIGNIFICADO_DO_CODIGO: Record<ErrorCode, string> = {
   CUSTOMER_CONFLICT: "O documento ou telefone já pertence a outro cadastro.",
   CUSTOMER_NOT_IDENTIFIED: "O telefone do ticket não tem cadastro. Crie-o em POST /cadastro.",
   ACTIVE_LIMIT_REACHED: "O cliente já tem o máximo de agendamentos ativos permitido pelo estabelecimento.",
+  MEDIA_TOO_LARGE: "A mídia pedida passa do tamanho máximo (16 MB decodificados).",
   VALIDATION_ERROR: "Body, query ou parâmetro inválido. `details` é `[{ field, message }]`.",
   OUT_OF_WINDOW: "Data fora da janela [hoje, hoje + janela máxima].",
   NOTICE_TOO_SHORT: "Menos tempo do que a antecedência mínima do estabelecimento.",
