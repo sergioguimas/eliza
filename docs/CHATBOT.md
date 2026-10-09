@@ -1,7 +1,7 @@
 # Atendente Eliza (chatbot WhatsApp)
 
-> **Status:** F0 contratada — nenhum código de implementação escrito. Documento de decisões e escopo.
-> **Última revisão:** 2026-09-23
+> **Status:** F0 (API de Autoatendimento no Eliza) **implementada e na `main`** em 2026-10-06. Falta o consumidor (`eliza-atendente`).
+> **Última revisão:** 2026-10-09 — decisões E1–E6 da [análise de custo × benefício](ANALISE_ATENDENTE.md); D3 substituída por E1.
 > **Tipo:** TO-BE (descreve o alvo; o código atual ainda não está em conformidade)
 
 ## Objetivo
@@ -55,7 +55,7 @@ Evolution API ──webhook──▶ Eliza /api/webhooks/whatsapp
                    ┌──────────┴──────────┐
                   não                   sim
                    │                     │
-        fluxo palavra-chave      repassa ──▶ eliza-atendente (serviço Node/TS)
+        fluxo palavra-chave      repassa ──▶ eliza-atendente (serviço Go, E1)
           (comportamento atual)              │ dedupe por message.id
                                              │ debounce ~3s por conversa
                                              │ lock: 1 conversa por vez
@@ -104,7 +104,7 @@ eliza-atendente ──resposta──▶ Eliza POST /mensagens ──▶ gateway 
 |---|---|---|---|
 | D1 | **Evolution API** (Node/Baileys), a mesma já em produção | Evolution Go | Go está em 0.x, exige ativação de licença com heartbeat ao servidor do fornecedor (API retorna 503 sem licença) e o ganho de desempenho não aparece no volume do Eliza — o gargalo do bot é o LLM. A troca fica barata via `lib/whatsapp/gateway.ts`. Custo aceito: re-parear números fica mais caro conforme entram tenants. Reabrir se RAM da VPS passar de ~70% com instâncias conectadas, se quedas de sessão do Baileys virarem recorrentes ou se a Evolution API ficar sem release estável. |
 | D2 | **Serviço separado** (`eliza-atendente`) falando com o Eliza por API | Bot dentro do Next.js | Fronteira clara: o bot não toca o banco de domínio diretamente; a regra de negócio continua num lugar só. |
-| D3 | **Node + TypeScript** no bot | Go | Compartilha contratos Zod e tipos gerados do Supabase com o Eliza. |
+| ~~D3~~ | ~~**Node + TypeScript** no bot~~ — **substituída por E1 em 2026-10-09** | Go | O motivo (compartilhar os Zod) perdeu força: a OpenAPI gerada dos mesmos Zod dá um cliente Go tipado, e o Smaug já tem o motor de agente em Go. |
 | D4 | **Histórico no schema `atendente`**, mesmo banco Supabase, acessado só pelo bot | Banco próprio do bot | Mesmo backup e uma superfície LGPD só. Custo aceito: independência de código, não de infraestrutura. |
 | D5 | **Webhook continua entrando pelo Eliza**, que repassa ao bot | Evolution apontando direto para o bot | Gating do add-on num lugar só, fallback para o fluxo de palavra-chave se o bot cair, e a config de webhook da Evolution não muda ao ligar o add-on. Custo aceito: um salto a mais, e o Eliza no caminho (o bot já depende dele para as ferramentas). |
 | D6 | **Org e telefone nunca vêm do LLM.** Ambos saem do webhook e são injetados pela camada de ferramentas do bot; a API valida o escopo. | Deixar o modelo passar identificadores | Evita injeção de prompt virar acesso a dado de terceiro ("cancela o horário da Maria"). Em clínica/psicologia é dado de saúde. |
@@ -113,6 +113,19 @@ eliza-atendente ──resposta──▶ Eliza POST /mensagens ──▶ gateway 
 | D9 | **Intervenção humana pausa o bot.** Mensagem `fromMe` que o bot não enviou pausa aquela conversa por algumas horas. | Bot sempre ativo | O dono vai responder pelo próprio celular; sem isso os dois falam ao mesmo tempo. |
 | D10 | **Contexto injetado a cada turno:** data/hora atual em `America/Sao_Paulo` e agendamentos aguardando confirmação. | Depender só do histórico do bot | O lembrete sai do cron do Eliza, não do bot; sem isso um "sim" em resposta ao lembrete fica ambíguo. |
 
+## Decisões de 2026-10-09 (análise de custo × benefício)
+
+Detalhe, alternativas e trade-offs em [ANALISE_ATENDENTE.md](ANALISE_ATENDENTE.md).
+
+| # | Decisão | Alternativa descartada | Motivo |
+|---|---|---|---|
+| E1 | **Bot em Go**, extraindo o motor de agente do Smaug (`redmilab/servicos/smaug`). Cliente da API gerado da OpenAPI (`/api/v1/autoatendimento/openapi.json`). Substitui D3. | Node/TS escrito do zero | Reaproveita LLM, ferramentas, fastpath, fila, áudio e imagem já em produção; ~20–40 MB de RAM. O bot não fala com a Evolution (D5/C3), então a linguagem dela não pesa. Custo aceito: mudança de contrato exige regenerar o cliente; o CI do bot acusa. |
+| E2 | **Motor genérico + adaptador por produto** (Eliza, Smaug, Helena). Reaproveita o código, **nunca a instância**: cada empresa roda o seu binário com base e segredos próprios. Extrair do Smaug só quando o Eliza for o segundo consumidor real. | Bot exclusivo do Eliza; instância única multiproduto | Sola e Geti não podem misturar dado de cliente; reescrever o motor três vezes não compensa. |
+| E3 | **LLM de terceiro com tool use**: Gemini 2.5 Flash-Lite em **plano pago** como padrão, escada para modelo maior só se a avaliação mostrar erro de ferramenta, raciocínio desligado. **Fastpath determinístico** na frente ("sim", "confirmo", "cancelar"). Bateria fixa de ~40 conversas antes de tenant real e a cada troca de modelo/prompt. | Mini-modelo local; NLP clássico como motor | VPS sem GPU (5–20 s por resposta) e modelos pequenos erram tool use em PT-BR; NLP clássico é o fluxo de palavra-chave, que quebra em conversa livre. Plano gratuito do Gemini pode usar o conteúdo — inaceitável com dado de saúde. |
+| E4 | **Histórico no schema `atendente`** do Supabase do Eliza, papel de banco que só enxerga esse schema (mantém D4). Dado vivo sempre pela API, sem cópia; conhecimento estático do tenant no Eliza (`instrucoes_atendimento`, depois tabela de FAQ via `/contexto`). Sem RAG na F1. | Acesso ao banco do Eliza; base paralela com cópia de agenda | D9 fechou a escrita fora do domínio de propósito; cópia de agenda desatualiza. |
+| E5 | **Retenção (fecha A5):** 90 dias de texto completo, depois só metadados; apagamento sob pedido do titular. Auditoria do bot por turno (ferramentas, argumentos, modelo, tokens, custo), além do `appointment_logs` do Eliza. | Guardar tudo indefinidamente | LGPD; o log por turno responde "por que o bot fez isso" e "quanto custou o tenant". |
+| E6 | **Verificar qual Evolution o Eliza usa em produção** antes da F1. A única documentada em `_padroes/` é a da VPS da Geti. | — | Produto da Sola dependendo de infra da Geti seria herdado pelo bot. |
+
 ## Decisões em aberto
 
 | # | Questão | Recomendação | Trade-off | Dono / prazo |
@@ -120,8 +133,8 @@ eliza-atendente ──resposta──▶ Eliza POST /mensagens ──▶ gateway 
 | ~~A1~~ | **Fechada em 2026-10-06 (D8):** nasce `pending` ("solicitado"), sempre, igual à página pública; o tenant confirma. Não configurável. | — | — | — |
 | ~~A2~~ | **Fechada em 2026-10-06:** C6 confirmada, tabela própria `autoatendimento_config`. | — | — | — |
 | ~~A3~~ | **Fechada em 2026-10-06:** C7 confirmada, token de serviço único + ticket. O token do bot não é uma API key da v1. | — | — | — |
-| A4 | Modelo de LLM e custo por tenant | Medir na F1 antes de fechar preço do add-on | — | F1 |
-| A5 | Retenção do histórico (LGPD) | Definir prazo antes da F1 ir para tenant real | Mais tempo = mais contexto; menos = menos exposição | Antes do go-live |
+| A4 | Modelo de LLM e custo por tenant | **Encaminhada por E3:** Gemini 2.5 Flash-Lite pago (~US$ 0,006/conversa estimado). Medir o real na F1 antes de fechar o preço do add-on | — | F1 |
+| ~~A5~~ | **Fechada em 2026-10-09 (E5):** 90 dias de texto completo, depois só metadados sem texto; apagamento sob pedido do titular. | — | — | — |
 
 Decisões de 2026-10-06 em `docs/contratos/DECISOES_API.md`.
 
@@ -164,4 +177,6 @@ Evolution).
 
 1. ~~Decidir A1 e confirmar A2/A3~~ (feito em 2026-10-06).
 2. ~~Commitar as correções de segurança de 2026-09-23~~ (feito).
-3. Executar a ordem de `docs/contratos/README.md`: 00-dominio → api-v1 → F0 do Autoatendimento.
+3. ~~Executar a ordem de `docs/contratos/README.md`: 00-dominio → api-v1 → F0 do Autoatendimento~~ (feito, PRs #39–#41).
+4. Verificar a Evolution de produção do Eliza (E6).
+5. F1 do `eliza-atendente`: contrato do motor genérico extraído do Smaug (E1/E2) e do adaptador Eliza; bateria de avaliação (E3); schema `atendente` com retenção (E4/E5).
