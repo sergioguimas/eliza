@@ -2,7 +2,7 @@
 
 > **Status:** F0 (API de Autoatendimento no Eliza) **implementada e na `main`** em 2026-10-06. Falta o consumidor (`eliza-atendente`).
 > **Última revisão:** 2026-10-09 — decisões E1–E6 da [análise de custo × benefício](ANALISE_ATENDENTE.md); D3 substituída por E1.
-> **O bot deixou de ser do Eliza:** virou a plataforma interna **`sola-agens`** (`Projetos/SolaSoftware/sola-agens`, decisões em `docs/DECISOES.md` de lá). O Eliza é o primeiro agente (F1), no modo de identidade *encaminhado*. O que está abaixo sobre o lado do Eliza continua valendo.
+> **O bot deixou de ser do Eliza:** virou a plataforma interna **`sola-agens`** (`Projetos/sola-agens`, decisões em `docs/DECISOES.md` e contrato em `CONTRATO.md` de lá). O Eliza é o primeiro agente (F1), no modo de identidade *encaminhado*. O que está abaixo sobre o lado do Eliza continua valendo.
 > **Tipo:** TO-BE (descreve o alvo; o código atual ainda não está em conformidade)
 
 ## Objetivo
