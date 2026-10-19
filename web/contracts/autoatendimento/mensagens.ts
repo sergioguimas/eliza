@@ -34,6 +34,17 @@ export const MensagemEncaminhada = z.object({
   deMim: z.boolean(),
   conteudo: z.discriminatedUnion("tipo", [
     z.object({ tipo: z.literal("texto"), texto: z.string().min(1) }),
+    z.object({
+      tipo: z.literal("audio"),
+      /** audioMessage.seconds */
+      duracaoS: z.number().int().nonnegative(),
+      /** audioMessage.mimetype, ex.: "audio/ogg; codecs=opus" */
+      mime: z.string().min(1),
+      /** audioMessage.fileLength em bytes; 0 se a Evolution não informou */
+      tamanho: z.number().int().nonnegative(),
+      /** contextInfo.isForwarded || contextInfo.forwardingScore > 0 */
+      encaminhado: z.boolean(),
+    }),
     z.object({ tipo: z.literal("nao_suportado"), tipoOriginal: z.string() }),
   ]),
   /** null quando deMim = true */
@@ -72,6 +83,8 @@ export const EscalonarBody = z
       "fora_da_politica",
       "nao_entendi",
       "reclamacao",
+      "numero_novo",
+      "falha_tecnica",
       "outro",
     ]),
     /** Resumo para a equipe. Sem dado sensível além do necessário. */
@@ -84,6 +97,15 @@ export const EscalonarResposta = apiSuccess(
     /** false quando a org não configurou contato humano */
     equipeNotificada: z.boolean(),
   })
+)
+
+// ---------------------------------------------------------------------------
+// atendente -> Eliza: GET /api/v1/autoatendimento/mensagens/{mensagemId}/midia
+// ---------------------------------------------------------------------------
+
+/** `tamanho` = bytes já decodificados. Nada disto é gravado no Eliza. */
+export const MidiaResposta = apiSuccess(
+  z.object({ mime: z.string(), tamanho: z.number().int().nonnegative(), base64: z.string() })
 )
 
 export type MensagemEncaminhada = z.infer<typeof MensagemEncaminhada>

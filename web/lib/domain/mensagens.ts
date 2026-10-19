@@ -129,15 +129,26 @@ export function mensagemPedidoRecusado(d: DadosMensagem, organizacaoNome: string
   return `❌ *Atualização de Agendamento*\n\nOlá ${d.clienteNome}, infelizmente não conseguimos confirmar o seu pedido de horário para *${servico}* em *${org}*. Por favor, entre em contacto para sugerirmos uma nova data.`
 }
 
+/**
+ * Textos padrão das respostas do webhook, com `{primeiroNome}` no lugar do
+ * nome. Constantes para o webhook antigo e o contexto do autoatendimento (07 §5.3)
+ * nunca divergirem.
+ */
+export const PADRAO_RESPOSTA_CONFIRMACAO =
+  "✅ *Confirmado, {primeiroNome}!* Já deixei seu agendamento confirmado na agenda. Te aguardamos!"
+export const PADRAO_RESPOSTA_CANCELAMENTO =
+  "👌 *Entendido, {primeiroNome}.* O agendamento foi cancelado. Quando quiser remarcar, é só chamar!"
+
+/** Função no replace: o nome nunca é lido como padrão especial (`$&`). */
+const comNome = (padrao: string, primeiroNome: string) =>
+  padrao.replace("{primeiroNome}", () => primeiroNome || "tudo certo")
+
 /** Resposta do webhook quando o cliente confirma pelo WhatsApp. */
 export function respostaWebhookConfirmacao(primeiroNome: string) {
-  return `✅ *Confirmado, ${primeiroNome || "tudo certo"}!* Já deixei seu agendamento confirmado na agenda. Te aguardamos!`
+  return comNome(PADRAO_RESPOSTA_CONFIRMACAO, primeiroNome)
 }
 
 /** Resposta do webhook quando o cliente cancela pelo WhatsApp (template da org só com {name}). */
 export function respostaWebhookCancelamento(template: string | null | undefined, primeiroNome: string) {
-  return (
-    renderMessageTemplate(template, { name: primeiroNome }) ||
-    `👌 *Entendido, ${primeiroNome || "tudo certo"}.* O agendamento foi cancelado. Quando quiser remarcar, é só chamar!`
-  )
+  return renderMessageTemplate(template, { name: primeiroNome }) || comNome(PADRAO_RESPOSTA_CANCELAMENTO, primeiroNome)
 }

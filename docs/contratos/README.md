@@ -10,9 +10,10 @@ Se discordarem, Zod vence para forma e `.md` para regra; registre a divergência
 | [00-dominio/](00-dominio/README.md) | TO-BE | `web/lib/domain/`: regra de agendamento compartilhada por painel, página pública e as duas APIs |
 | [api-v1/](api-v1/README.md) | AS-IS + TO-BE | API REST B2B com API key por tenant (`a0ff88a`) e as correções |
 | [autoatendimento/](autoatendimento/README.md) | TO-BE | API do cliente final (bot), revisada em 2026-10-06 |
+| [api-publica/](api-publica/README.md) | AS-IS + TO-BE | Catálogo público sem autenticação para sites dos clientes (2026-10-19); categoria de serviço, OpenAPI e verificação |
 
 Zod: `web/contracts/comum/envelope.ts` (envelope e erros únicos),
-`web/contracts/api-v1/`, `web/contracts/autoatendimento/`.
+`web/contracts/api-v1/`, `web/contracts/autoatendimento/`, `web/contracts/publico/`.
 
 Guias de consumo e Swagger (OpenAPI 3.1 em `/api/v1/docs`): [API.md](../API.md) (v1, para o tenant) e
 [API_AUTOATENDIMENTO.md](../API_AUTOATENDIMENTO.md) (para quem desenvolve o atendente).
@@ -32,6 +33,7 @@ funcionando. Cada contrato tem a sua ordem interna e o seu Aceite.
 | — | **Revisão Opus** da leva 1–4 → merge na `main` → deploy | | |
 | 4b | Migration D9: `authenticated` só lê `appointments` (**só depois do deploy**) | 00-dominio §8.3 | `docs/RELATORIO_DOMINIO.md` |
 | 5 | Autoatendimento F0 | autoatendimento §7 | `docs/RELATORIO_AUTOATENDIMENTO_F0.md` |
+| 6 | API pública: categoria, OpenAPI, verificação (migration **antes** do código) — **feito 2026-10-19** (`09f83e2`, migration aplicada) | api-publica §7 | `docs/RELATORIO_API_PUBLICA.md` |
 
 A auditoria do painel (`docs/AUDITORIA_STATUS_PAINEL.md`, 2026-10-06) já está
 incorporada ao 00-dominio §8 (decisões D9–D11).

@@ -252,6 +252,8 @@ export type Database = {
       autoatendimento_config: {
         Row: {
           antecedencia_minima_minutos: number
+          atendente_persona: string | null
+          atendente_tom: string | null
           ativo: boolean
           contato_humano_telefone: string | null
           created_at: string
@@ -259,10 +261,21 @@ export type Database = {
           janela_maxima_dias: number
           max_agendamentos_ativos: number
           organization_id: string
+          palavras_cancelar: string[] | null
+          palavras_confirmar: string[] | null
+          pausa_humana_horas: number | null
+          resposta_audio_longo: string | null
+          resposta_cancelado: string | null
+          resposta_confirmado: string | null
+          resposta_equipe_sem_contato: string | null
+          resposta_falha_tecnica: string | null
+          resposta_midia_nao_suportada: string | null
           updated_at: string
         }
         Insert: {
           antecedencia_minima_minutos?: number
+          atendente_persona?: string | null
+          atendente_tom?: string | null
           ativo?: boolean
           contato_humano_telefone?: string | null
           created_at?: string
@@ -270,10 +283,21 @@ export type Database = {
           janela_maxima_dias?: number
           max_agendamentos_ativos?: number
           organization_id: string
+          palavras_cancelar?: string[] | null
+          palavras_confirmar?: string[] | null
+          pausa_humana_horas?: number | null
+          resposta_audio_longo?: string | null
+          resposta_cancelado?: string | null
+          resposta_confirmado?: string | null
+          resposta_equipe_sem_contato?: string | null
+          resposta_falha_tecnica?: string | null
+          resposta_midia_nao_suportada?: string | null
           updated_at?: string
         }
         Update: {
           antecedencia_minima_minutos?: number
+          atendente_persona?: string | null
+          atendente_tom?: string | null
           ativo?: boolean
           contato_humano_telefone?: string | null
           created_at?: string
@@ -281,6 +305,15 @@ export type Database = {
           janela_maxima_dias?: number
           max_agendamentos_ativos?: number
           organization_id?: string
+          palavras_cancelar?: string[] | null
+          palavras_confirmar?: string[] | null
+          pausa_humana_horas?: number | null
+          resposta_audio_longo?: string | null
+          resposta_cancelado?: string | null
+          resposta_confirmado?: string | null
+          resposta_equipe_sem_contato?: string | null
+          resposta_falha_tecnica?: string | null
+          resposta_midia_nao_suportada?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1077,6 +1110,7 @@ export type Database = {
       }
       services: {
         Row: {
+          category: string | null
           color: string | null
           created_at: string
           description: string | null
@@ -1088,6 +1122,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          category?: string | null
           color?: string | null
           created_at?: string
           description?: string | null
@@ -1099,6 +1134,7 @@ export type Database = {
           title: string
         }
         Update: {
+          category?: string | null
           color?: string | null
           created_at?: string
           description?: string | null

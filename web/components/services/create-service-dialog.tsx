@@ -117,6 +117,23 @@ export function CreateServiceDialog({
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="service-category" className="text-foreground">
+              Categoria (opcional)
+            </Label>
+            <Input
+              id="service-category"
+              name="category"
+              maxLength={40}
+              placeholder="Ex.: Alongamento"
+              defaultValue={serviceToEdit?.category ?? ""}
+              className="border-input bg-background text-foreground placeholder:text-muted-foreground"
+            />
+            <p className="text-xs text-muted-foreground">
+              Serviços com a mesma categoria aparecem juntos no seu site.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="service-duration" className="text-foreground">

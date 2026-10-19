@@ -44,6 +44,11 @@ export const AtualizarCadastroBody = z
     message: "Informe ao menos um campo.",
   })
 
+// GET /api/v1/autoatendimento/cadastro/nome?nome=...
+export const VerificarNomeQuery = z.object({ nome: z.string().trim().min(3).max(120) }).strict()
+
+export const VerificarNomeResposta = apiSuccess(z.object({ existe: z.boolean() }))
+
 export type Cadastro = z.infer<typeof Cadastro>
 export type CriarCadastroBody = z.infer<typeof CriarCadastroBody>
 export type AtualizarCadastroBody = z.infer<typeof AtualizarCadastroBody>

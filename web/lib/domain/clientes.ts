@@ -52,6 +52,44 @@ export async function buscarPorTelefone(db: Db, orgId: string, telefone: string)
   return (data ?? []).map((c) => ({ id: c.id, nome: c.name, telefone: c.phone, email: c.email }))
 }
 
+/** Minúsculas, sem acento, espaços colapsados: "  MARIA   Silva" e "María silva" comparam iguais. */
+function normalizarNome(nome: string) {
+  return nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim()
+}
+
+const TAMANHO_DA_PAGINA = 1000
+
+/**
+ * Já existe cliente ativo da org com este nome COMPLETO (igualdade normalizada,
+ * nunca prefixo nem semelhança)? Devolve só o `boolean`: quem chama não ganha
+ * id, contagem nem telefone. Compara em TypeScript porque não há coluna de nome
+ * normalizado (07, C11); lê só `name`, paginando até achar ou acabar.
+ */
+export async function existeClienteComNome(db: Db, orgId: string, nome: string): Promise<boolean> {
+  const alvo = normalizarNome(nome)
+
+  if (!alvo) return false
+
+  for (let de = 0; ; de += TAMANHO_DA_PAGINA) {
+    const { data, error } = await db
+      .from("customers")
+      .select("name")
+      .eq("organization_id", orgId)
+      .is("deleted_at", null)
+      .order("id")
+      .range(de, de + TAMANHO_DA_PAGINA - 1)
+
+    if (error) {
+      console.error("[domain:existeClienteComNome]", error)
+      throw error
+    }
+
+    if ((data ?? []).some((c) => normalizarNome(c.name ?? "") === alvo)) return true
+
+    if ((data ?? []).length < TAMANHO_DA_PAGINA) return false
+  }
+}
+
 export async function buscarPorDocumento(db: Db, orgId: string, documento: string): Promise<ClienteResumo[]> {
   const { data, error } = await db
     .from("customers")

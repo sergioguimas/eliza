@@ -16,6 +16,8 @@ export type ContextoAutoatendimento = {
   org: string
   /** telefone do ticket, só dígitos, como veio do WhatsApp */
   telefone: string
+  /** Id da mensagem que gerou o ticket (`payload.msg`). Só a rota de mídia usa. */
+  mensagemId: string
   config: ConfigAutoatendimento
 }
 
@@ -79,7 +81,7 @@ export const autenticarTicket: Autenticador<ContextoAutoatendimento> = async (re
       : new ApiError("TICKET_INVALID", "Ticket da conversa inválido.")
   }
 
-  const { org, tel, inst } = ticket.payload
+  const { org, tel, inst, msg } = ticket.payload
 
   const [organizacao, config] = await Promise.all([
     db.from("organizations").select("whatsapp_instance_name").eq("id", org).maybeSingle(),
@@ -95,5 +97,5 @@ export const autenticarTicket: Autenticador<ContextoAutoatendimento> = async (re
     throw new ApiError("ADDON_INACTIVE", MENSAGEM_INATIVO)
   }
 
-  return { org, telefone: tel, config }
+  return { org, telefone: tel, mensagemId: msg, config }
 }

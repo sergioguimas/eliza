@@ -80,6 +80,8 @@ interface PublicBookingFormProps {
   services: Servico[]
   professionals: Profissional[]
   organizationName?: string
+  /** Serviço pré-selecionado (`?servico=<id>`, ex.: link do site do cliente). Já validado pela página. */
+  initialServiceId?: string
   headline?: string
   subtitle?: string
 }
@@ -92,7 +94,8 @@ export function PublicBookingForm({
   services,
   professionals,
   organizationName,
-  headline = "Agende seu atendimento online",
+  initialServiceId,
+  headline ="Agende seu atendimento online",
   subtitle = "Escolha o serviço, selecione um horário disponível e receba a confirmação pelo WhatsApp.",
 }: PublicBookingFormProps) {
   const [mounted, setMounted] = useState(false)
@@ -117,7 +120,7 @@ export function PublicBookingForm({
       customer_birth_date: "",
       customer_gender: "",
       notes: "",
-      service_id: "",
+      service_id: initialServiceId ?? "",
       professional_id: "",
       time: "",
     },

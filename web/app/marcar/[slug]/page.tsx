@@ -32,8 +32,15 @@ export async function generateMetadata(
   }
 }
 
-export default async function PublicBookingPage({params}: {params: Promise<{ slug: string }>}) {
+export default async function PublicBookingPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ servico?: string | string[] }>
+}) {
   const { slug } = await params;
+  const { servico } = await searchParams
   const supabase = await createClient<Database>()
 
   // 1. Busca a organização pelo slug
@@ -57,6 +64,11 @@ export default async function PublicBookingPage({params}: {params: Promise<{ slu
     listarProfissionaisAtivos(admin, organization.id),
   ])
 
+  // `?servico=<id>` pré-seleciona o serviço (links do site do cliente). Só vale
+  // se for um serviço ativo desta org; qualquer outro valor é ignorado.
+  const initialServiceId =
+    typeof servico === "string" && services.some((s) => s.id === servico) ? servico : undefined
+
   return (
     <div className={`theme-${organization.niche ?? "generico"} min-h-screen bg-background py-10 px-4`}>
       <div className="mx-auto w-full max-w-[1400px] space-y-8">
@@ -71,6 +83,7 @@ export default async function PublicBookingPage({params}: {params: Promise<{ slu
           organizationName={organization.name}
           services={services}
           professionals={professionals}
+          initialServiceId={initialServiceId}
         />
       </div>
     </div>

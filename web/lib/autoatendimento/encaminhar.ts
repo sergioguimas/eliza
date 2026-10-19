@@ -8,7 +8,7 @@ import {
   type TicketEmitido,
 } from "@/contracts/autoatendimento"
 import type { Db } from "@/lib/domain/db"
-import { extractIncomingNumber, extractInstanceName, extractMessageText } from "@/lib/whatsapp/extrair-mensagem"
+import { extractAudio, extractIncomingNumber, extractInstanceName, extractMessageText } from "@/lib/whatsapp/extrair-mensagem"
 import { createAdminClient } from "@/utils/supabase/admin"
 import { carregarConfig } from "./config"
 import { emitirTicket } from "./ticket"
@@ -130,6 +130,7 @@ async function enviarAoAtendente(p: {
   if (!segredo) return recuar(p.deMim, "segredo_de_encaminhamento_ausente")
 
   const texto = extractMessageText(p.data.message)
+  const audio = texto ? null : extractAudio(p.data.message)
   let ticket: TicketEmitido | null = null
 
   if (!p.deMim) {
@@ -150,9 +151,10 @@ async function enviarAoAtendente(p: {
       nomeExibicao: !p.deMim && typeof p.data.pushName === "string" && p.data.pushName ? p.data.pushName : null,
     },
     deMim: p.deMim,
+    // Ordem: texto -> áudio -> nao_suportado. Áudio leva só metadados; o atendente baixa o arquivo pela API (07 §4.2).
     conteudo: texto
       ? { tipo: "texto", texto }
-      : { tipo: "nao_suportado", tipoOriginal: tipoOriginal(p.data.message) },
+      : (audio ?? { tipo: "nao_suportado", tipoOriginal: tipoOriginal(p.data.message) }),
     ticket,
   })
 

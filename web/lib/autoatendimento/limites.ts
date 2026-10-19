@@ -13,6 +13,9 @@ const LIMITES = {
   "aa-msg-contato": { windowMs: HORA, max: 60 },
   "aa-msg-org": { windowMs: HORA, max: 600 },
   "aa-escalar": { windowMs: HORA, max: 3 },
+  // 07: contém enumeração de nomes e download de mídia por um atendente em loop.
+  "aa-nome": { windowMs: HORA, max: 10 },
+  "aa-midia": { windowMs: HORA, max: 30 },
 } as const
 
 export type PrefixoDeLimite = keyof typeof LIMITES

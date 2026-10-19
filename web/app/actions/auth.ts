@@ -1,7 +1,6 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
-import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { Database } from "@/utils/database.types"
@@ -71,62 +70,6 @@ export async function signUp(formData: FormData) {
   return {
     success: 'Verifique seu email para confirmar o cadastro.',
   }
-}
-
-export async function createCompany(formData: FormData) {
-  const supabase = await createClient<Database>() 
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return { error: 'Usuário não autenticado.' }
-  }
-
-  const companyName = formData.get('companyName') as string
-  
-  const slug = companyName.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-') + '-' + Math.floor(Math.random() * 10000)
-
-  const { data: org, error: orgError } = await supabase
-    .from('organizations') 
-    .insert({
-      name: companyName,
-      slug: slug,
-      niche: 'generico', // Padrão
-      // plan e subscription_status não são enviados de propósito: o client não
-      // tem privilégio de INSERT nessas colunas (senão dá para nascer com
-      // plan='enterprise'). Os DEFAULTs da tabela cobrem 'free' / 'active'.
-    })
-    // `.select()` sem argumento vira `select=*` no PostgREST, e o RETURNING de
-    // todas as colunas exige SELECT em todas elas — que authenticated não tem
-    // mais (migration 20260811120000). Só o id é usado abaixo.
-    .select('id')
-    .single()
-
-  if (orgError) {
-    console.error('Erro ao criar organização:', orgError)
-    return { error: 'Erro ao criar a empresa. Tente outro nome.' }
-  }
-
-  // Atualização do perfil
-  const { error: profileError } = await supabase
-    .from('profiles')
-    .update({
-      organization_id: org.id,
-      role: 'owner'
-    })
-    .eq('id', user.id)
-
-  if (profileError) {
-    console.error('Erro ao atualizar perfil:', profileError)
-    return { error: 'Empresa criada, mas houve um erro ao vincular seu perfil.' }
-  }
-
-  await supabase.from('organization_settings').insert({ organization_id: org.id })
-
-  revalidatePath('/', 'layout')
-  return redirect('/dashboard')
 }
 
 export async function signOut() {

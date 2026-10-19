@@ -34,6 +34,7 @@ correções de segurança de 2026-09-23 já estão commitadas (`19fff0e`, `a2213
 | [04-agendamentos.md](04-agendamentos.md) | Listar, criar, remarcar, cancelar, confirmar |
 | [05-cadastro.md](05-cadastro.md) | Ler, criar e atualizar o próprio cadastro |
 | [06-mensagens-e-encaminhamento.md](06-mensagens-e-encaminhamento.md) | Webhook → atendente, envio de resposta, escalonamento |
+| [07-ajustes-sola-agens.md](07-ajustes-sola-agens.md) | Revisão aditiva (2026-10-09) para o sola-agens: `x-atendente`, busca por nome, motivos novos, áudio, campo `atendente` no contexto |
 
 ## 1. A fronteira (o que "desmembrado" significa aqui)
 
@@ -226,6 +227,6 @@ Confirmar com o Sérgio antes de executar o passo 3.
 
 - Tela de configuração do add-on no painel. Na F0 liga-se pelo Studio.
 - Mensagens proativas iniciadas pelo atendente (sem ticket, não há como).
-- Mídia, áudio e localização (`conteudo.tipo = "nao_suportado"`).
+- Mídia, áudio e localização (`conteudo.tipo = "nao_suportado"`). **Áudio revisto em [07](07-ajustes-sola-agens.md).**
 - Qualquer coisa do serviço `eliza-atendente` além do que ele precisa
   consumir e expor (os endpoints dele são só o de 06).

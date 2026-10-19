@@ -12,6 +12,8 @@ export const Servico = z.object({
   duracaoMinutos: z.number().int().positive(),
   /** Em reais. null = não divulgar preço. */
   preco: z.number().nonnegative().nullable(),
+  /** Agrupamento opcional definido no painel; null = sem grupo. */
+  categoria: z.string().nullable(),
 })
 
 export const Profissional = z.object({

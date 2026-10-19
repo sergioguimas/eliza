@@ -34,6 +34,8 @@ export const ErrorCode = z.enum([
   "CUSTOMER_CONFLICT", //      documento já pertence a outro cliente
   "CUSTOMER_NOT_IDENTIFIED", // autoatendimento: telefone do ticket sem cadastro
   "ACTIVE_LIMIT_REACHED", //   autoatendimento: max_agendamentos_ativos
+  // 413
+  "MEDIA_TOO_LARGE", //        autoatendimento: mídia acima do limite (16 MB)
   // 422
   "VALIDATION_ERROR",
   "OUT_OF_WINDOW", //          autoatendimento: data fora de [hoje, hoje + janela]
@@ -66,6 +68,7 @@ export const HTTP_STATUS_BY_CODE: Record<ErrorCode, number> = {
   CUSTOMER_CONFLICT: 409,
   CUSTOMER_NOT_IDENTIFIED: 409,
   ACTIVE_LIMIT_REACHED: 409,
+  MEDIA_TOO_LARGE: 413,
   VALIDATION_ERROR: 422,
   OUT_OF_WINDOW: 422,
   NOTICE_TOO_SHORT: 422,
