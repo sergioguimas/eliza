@@ -13,6 +13,7 @@ const SRI = {
 } as const
 
 export const SPEC_V1 = "/api/v1/openapi.json"
+export const SPEC_PUBLICA = "/api/public/v1/openapi.json"
 export const SPEC_AUTOATENDIMENTO = "/api/v1/autoatendimento/openapi.json"
 
 export const CSP_DA_PAGINA = (nonce: string) =>
@@ -32,6 +33,7 @@ export function paginaSwagger({ nonce, comAutoatendimento }: { nonce: string; co
   const urls = [
     { url: SPEC_V1, name: "API v1 (integração B2B)" },
     ...(comAutoatendimento ? [{ url: SPEC_AUTOATENDIMENTO, name: "Autoatendimento (interna)" }] : []),
+    { url: SPEC_PUBLICA, name: "API pública (sites)" },
   ]
 
   return `<!doctype html>

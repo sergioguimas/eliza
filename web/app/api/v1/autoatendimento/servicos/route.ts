@@ -14,6 +14,7 @@ export const GET = criarRota({
         duracaoMinutos: s.duracaoMinutos,
         // null = não divulgar; preço 0 continua 0.
         preco: s.preco ?? null,
+        categoria: s.categoria,
       })),
     },
   }),
