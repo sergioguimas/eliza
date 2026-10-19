@@ -74,3 +74,21 @@ selecionado. Id que não for serviço ativo da org é ignorado (abre sem seleç�
 
 Novo cliente com LP = cadastrar a org, acrescentar o domínio dele em
 `LP_PUBLIC_ORIGINS` e recriar o container.
+
+## Documentação interativa
+
+A spec OpenAPI 3.1 está em `/api/public/v1/openapi.json` (gerada do Zod) e aparece no Swagger
+(`/api/v1/docs`) como "API pública (sites)", ao lado das outras duas.
+
+## Verificação do contrato
+
+`web/scripts/verificar-api-publica.mjs` (Node puro, sem dependência) confere o formato fechado da resposta,
+cabeçalhos (`set-cookie`, `cache-control`, `etag`), `304`, os `404` idênticos e o CORS:
+
+```
+node web/scripts/verificar-api-publica.mjs <base-url> <slug> [origem-permitida]
+node web/scripts/verificar-api-publica.mjs http://localhost:3001 admin http://localhost:3200
+```
+
+Sai com código 1 na primeira falha. A lista de campos é fechada no script: campo novo na resposta reprova até o
+script ser atualizado. Não testa o `429` (gastaria a cota do IP).
