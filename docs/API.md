@@ -4,6 +4,7 @@ API multitenant para integrações externas (agentes, automações). Cobre as
 ações de agendamento, sem exclusão (cancelar resolve). Não confundir com a API
 de Autoatendimento (`/api/v1/autoatendimento/*`), que é interna, usada pelo
 atendente de WhatsApp: ver [API_AUTOATENDIMENTO.md](API_AUTOATENDIMENTO.md).
+Catálogo público sem autenticação (sites dos clientes): [API_PUBLICA.md](API_PUBLICA.md).
 
 Referência interativa (Swagger/OpenAPI 3.1): `/api/v1/docs`. O documento cru
 está em `/api/v1/openapi.json`. Veja [Testando pelo Swagger](#testando-pelo-swagger).
