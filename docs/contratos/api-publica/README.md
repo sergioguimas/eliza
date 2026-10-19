@@ -1,6 +1,6 @@
 # API pública (`/api/public/v1`) — contrato
 
-> **§1 AS-IS** (implementado em `de33f29`, 2026-10-19, `development`, sem deploy) · **§2–§5 TO-BE**
+> **AS-IS** · §1 implementado em `de33f29`; §2–§5 executados em 2026-10-19 (merge `09f83e2` na `development`, sem deploy) · relatório: [RELATORIO_API_PUBLICA.md](../../RELATORIO_API_PUBLICA.md)
 > **Escrito em:** 2026-10-19 · **Origem:** LP da Deborah (`SolaSoftware/clientes/deborah/lp/docs/ELIZA_CATALOGO.md`, decisões D1–D5)
 > **Zod tocados:** `web/contracts/publico/catalogo.ts`, `web/contracts/api-v1/catalogo.ts`, `web/contracts/autoatendimento/catalogo.ts`
 > Guia de consumo: [API_PUBLICA.md](../../API_PUBLICA.md)

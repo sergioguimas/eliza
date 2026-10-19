@@ -33,7 +33,7 @@ funcionando. Cada contrato tem a sua ordem interna e o seu Aceite.
 | — | **Revisão Opus** da leva 1–4 → merge na `main` → deploy | | |
 | 4b | Migration D9: `authenticated` só lê `appointments` (**só depois do deploy**) | 00-dominio §8.3 | `docs/RELATORIO_DOMINIO.md` |
 | 5 | Autoatendimento F0 | autoatendimento §7 | `docs/RELATORIO_AUTOATENDIMENTO_F0.md` |
-| 6 | API pública: categoria, OpenAPI, verificação (migration **antes** do código) | api-publica §7 | `docs/RELATORIO_API_PUBLICA.md` |
+| 6 | API pública: categoria, OpenAPI, verificação (migration **antes** do código) — **feito 2026-10-19** (`09f83e2`, migration aplicada) | api-publica §7 | `docs/RELATORIO_API_PUBLICA.md` |
 
 A auditoria do painel (`docs/AUDITORIA_STATUS_PAINEL.md`, 2026-10-06) já está
 incorporada ao 00-dominio §8 (decisões D9–D11).

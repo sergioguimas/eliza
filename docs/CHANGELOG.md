@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-10-19
+
+### API pública (`/api/public/v1`) e categoria de serviço
+
+- Nova rota sem autenticação `GET /api/public/v1/orgs/{slug}/catalogo`: serviços ativos da org (`id, nome, descricao,
+  duracaoMinutos, preco, categoria`), contrato Zod estrito, CORS só para `LP_PUBLIC_ORIGINS`, `ETag`/304, cache de 30 s e
+  120 req/min por IP. Primeiro consumidor: LP da Deborah. Guia em `docs/API_PUBLICA.md`, contrato em `docs/contratos/api-publica/`.
+- `/marcar/[slug]?servico=<id>` abre com o serviço pré-selecionado (id fora do catálogo ativo da org é ignorado).
+- Coluna `services.category` (texto opcional, até 40; migration `20261019120000`) e campo "Categoria" no formulário de serviço.
+- Categoria exposta nas três APIs, de forma aditiva: `category` na v1 (`GET /services`), `categoria` no Autoatendimento
+  (`GET /servicos`, versão do contrato continua `1`) e na pública.
+- OpenAPI 3.1 da API pública em `/api/public/v1/openapi.json`, terceira spec no Swagger (`/api/v1/docs`). As specs da v1 e do
+  Autoatendimento ganharam o campo automaticamente (geradas do Zod).
+- `web/scripts/verificar-api-publica.mjs`: verificação do contrato da rota pública (formato fechado, cabeçalhos, 304, 404, CORS).
+- Variável nova: `LP_PUBLIC_ORIGINS` (lista de origens separadas por vírgula; vazia = nenhum site lê ao vivo).
+
 ## 2026-10-06
 
 ### API v1 (etapa 4: escopo `payments`, gate de plano e documentação)

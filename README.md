@@ -130,8 +130,10 @@ EVOLUTION_API_KEY=
 | `/configuracoes` | Organização, preferências, WhatsApp e perfil |
 | `/configuracoes/equipe` | Membros e hierarquia |
 | `/configuracoes/horarios` | Disponibilidade semanal |
-| `/marcar/[slug]` | Agendamento público |
+| `/marcar/[slug]` | Agendamento público (`?servico=<id>` pré-seleciona o serviço) |
 | `/admin` | Super admin |
+| `/api/v1/*` | API REST B2B com API key ([docs/API.md](docs/API.md)); Swagger em `/api/v1/docs` |
+| `/api/public/v1/orgs/[slug]/catalogo` | Catálogo público sem autenticação, para sites dos clientes ([docs/API_PUBLICA.md](docs/API_PUBLICA.md)) |
 | `/api/webhooks/whatsapp/[[...slug]]` | Webhook WhatsApp |
 | `/api/cron/send-reminders` | Cron protegido por `CRON_SECRET` |
 | `/api/cron/cleanup-demo` | Cron protegido por `CRON_SECRET`, limpa tenants demo expirados |
