@@ -24,7 +24,7 @@ export const ServicoPublico = z
     duracaoMinutos: z.number().int().positive(),
     /** Em reais. null = não divulgar. Preço 0 continua 0 (quem consome decide como mostrar). */
     preco: z.number().nonnegative().nullable(),
-    /** Agrupamento opcional. `services` ainda não tem categoria: sempre null por enquanto. */
+    /** Agrupamento opcional (`services.category`, texto livre até 40). null = sem grupo. */
     categoria: z.string().max(40).nullable(),
   })
   .strict()

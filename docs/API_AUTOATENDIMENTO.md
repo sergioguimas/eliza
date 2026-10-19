@@ -99,7 +99,7 @@ para `desconhecido`.
    (`organizacao.termos`: use "cliente", "profissional" etc. como o estabelecimento fala), o expediente, a política, quem é o cliente e os
    agendamentos futuros. `politica.instrucoesAtendimento` é texto do estabelecimento para você (avisos, tom).
 3. **Entender o pedido** (isso é com o atendente). Para agendar:
-   - `GET /servicos` e `GET /profissionais` (catálogo ativo; todo profissional atende todo serviço).
+   - `GET /servicos` (inclui `categoria`, `null` quando sem grupo) e `GET /profissionais` (catálogo ativo; todo profissional atende todo serviço).
    - **`GET /horarios?servicoId=…&data=AAAA-MM-DD`** devolve os horários livres de **cada** profissional (com `motivoVazio` quando não há).
      Ofereça ao cliente só horários desta lista.
 4. **`POST /agendamentos`** com `servicoId`, `profissionalId` e `inicio` (um dos horários oferecidos). Responde `201` com o agendamento em

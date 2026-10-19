@@ -100,7 +100,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
         descricao: s.descricao?.trim() ? s.descricao : null,
         duracaoMinutos: s.duracaoMinutos,
         preco: s.preco ?? null,
-        categoria: null,
+        categoria: s.categoria,
       })),
       atualizadoEm: new Date().toISOString(),
     }

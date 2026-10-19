@@ -26,7 +26,7 @@ vazamento.
         "descricao": null,
         "duracaoMinutos": 60,
         "preco": 120,
-        "categoria": null
+        "categoria": "Nail art"
       }
     ],
     "atualizadoEm": "2026-10-19T14:06:43.454Z"
@@ -38,7 +38,7 @@ vazamento.
 |---|---|
 | `servicos[]` | Só `is_active = true` da org, ordenados por título, no máximo 30 |
 | `preco` | Reais; `null` = não divulgar; `0` continua `0` |
-| `categoria` | Sempre `null` até existir `services.category` (decisão D2 da LP) |
+| `categoria` | Texto livre (até 40) definido no painel; `null` = sem grupo. Serviços com a mesma categoria devem ser exibidos juntos (decisão D2 da LP) |
 | `atualizadoEm` | Instante da consulta (`services` não tem `updated_at`) |
 
 Erros no envelope único (`contracts/comum/envelope.ts`): `404 NOT_FOUND`
