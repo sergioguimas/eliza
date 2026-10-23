@@ -6,19 +6,17 @@ services:
     build: .
     restart: always
     networks:
-      - public
-      - private
+      proxy_net: {} # Mantém IP automático nesta rede
+      evo_net:
+        ipv4_address: ${IP_EVO_NET} # Fixa o IP na evo_net
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=public"
-      - "traefik.http.routers.elisa-app.rule=Host(`eliza.solasoftware.com.br`)"
-      - "traefik.http.routers.elisa-app.entrypoints=websecure"
-      - "traefik.http.routers.elisa-app.tls.certresolver=meuresolver"
+      - "traefik.http.routers.elisa-app.rule=Host(`${DNS}`)"
       - "traefik.http.services.elisa-app.loadbalancer.server.port=3000"
     env_file:
       - .env
 networks:
-  public:
+  proxy_net:
     external: true
-  private:
+  evo_net:
     external: true
