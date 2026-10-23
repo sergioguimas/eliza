@@ -316,7 +316,7 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
         {!collapsed && (
           <div className="flex items-center justify-between gap-2 border-t border-sidebar-border px-3 py-3">
             <ElizaWordmark className="text-xs text-muted-foreground" />
-            <SolaSeal />
+            <SolaSeal align="end" />
           </div>
         )}
       </aside>
