@@ -21,9 +21,9 @@ EVOLUTION_API_URL=
 EVOLUTION_API_KEY=
 ```
 
-`NEXT_PUBLIC_EVOLUTION_API_URL` ainda é aceita como fallback por compatibilidade
-com o deploy atual, mas está em vias de aposentadoria: todo uso é server-side, e
-o prefixo `NEXT_PUBLIC_` só serve para expor a URL no bundle do browser.
+`NEXT_PUBLIC_EVOLUTION_API_URL` não é mais lida. Todo uso é server-side, e uma
+`NEXT_PUBLIC_*` é embutida no `next build`: trocar a `.env` depois não muda o valor
+(um build ficou preso no IP da Evolution de dev assim). Use só `EVOLUTION_API_URL`.
 
 O servidor Evolution é **único para todo o sistema**. Não existe servidor por
 organização — as colunas `organizations.evolution_api_url` / `evolution_api_key`

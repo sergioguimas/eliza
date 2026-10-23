@@ -1,0 +1,10 @@
+# A .env (produção) entra de propósito: as NEXT_PUBLIC_* são embutidas no
+# `next build`. Já .env.local tem prioridade sobre .env no Next e traria
+# valores de dev para dentro da imagem.
+.env*.local
+.env.development*
+.env.test*
+
+node_modules
+.next
+tsconfig.tsbuildinfo
