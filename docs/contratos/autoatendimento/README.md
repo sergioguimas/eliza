@@ -35,6 +35,7 @@ correções de segurança de 2026-09-23 já estão commitadas (`19fff0e`, `a2213
 | [05-cadastro.md](05-cadastro.md) | Ler, criar e atualizar o próprio cadastro |
 | [06-mensagens-e-encaminhamento.md](06-mensagens-e-encaminhamento.md) | Webhook → atendente, envio de resposta, escalonamento |
 | [07-ajustes-sola-agens.md](07-ajustes-sola-agens.md) | Revisão aditiva (2026-10-09) para o sola-agens: `x-atendente`, busca por nome, motivos novos, áudio, campo `atendente` no contexto |
+| [08-canal-web.md](08-canal-web.md) | Revisão aditiva (2026-10-26): chat da página pública `/marcar` que pré-preenche o formulário — ticket de visitante, `canal_web`, `x-atendente-publico`, rota do chat |
 
 ## 1. A fronteira (o que "desmembrado" significa aqui)
 
