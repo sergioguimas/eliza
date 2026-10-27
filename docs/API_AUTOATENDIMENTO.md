@@ -304,8 +304,9 @@ pelo motor.
 
 ## 13. Testando pelo Swagger
 
-A spec do Autoatendimento só é servida em **desenvolvimento** ou com `API_DOCS_INTERNAS=true` no Eliza (é uma API interna). Em produção,
-sem a flag, `/api/v1/autoatendimento/openapi.json` responde `404` e o seletor da página não a mostra.
+A spec do Autoatendimento só é servida em **desenvolvimento**, com `API_DOCS_INTERNAS=true` no Eliza ou para quem envia
+`Authorization: Bearer <AUTOATENDIMENTO_API_TOKEN>` (é assim que o sola-agens a lê no boot; não exige ticket). Em produção,
+sem a flag nem o token, `/api/v1/autoatendimento/openapi.json` responde `404` e o seletor da página não a mostra.
 
 1. Suba o Eliza e abra `http://localhost:3000/api/v1/docs`; no seletor do topo escolha **Autoatendimento (interna)**.
 2. Gere um ticket de desenvolvimento (de dentro de `web/`; lê `AUTOATENDIMENTO_TICKET_SECRET` do `.env.local`, não o imprime e recusa rodar com `NODE_ENV=production`):
