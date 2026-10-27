@@ -23,9 +23,10 @@ vazamento.
       {
         "id": "c6c3cf27-996e-465e-8262-ae698d75d776",
         "nome": "Nail Art Premium",
-        "descricao": null,
+        "descricao": "Inclui remoção. Decoração e extras são combinados no atendimento.",
         "duracaoMinutos": 60,
         "preco": 120,
+        "precoAPartirDe": true,
         "categoria": "Nail art"
       }
     ],
@@ -37,7 +38,9 @@ vazamento.
 | Campo | Regra |
 |---|---|
 | `servicos[]` | Só `is_active = true` da org, ordenados por título, no máximo 30 |
-| `preco` | Reais; `null` = não divulgar; `0` continua `0` |
+| `descricao` | Observações do serviço, editadas no painel (até 500 caracteres); `null` quando vazia. É texto para o cliente final |
+| `preco` | Reais; `null` = não divulgar; `0` continua `0`. Quando `precoAPartirDe` é `true`, é o valor mínimo |
+| `precoAPartirDe` | `true` = preço "a partir de": o valor final depende do que o cliente pedir a mais e é combinado no atendimento. Sempre presente (`false` por padrão). Exibir como "a partir de R$ X" |
 | `categoria` | Texto livre (até 40) definido no painel; `null` = sem grupo. Serviços com a mesma categoria devem ser exibidos juntos (decisão D2 da LP) |
 | `atualizadoEm` | Instante da consulta (`services` não tem `updated_at`) |
 

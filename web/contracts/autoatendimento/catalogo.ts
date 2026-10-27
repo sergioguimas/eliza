@@ -12,6 +12,8 @@ export const Servico = z.object({
   duracaoMinutos: z.number().int().positive(),
   /** Em reais. null = não divulgar preço. */
   preco: z.number().nonnegative().nullable(),
+  /** true = `preco` é o valor mínimo ("a partir de"); o final é combinado no atendimento. */
+  precoAPartirDe: z.boolean(),
   /** Agrupamento opcional definido no painel; null = sem grupo. */
   categoria: z.string().nullable(),
 })

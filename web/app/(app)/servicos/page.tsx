@@ -134,12 +134,17 @@ export default async function ProcedimentosPage() {
                   <span>{service.duration_minutes} min</span>
                   <span className="h-1 w-1 rounded-full bg-muted-foreground/50" />
                   <span>
+                    {service.price_from && "a partir de "}
                     {new Intl.NumberFormat("pt-BR", {
                       style: "currency",
                       currency: "BRL",
                     }).format(service.price || 0)}
                   </span>
                 </div>
+
+                {service.description && (
+                  <p className="pt-1 text-sm text-muted-foreground line-clamp-2">{service.description}</p>
+                )}
               </div>
             </CardContent>
           </Card>

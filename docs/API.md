@@ -80,7 +80,7 @@ aceita ISO com offset/`Z`. Saída traz `start_time` (UTC) e `start_local`.
 | Método | Rota | Escopo | Descrição |
 |---|---|---|---|
 | GET | `/me` | read | Tenant e dados da chave |
-| GET | `/services` | read | Serviços ativos (`id, title, description, duration_minutes, price, category`; `category` é `null` quando o serviço não tem grupo) |
+| GET | `/services` | read | Serviços ativos (`id, title, description, duration_minutes, price, price_from, category`; `category` é `null` quando o serviço não tem grupo; `price_from: true` = `price` é o valor mínimo, "a partir de"; `description` são as observações do serviço, até 500 caracteres) |
 | GET | `/professionals` | read | Profissionais ativos |
 | GET | `/availability?professional_id&service_id&date=YYYY-MM-DD` | read | Horários livres para o serviço. `service_id` é obrigatório (422 sem ele). `meta.grid_step_minutes` traz o passo da grade |
 | GET | `/customers?phone=` `?document=` `?q=` | read | Busca de clientes (máx. 20). Exatamente um critério, senão 422 |

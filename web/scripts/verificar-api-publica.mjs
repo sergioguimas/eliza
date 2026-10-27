@@ -14,7 +14,7 @@
 
 const CAMPOS_TOPO = ["data"]
 const CAMPOS_DATA = ["atualizadoEm", "organizacao", "servicos"]
-const CAMPOS_SERVICO = ["categoria", "descricao", "duracaoMinutos", "id", "nome", "preco"]
+const CAMPOS_SERVICO = ["categoria", "descricao", "duracaoMinutos", "id", "nome", "preco", "precoAPartirDe"]
 const CACHE_ESPERADO = "public, max-age=30, stale-while-revalidate=300"
 
 const [baseBruta, slug, origemPermitida] = process.argv.slice(2)
@@ -62,8 +62,9 @@ conferir(Array.isArray(corpo.data.servicos), "servicos é lista")
 conferir(corpo.data.servicos.length <= 30, "no máximo 30 serviços", corpo.data.servicos.length)
 
 corpo.data.servicos.forEach((s, i) => {
-  conferir(igual(chaves(s), CAMPOS_SERVICO), `servicos[${i}] = id, nome, descricao, duracaoMinutos, preco, categoria`, chaves(s))
+  conferir(igual(chaves(s), CAMPOS_SERVICO), `servicos[${i}] = id, nome, descricao, duracaoMinutos, preco, precoAPartirDe, categoria`, chaves(s))
   conferir(s.categoria === null || typeof s.categoria === "string", `servicos[${i}].categoria é string ou null`, s.categoria)
+  conferir(typeof s.precoAPartirDe === "boolean", `servicos[${i}].precoAPartirDe é boolean`, s.precoAPartirDe)
 })
 
 // 2. cabeçalhos

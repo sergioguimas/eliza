@@ -56,6 +56,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { createPublicAppointment } from "@/app/actions/create-appointment"
 import { getAvailableSlots } from "@/app/actions/get-available-slots"
 import type { Profissional, Servico } from "@/lib/domain/catalogo"
+import { rotuloPreco } from "@/lib/preco"
 import { getNicheDocuments } from "@/lib/niche-documents"
 
 const formSchema = z.object({
@@ -295,7 +296,7 @@ export function PublicBookingForm({
       selectedService?.titulo,
       selectedProfessional?.nome,
       selectedDate ? format(selectedDate, "dd/MM", { locale: ptBR }) + (selectedTime ? ` às ${selectedTime}` : "") : null,
-      selectedService?.preco ? `R$ ${Number(selectedService.preco).toFixed(2)}` : null,
+      selectedService?.preco ? rotuloPreco(selectedService) : null,
     ].filter(Boolean)
 
     if (parts.length > 0) return parts.join(" · ")
@@ -575,7 +576,7 @@ export function PublicBookingForm({
                                 <SelectContent>
                                   {services.map((s) => (
                                     <SelectItem key={s.id} value={s.id}>
-                                      {s.titulo} — R$ {Number(s.preco).toFixed(2)}
+                                      {s.titulo} — {rotuloPreco(s)}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -1200,11 +1201,23 @@ export function PublicBookingForm({
                 {selectedService?.preco && (
                   <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
                     <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                      Valor do serviço
+                      {selectedService.precoAPartirDe ? "Valor a partir de" : "Valor do serviço"}
                     </p>
                     <p className="mt-1 text-2xl font-bold text-foreground">
                       R$ {Number(selectedService.preco).toFixed(2)}
                     </p>
+                    {selectedService.precoAPartirDe && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        O valor final depende do que você escolher; combinamos no atendimento.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {selectedService?.descricao && (
+                  <div className="rounded-2xl border border-border bg-muted/20 p-4">
+                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Sobre este serviço</p>
+                    <p className="mt-1 whitespace-pre-line text-sm text-foreground">{selectedService.descricao}</p>
                   </div>
                 )}
 

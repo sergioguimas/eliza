@@ -1151,6 +1151,7 @@ export type Database = {
           is_active: boolean | null
           organization_id: string
           price: number | null
+          price_from: boolean
           title: string
         }
         Insert: {
@@ -1163,6 +1164,7 @@ export type Database = {
           is_active?: boolean | null
           organization_id: string
           price?: number | null
+          price_from?: boolean
           title: string
         }
         Update: {
@@ -1175,6 +1177,7 @@ export type Database = {
           is_active?: boolean | null
           organization_id?: string
           price?: number | null
+          price_from?: boolean
           title?: string
         }
         Relationships: [
