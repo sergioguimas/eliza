@@ -5,6 +5,7 @@ import type { Database } from "@/utils/database.types"
 import { consumeRateLimit, getClientIp, hashIdentifier } from "@/lib/demo/rate-limit"
 import { listarServicosAtivos } from "@/lib/domain/catalogo"
 import { ApiError, internalError } from "@/lib/http/erros"
+import { etagConfere } from "@/lib/http/etag"
 import { corpoDeErro, jsonResponse } from "@/lib/http/resposta"
 import { HEADER_REQUEST_ID } from "@/contracts/comum/envelope"
 import {
@@ -120,7 +121,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
       .slice(0, 32)}"`
     const headers = { ...cors(req), "Cache-Control": CACHE, ETag: etag }
 
-    if (req.headers.get("if-none-match") === etag) {
+    if (etagConfere(req.headers.get("if-none-match"), etag)) {
       return new NextResponse(null, { status: 304, headers: { ...headers, [HEADER_REQUEST_ID]: requestId } })
     }
 
