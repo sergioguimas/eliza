@@ -18,6 +18,8 @@ import {
   parseISO,
   addWeeks,
   subWeeks,
+  startOfDay,
+  endOfDay,
 } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import {
@@ -41,6 +43,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AppointmentContextMenu } from "@/components/appointments/appointment-context-menu"
 import { AppointmentCardActions } from "@/components/appointments/appointment-card-actions"
 import { acoesDoAgendamento } from "@/components/appointments/acoes-agendamento"
+import { CloseSlotDialog } from "@/components/appointments/close-slot-dialog"
+import { ScheduleBlockCard, type ScheduleBlock } from "@/components/appointments/schedule-block-card"
 import {
   Select,
   SelectContent,
@@ -113,6 +117,7 @@ type Appointment = {
 
 type Props = {
   appointments?: Appointment[]
+  blocks?: ScheduleBlock[]
   customers?: any[]
   services?: any[]
   staff?: any[]
@@ -139,6 +144,7 @@ const getRawHour = (dateString: string) => {
 
 function CalendarContent({
   appointments = [],
+  blocks = [],
   customers = [],
   services = [],
   staff = [],
@@ -282,6 +288,15 @@ function CalendarContent({
     if (filterId === "all") return appointments
     return appointments.filter((apt) => apt.professional_id === filterId)
   }, [appointments, filterId])
+
+  const filteredBlocks = useMemo(() => {
+    if (filterId === "all") return blocks
+    return blocks.filter((b) => b.professional_id === filterId)
+  }, [blocks, filterId])
+
+  // Fechamento que toca o intervalo [de, ate): vale para o dia (mês) e para a hora (dia).
+  const blocksIn = (de: Date, ate: Date) =>
+    filteredBlocks.filter((b) => parseISO(b.start_time) < ate && parseISO(b.end_time) > de)
 
   useEffect(() => {
     setIsMounted(true)
@@ -571,6 +586,9 @@ function CalendarContent({
                         </span>
 
                         <div className="flex flex-col gap-1 overflow-y-auto max-h-[70px] no-scrollbar">
+                          {blocksIn(startOfDay(day), endOfDay(day)).map((b) => (
+                            <ScheduleBlockCard key={b.id} block={b} showProfessional={filterId === "all"} />
+                          ))}
                           {dayAppointments.map((apt) => (
                             <div key={apt.id} className="h-auto">
                               <AppointmentCard appointment={apt} />
@@ -626,6 +644,14 @@ function CalendarContent({
                     </div>
 
                     <div className="p-1 md:p-2 relative flex gap-2 overflow-x-auto">
+                      {blocksIn(
+                        new Date(slotDate.getFullYear(), slotDate.getMonth(), slotDate.getDate(), hour),
+                        new Date(slotDate.getFullYear(), slotDate.getMonth(), slotDate.getDate(), hour + 1)
+                      ).map((b) => (
+                        <div key={b.id} className="flex-1 min-w-[150px] max-w-[250px]">
+                          <ScheduleBlockCard block={b} showProfessional={filterId === "all"} />
+                        </div>
+                      ))}
                       {hourAppointments.map((apt) => (
                         <div
                           key={apt.id}
@@ -746,6 +772,12 @@ function CalendarContent({
             direito num dia, ou toque longo no celular. Funciona, mas é um gesto
             que ninguém descobre sozinho, e era a ação principal da tela.
           */}
+          <CloseSlotDialog
+            professionals={staff}
+            defaultDate={date}
+            defaultProfessionalId={filterId}
+          />
+
           <Button
             size="sm"
             data-tour="novo-agendamento"
@@ -784,6 +816,11 @@ function CalendarContent({
             </div>
           )
         })}
+
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded border border-dashed border-border bg-muted/60" />
+          <span className="text-foreground">Fechado</span>
+        </div>
       </div>
 
       <UpdateAppointmentDialog

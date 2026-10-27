@@ -75,7 +75,28 @@ Motivos conhecidos:
 4. Se o horário cai no intervalo:
    - `Este horário está dentro do intervalo de atendimento.`
 5. Se está ocupado:
-   - agenda cheia ou horário indisponível.
+   - agenda cheia ou horário indisponível. Conta como ocupado tanto o agendamento ativo
+     (`pending`, `scheduled`, `confirmed`, `arrived`) quanto o **horário fechado** (`schedule_blocks`).
+
+### Horário fechado (`schedule_blocks`)
+
+O profissional (ou todos) não atende num intervalo: folga, compromisso, almoço fora do padrão. Age como um
+agendamento ativo para fins de disponibilidade, mas não é atendimento: sem cliente, preço, lembrete, cobrança,
+financeiro ou relatório (por isso tabela própria, não `appointments`).
+
+- **Onde vale:** `carregarDiaDeAgenda` (`web/lib/domain/horarios.ts`) lê os bloqueios e os soma aos ocupados.
+  É a mesma fonte de `/marcar`, `GET /api/v1/availability`, criação/remarcação e Autoatendimento: nenhum contrato
+  mudou, o horário fechado aparece como `ocupado` / `Este horário já está ocupado.`
+- **Criar/reabrir:** botão "Fechar horário" na Agenda (profissional ou "Todos", data, "até" opcional para vários
+  dias, horário ou "dia inteiro", motivo). Clicar no card "Fechado" na agenda pede confirmação e reabre.
+  Código: `web/lib/domain/bloqueios.ts`, `web/app/actions/schedule-blocks.ts`.
+- **Regras:** não fecha por cima de agendamento ativo (a mensagem cita quem é; cancele ou remarque antes);
+  "Todos" é tudo-ou-nada; máx. 31 dias por bloqueio; motivo até 200 caracteres; período já passado é recusado.
+- **Segurança:** `authenticated` só lê a própria org; escrita só pelo domínio com service role (org vem da sessão).
+  `anon` não tem acesso: a página pública lê pelo domínio.
+- **Limite conhecido:** o banco não impede sozinho que um agendamento e um bloqueio se sobreponham (a exclusion
+  constraint `appointments_professional_overlap_idx` só cobre `appointments`). Há uma janela de corrida mínima entre
+  validar e gravar; a validação roda antes de gravar nos dois lados. Se virar problema, um trigger fecha.
 
 ## Organização
 

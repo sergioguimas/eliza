@@ -10,7 +10,7 @@ import type { Database } from "@/utils/database.types"
  * vir do FormData nem de argumento: quem chama a action direto escolheria a
  * org que quisesse.
  */
-export async function organizacaoDaSessao(): Promise<{ organizationId: string } | { error: string }> {
+export async function organizacaoDaSessao(): Promise<{ organizationId: string; userId: string } | { error: string }> {
   const session = await createClient<Database>()
 
   const {
@@ -23,7 +23,7 @@ export async function organizacaoDaSessao(): Promise<{ organizationId: string } 
 
   if (!profile?.organization_id) return { error: "Seu perfil não está vinculado a uma organização." }
 
-  return { organizationId: profile.organization_id }
+  return { organizationId: profile.organization_id, userId: user.id }
 }
 
 /** Ator do painel; `notificar` liga o aviso por WhatsApp ao cliente. */
