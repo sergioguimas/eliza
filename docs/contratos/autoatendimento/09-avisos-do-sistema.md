@@ -194,6 +194,18 @@ Retenção: o aviso segue a mesma regra das outras mensagens (90 dias de texto).
    texto do eco é **igual** ao enviado (emoji, `*negrito*`, quebras de linha). Se o texto vier
    diferente, ajustar só a normalização de `hashDoTexto` e registrar; se o eco não chegar, parar e
    registrar (o problema da §1 não existiria).
+
+   **Resultado (27/10/2026, produção, org Admin, depois do deploy das §8.1 e §8.2):** o eco **não
+   chega**. Duas respostas do bot e uma notificação saíram pela API (`✅ [SendWhatsApp] Enviado`, uma
+   linha em `autoatendimento_envios_sistema`), e o agens não registrou `eco`, `aviso` nem `pausa`; o
+   webhook da instância só assinava `MESSAGES_UPSERT`. Uma mensagem digitada no aparelho chegou como
+   `messages.upsert` `fromMe` e pausou a conversa (`pausa`), como previsto. Conclusão: a Evolution v2
+   devolve o que sai pela API **só** no evento `send.message` (SEND_MESSAGE). O problema da §1 (aviso
+   pausando o agens) não acontecia em produção, mas o objetivo deste contrato (o aviso como contexto)
+   também não. **Correção:** o webhook passa a aceitar `send.message` e o encaminha ao atendente com
+   `deMim` forçado, sem passar pelo fluxo de palavra-chave; a instância passa a assinar
+   `["MESSAGES_UPSERT", "SEND_MESSAGE"]`. Com isso a resposta do bot volta como eco e o lembrete como
+   `aviso`. A conferência do texto (emoji, `*negrito*`, quebras) fica para depois desse deploy.
 1. Eliza: migration → `supabase gen types` → `envios-sistema.ts` → `send-whatsapp.ts`/`gateway.ts` →
    chamadas da §3.1 → `encaminhar.ts` → Zod → OpenAPI e docs → `tsc`, `lint`, `build`.
 2. sola-agens: store (migration `0002`, `storetest`) → entrada → `demim.go` → histórico e prompt

@@ -123,6 +123,23 @@ export async function POST(
     const body = await req.json()
     const eventType = body.event || body.type
 
+    // Envio feito pela API (resposta do atendente, lembrete, notificação): a
+    // Evolution não o devolve como `messages.upsert`, só como `send.message`
+    // (evento SEND_MESSAGE da instância; passo 0 do contrato 09). Serve só ao
+    // atendente, como `deMim` — eco e aviso —, nunca ao fluxo de palavra-chave.
+    // `fromMe` é forçado: resposta do bot jamais vira mensagem de cliente.
+    if (eventType === "send.message") {
+      const data = body.data
+
+      if (!data?.key) {
+        return NextResponse.json({ status: "ignored_invalid_payload" })
+      }
+
+      const encaminhada = await encaminharParaAtendente({ ...body, data: { ...data, key: { ...data.key, fromMe: true } } })
+
+      return NextResponse.json({ status: encaminhada ? "forwarded_to_attendant" : "ignored_sent_message" })
+    }
+
     if (eventType !== "messages.upsert") {
       return NextResponse.json({ status: "ignored_not_message" })
     }

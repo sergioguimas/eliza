@@ -118,6 +118,12 @@ instância e busca QR). A URL fica em um destes lugares, conforme o servidor:
 - **Webhook por instância** (`POST /webhook/set/{instance}` ou pelo Manager):
   pode usar o caminho ou o campo `headers` com `x-webhook-secret`.
 
+Eventos: `MESSAGES_UPSERT` (cliente escrevendo e mensagem digitada no próprio
+aparelho) e, com o add-on de autoatendimento, `SEND_MESSAGE`. O que o app envia
+pela API (respostas do atendente, lembretes, notificações) **não** volta como
+`messages.upsert`, só como `send.message`; o webhook o repassa ao atendente como
+`deMim` (eco e aviso, contrato 09) e não faz mais nada com ele.
+
 Envio de um número qualquer não prova nada: o segredo é a única barreira.
 Nome de instância é derivado do slug da org, que é público.
 
