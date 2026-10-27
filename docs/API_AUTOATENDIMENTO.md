@@ -210,7 +210,8 @@ enviada pelo número do estabelecimento.
   "contato": { "telefone": "5511900000001", "nomeExibicao": "Maria" },
   "deMim": false,                                  // true = enviada PELO número do estabelecimento
   "conteudo": { "tipo": "texto", "texto": "Quero marcar um corte amanhã" },   // ou { "tipo": "audio", ... } ou { "tipo": "nao_suportado", "tipoOriginal": "imageMessage" }
-  "ticket": { "token": "<ticket>", "expiraEm": "2026-10-02T13:30:00.000Z" }   // null quando deMim = true
+  "ticket": { "token": "<ticket>", "expiraEm": "2026-10-02T13:30:00.000Z" },  // null quando deMim = true
+  "aviso": null                                    // só com deMim: { "tipo": "lembrete" } etc. = envio automático do Eliza
 }
 ```
 
@@ -247,8 +248,11 @@ encaminhamento: para transcrever, baixe com `GET /mensagens/{mensagemId}/midia` 
 de palavra-chave (por exemplo, o "sim" ao lembrete continua confirmando). Isso só vale para `deMim: false`. Consequência: o atendente
 pode ter perdido uma mensagem, então não presuma que viu a conversa inteira.
 
-**`deMim: true`.** Pode ser o eco do próprio atendente (o `mensagemId` bate com um que `POST /mensagens` devolveu) ou alguém da equipe respondendo
-pelo celular. Neste segundo caso o atendente deve **pausar** naquela conversa. Mensagens de grupo e de status nunca são encaminhadas;
+**`deMim: true`.** Pode ser o eco do próprio atendente (o `mensagemId` bate com um que `POST /mensagens` devolveu), um envio automático
+do Eliza ou alguém da equipe respondendo pelo celular. O envio automático (lembrete, resumo ao profissional, notificação de agendamento,
+resposta do fluxo antigo, aviso à equipe) vem com `aviso: { "tipo": ... }`: o atendente guarda o texto como contexto, **não pausa** e não
+responde. O Eliza reconhece esses envios porque registra o hash do texto antes de mandar (só em org com o add-on ativo) e casa o eco
+pelos 10 minutos seguintes (contrato 09). Com `aviso: null`, é a equipe: o atendente deve **pausar** naquela conversa. Mensagens de grupo e de status nunca são encaminhadas;
 imagem, documento, vídeo e localização chegam como `nao_suportado`.
 
 ## 10. Catálogo de erros

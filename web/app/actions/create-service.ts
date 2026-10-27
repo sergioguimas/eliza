@@ -11,6 +11,8 @@ export async function upsertService(formData: FormData) {
   const title = formData.get('name') as string
   const duration_minutes = Number(formData.get('duration'))
   const price = Number(formData.get('price'))
+  const price_from = formData.get('price_from') === 'on'
+  const description = (formData.get('description') as string | null)?.trim().slice(0, 500) || null
   
   const category = (formData.get('category') as string | null)?.trim().slice(0, 40) || null
   const color = formData.get('color') as string || '#3b82f6'
@@ -25,6 +27,8 @@ export async function upsertService(formData: FormData) {
     title,
     duration_minutes,
     price,
+    price_from,
+    description,
     category,
     color,
     organization_id,

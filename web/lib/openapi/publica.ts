@@ -67,9 +67,10 @@ export function gerarOpenApiPublica({ origem }: OpcoesDoDocumento): Objeto {
   anotar(componentes, "ServicoPublico", {
     id: "Id do serviço. Serve de `?servico=` no link de agendamento.",
     nome: "Título do serviço.",
-    descricao: "Descrição; `null` quando vazia.",
+    descricao: "Observações do serviço (até 500 caracteres); `null` quando vazia.",
     duracaoMinutos: "Duração em minutos (30 quando o cadastro está sem duração).",
-    preco: "Em reais. `null` = não divulgar. `0` continua `0`.",
+    preco: "Em reais. `null` = não divulgar. `0` continua `0`. Com `precoAPartirDe`, é o valor mínimo.",
+    precoAPartirDe: "`true` = preço \"a partir de\": o valor final é combinado no atendimento. Sempre presente.",
     categoria: "Agrupamento opcional (até 40 caracteres); `null` = sem grupo.",
   })
 
@@ -141,8 +142,8 @@ export function gerarOpenApiPublica({ origem }: OpcoesDoDocumento): Objeto {
                         data: {
                           organizacao: { nome: "Studio Exemplo", slug: "studio-exemplo" },
                           servicos: [
-                            { id: ID_EXEMPLO.servico, nome: "Alongamento em fibra", descricao: null, duracaoMinutos: 120, preco: 180, categoria: "Alongamento" },
-                            { id: "9b2e4d18-6a3c-4f71-8e05-d3c1a7b92f46", nome: "Esmaltação", descricao: "Inclui cuticulagem", duracaoMinutos: 45, preco: 0, categoria: null },
+                            { id: ID_EXEMPLO.servico, nome: "Alongamento em fibra", descricao: null, duracaoMinutos: 120, preco: 180, precoAPartirDe: true, categoria: "Alongamento" },
+                            { id: "9b2e4d18-6a3c-4f71-8e05-d3c1a7b92f46", nome: "Esmaltação", descricao: "Inclui cuticulagem", duracaoMinutos: 45, preco: 0, precoAPartirDe: false, categoria: null },
                           ],
                           atualizadoEm: "2026-10-19T14:06:43.454Z",
                         },

@@ -9,6 +9,8 @@ export type Servico = {
   descricao: string | null
   duracaoMinutos: number
   preco: number | null
+  /** true = `preco` é o piso ("a partir de"); o valor final é combinado no atendimento. */
+  precoAPartirDe: boolean
   categoria: string | null
 }
 
@@ -20,7 +22,7 @@ export type Profissional = {
 
 // Colunas explícitas, nunca `*`: o profissional tem `phone`, `license_number`
 // e `user_id`, que não podem chegar à página pública nem à API.
-const COLUNAS_SERVICO = "id, title, description, duration_minutes, price, category"
+const COLUNAS_SERVICO = "id, title, description, duration_minutes, price, price_from, category"
 const COLUNAS_PROFISSIONAL = "id, name, specialty"
 
 type LinhaServico = {
@@ -29,6 +31,7 @@ type LinhaServico = {
   description: string | null
   duration_minutes: number | null
   price: number | null
+  price_from: boolean | null
   category: string | null
 }
 
@@ -42,6 +45,7 @@ function paraServico(linha: LinhaServico): Servico {
     // 30 é o fallback que todos os caminhos de agendamento já usavam.
     duracaoMinutos: linha.duration_minutes || 30,
     preco: linha.price,
+    precoAPartirDe: linha.price_from === true,
     categoria: linha.category?.trim() ? linha.category.trim() : null,
   }
 }

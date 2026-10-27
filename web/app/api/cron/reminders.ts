@@ -236,6 +236,7 @@ export async function processDoctorDailySummaries() {
       phone,
       message,
       organizationId: orgId,
+      registrarComo: "resumo_profissional",
     })
 
     if (!result.success) {
@@ -355,6 +356,7 @@ export async function processPatientMorningReminders() {
       phone: customer.phone,
       message,
       organizationId: appt.organization_id,
+      registrarComo: "lembrete",
     })
 
     if (result.success) {

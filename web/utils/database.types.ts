@@ -326,6 +326,38 @@ export type Database = {
           },
         ]
       }
+      autoatendimento_envios_sistema: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          texto_hash: string
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          texto_hash: string
+          tipo: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          texto_hash?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "autoatendimento_envios_sistema_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           active: boolean | null
@@ -1004,6 +1036,54 @@ export type Database = {
           },
         ]
       }
+      schedule_blocks: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          end_time: string
+          id: string
+          organization_id: string
+          professional_id: string
+          reason: string | null
+          start_time: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          end_time: string
+          id?: string
+          organization_id: string
+          professional_id: string
+          reason?: string | null
+          start_time: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          end_time?: string
+          id?: string
+          organization_id?: string
+          professional_id?: string
+          reason?: string | null
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_blocks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_blocks_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_records: {
         Row: {
           appointment_id: string | null
@@ -1119,6 +1199,7 @@ export type Database = {
           is_active: boolean | null
           organization_id: string
           price: number | null
+          price_from: boolean
           title: string
         }
         Insert: {
@@ -1131,6 +1212,7 @@ export type Database = {
           is_active?: boolean | null
           organization_id: string
           price?: number | null
+          price_from?: boolean
           title: string
         }
         Update: {
@@ -1143,6 +1225,7 @@ export type Database = {
           is_active?: boolean | null
           organization_id?: string
           price?: number | null
+          price_from?: boolean
           title?: string
         }
         Relationships: [

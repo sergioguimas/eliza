@@ -49,7 +49,18 @@ export const MensagemEncaminhada = z.object({
   ]),
   /** null quando deMim = true */
   ticket: TicketEmitido.nullable(),
-})
+  /**
+   * Só com deMim: a mensagem é um envio automático do próprio sistema
+   * (lembrete, notificação...), não a equipe respondendo. O atendente guarda o
+   * texto como contexto, NÃO pausa e não responde (09-avisos-do-sistema).
+   * null = mensagem do cliente, eco do atendente ou equipe.
+   */
+  aviso: z
+    .object({
+      tipo: z.enum(["lembrete", "resumo_profissional", "notificacao", "resposta_automatica", "escalonamento"]),
+    })
+    .nullable(),
+}).refine((m) => m.aviso === null || m.deMim, { message: "aviso só existe com deMim", path: ["aviso"] })
 
 /** O atendente responde 202 assim que valida e enfileira. */
 export const RespostaEncaminhamento = z.object({ aceito: z.literal(true) })

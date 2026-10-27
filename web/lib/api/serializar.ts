@@ -17,6 +17,7 @@ export function paraService(s: Servico): z.infer<typeof Service> {
     description: s.descricao,
     duration_minutes: s.duracaoMinutos,
     price: s.preco,
+    price_from: s.precoAPartirDe,
     category: s.categoria,
   }
 }

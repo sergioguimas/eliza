@@ -8,6 +8,8 @@ export const Service = z.object({
   description: z.string().nullable(),
   duration_minutes: z.number().int(), // 30 quando o cadastro está nulo/0
   price: z.number().nullable(),
+  /** true = `price` é o valor mínimo ("a partir de"); o final é combinado no atendimento. */
+  price_from: z.boolean(),
   /** Agrupamento opcional definido no painel; null = sem grupo. */
   category: z.string().nullable(),
 })

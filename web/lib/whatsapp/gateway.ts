@@ -1,6 +1,7 @@
 import "server-only"
 
 import { sendWhatsAppMessage } from "@/app/actions/send-whatsapp"
+import type { TipoAviso } from "@/lib/autoatendimento/envios-sistema"
 import { getEvolutionServer } from "@/lib/evolution"
 import { createAdminClient } from "@/utils/supabase/admin"
 
@@ -25,11 +26,14 @@ export async function enviarTexto(p: {
   organizationId: string
   telefone: string
   texto: string
+  /** Envio automático do sistema (09); omitido nas respostas do atendente. */
+  registrarComo?: TipoAviso
 }): Promise<ResultadoEnvio> {
   const envio = await sendWhatsAppMessage({
     organizationId: p.organizationId,
     phone: p.telefone,
     message: p.texto,
+    registrarComo: p.registrarComo,
   })
 
   if (!envio.success) {

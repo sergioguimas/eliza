@@ -10,6 +10,11 @@ export const metadata: Metadata = {
   title: "Agenda",
 }
 
+/** Janela de 40 dias para trás cobre o mês exibido; o que passou disso não é navegado. */
+function inicioDaJanelaDeBloqueios() {
+  return new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString()
+}
+
 export default async function AgendamentosPage({
   searchParams,
 }: {
@@ -52,6 +57,7 @@ export default async function AgendamentosPage({
     servicesRes,
     staffRes,
     appointmentsRes,
+    blocksRes,
     settingsRes
   ] = await Promise.all([
     supabase
@@ -89,6 +95,14 @@ export default async function AgendamentosPage({
       `)
       .eq('organization_id', orgId),
 
+    // Horários fechados (schedule_blocks): authenticated só LÊ a própria org; escrever é pelo domínio.
+    supabase
+      .from('schedule_blocks')
+      .select('id, professional_id, start_time, end_time, reason, professionals ( name )')
+      .eq('organization_id', orgId)
+      .gte('end_time', inicioDaJanelaDeBloqueios())
+      .order('start_time'),
+
     supabase
       .from('organization_settings')
       .select('*')
@@ -100,6 +114,7 @@ export default async function AgendamentosPage({
   const services = servicesRes.data || []
   const staff = staffRes.data || []
   const appointments = appointmentsRes.data || []
+  const blocks = blocksRes.data || []
   const settings = settingsRes.data || {}
 
   return (
@@ -120,6 +135,7 @@ export default async function AgendamentosPage({
       <div data-tour="agenda-lista">
         <CalendarView
         appointments={appointments as any}
+        blocks={blocks}
         customers={customers} 
         services={services}
         staff={staff}

@@ -430,6 +430,7 @@ async function handleStatusChange(
       phone: foundCustomer.phone || incomingClean,
       message: replyMessage,
       organizationId: appointment.organization_id,
+      registrarComo: "resposta_automatica",
     })
   }
 

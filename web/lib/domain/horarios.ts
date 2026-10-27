@@ -37,7 +37,7 @@ export type DiaDeAgenda = {
   passoMinutos: number // organization_settings.appointment_duration || 30
   janelas: Faixa[] // expediente org ∩ profissional
   bloqueios: Faixa[] // almoço da org + pausa do profissional
-  ocupados: Faixa[] // agendamentos ATIVOS do profissional no dia
+  ocupados: Faixa[] // agendamentos ATIVOS do profissional no dia + horários fechados (schedule_blocks)
   motivoFechado: MotivoSemHorario | null
 }
 
@@ -106,7 +106,16 @@ export async function carregarDiaDeAgenda(
     consultaOcupados = consultaOcupados.neq("id", p.ignorarAgendamentoId)
   }
 
-  const [configuracao, expediente, agendamentos] = await Promise.all([
+  // Horário fechado (schedule_blocks) ocupa como agendamento ativo e usa o mesmo recorte.
+  const consultaFechados = db
+    .from("schedule_blocks")
+    .select("start_time, end_time")
+    .eq("organization_id", p.orgId)
+    .eq("professional_id", p.profissionalId)
+    .lt("start_time", fim.toISOString())
+    .gt("end_time", inicio.toISOString())
+
+  const [configuracao, expediente, agendamentos, fechados] = await Promise.all([
     db
       .from("organization_settings")
       .select("days_of_week, open_hours_start, open_hours_end, lunch_start, lunch_end, appointment_duration")
@@ -120,12 +129,14 @@ export async function carregarDiaDeAgenda(
       .eq("is_active", true)
       .maybeSingle(),
     consultaOcupados,
+    consultaFechados,
   ])
 
   for (const { error, rotulo } of [
     { error: configuracao.error, rotulo: "settings" },
     { error: expediente.error, rotulo: "availability" },
     { error: agendamentos.error, rotulo: "appointments" },
+    { error: fechados.error, rotulo: "schedule_blocks" },
   ]) {
     if (error) {
       console.error(`[domain:carregarDiaDeAgenda:${rotulo}]`, error)
@@ -167,7 +178,7 @@ export async function carregarDiaDeAgenda(
   // Minutos contados a partir da meia-noite local do dia pedido, com corte nas
   // bordas: o agendamento que entra de ontem ou sai para amanhã ocupa só a
   // parte que cai neste dia.
-  const ocupados: Faixa[] = (agendamentos.data ?? []).map((a) => [
+  const ocupados: Faixa[] = [...(agendamentos.data ?? []), ...(fechados.data ?? [])].map((a) => [
     Math.max(0, Math.floor((new Date(a.start_time).getTime() - inicio.getTime()) / 60000)),
     Math.min(1440, Math.ceil((new Date(a.end_time).getTime() - inicio.getTime()) / 60000)),
   ])

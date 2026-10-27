@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-10-27
+
+### Serviços: observações e preço "a partir de"
+
+- Pedido da reunião com a Débora (LP + Eliza). Migration `20261027120000` (já aplicada): coluna `services.price_from`
+  (boolean, default `false`) e limite de 500 caracteres em `services.description`.
+- **Observações = `description`.** O campo já existia em API v1, Autoatendimento e catálogo público, mas o painel não o
+  editava. Agora há o campo "Observações" no formulário de serviço, e o texto aparece em `/marcar` e no card do painel.
+  Não foi criada coluna `observacoes`.
+- **Preço "a partir de":** checkbox no formulário; `price` vira o valor mínimo. Exposto de forma aditiva:
+  `price_from` na v1 (`GET /services`), `precoAPartirDe` no Autoatendimento (`GET /servicos`, versão do contrato
+  continua `1`) e no catálogo público. Sempre presente (`false` por padrão). `/marcar` mostra "a partir de R$ X".
+- `web/lib/preco.ts`: `rotuloPreco` (único lugar que decide "Consulte" / "a partir de R$ X").
+
+### Fechar horário na agenda
+
+- Tabela `schedule_blocks` (migration `20261027130000`, já aplicada): intervalo em que um profissional não atende.
+  Conta como ocupado em todos os horários livres (`/marcar`, `GET /api/v1/availability`, criação e remarcação,
+  Autoatendimento) sem mudar contrato (aparece como `ocupado`), e não é atendimento: sem cliente, preço, lembrete,
+  financeiro ou relatório. Escrita só pelo domínio; `authenticated` só lê a própria org.
+- Agenda: botão "Fechar horário" (profissional ou "Todos", data, até, dia inteiro, motivo) e cards "Fechado" no
+  mês e no dia; clicar reabre. Recusa fechar por cima de agendamento ativo. Detalhes em `docs/AGENDAMENTO.md`.
+
 ## 2026-10-19
 
 ### API pública (`/api/public/v1`) e categoria de serviço

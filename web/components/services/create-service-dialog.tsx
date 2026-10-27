@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
   DialogContent,
@@ -134,6 +135,24 @@ export function CreateServiceDialog({
             </p>
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="service-description" className="text-foreground">
+              Observações (opcional)
+            </Label>
+            <Textarea
+              id="service-description"
+              name="description"
+              maxLength={500}
+              rows={3}
+              placeholder="Ex.: Inclui remoção. Decoração e extras são combinados no atendimento."
+              defaultValue={serviceToEdit?.description ?? ""}
+              className="border-input bg-background text-foreground placeholder:text-muted-foreground"
+            />
+            <p className="text-xs text-muted-foreground">
+              O cliente vê este texto ao escolher o serviço, na página de agendamento e no seu site.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="service-duration" className="text-foreground">
@@ -162,6 +181,25 @@ export function CreateServiceDialog({
               />
             </div>
           </div>
+
+          <label
+            htmlFor="service-price-from"
+            className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-muted/30 p-3"
+          >
+            <input
+              id="service-price-from"
+              name="price_from"
+              type="checkbox"
+              defaultChecked={serviceToEdit?.price_from === true}
+              className="mt-1 h-4 w-4 rounded border-input"
+            />
+            <span className="space-y-0.5">
+              <span className="block text-sm font-medium text-foreground">Preço &quot;a partir de&quot;</span>
+              <span className="block text-xs text-muted-foreground">
+                Marque quando o valor final varia conforme o que o cliente pedir a mais. O preço acima vira o valor mínimo.
+              </span>
+            </span>
+          </label>
 
           <div className="rounded-lg border border-border bg-muted/30 p-3">
             <Label className="mb-3 flex items-center gap-2 text-foreground">
