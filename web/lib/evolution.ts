@@ -20,14 +20,10 @@ type EvolutionServer = {
 }
 
 export function getEvolutionServer(): EvolutionServer | null {
-  // NEXT_PUBLIC_EVOLUTION_API_URL é aceita porque é a que o deploy usa hoje;
-  // as duas apontam para o mesmo servidor. Ler só uma delas faria caminhos
-  // diferentes do app conversarem com servidores diferentes.
-  const url = (
-    process.env.EVOLUTION_API_URL ||
-    process.env.NEXT_PUBLIC_EVOLUTION_API_URL ||
-    ""
-  ).replace(/\/$/, "")
+  // Só EVOLUTION_API_URL: é lida em runtime. Uma NEXT_PUBLIC_* seria embutida
+  // no `next build` e sobreviveria a trocas da .env (foi assim que um build
+  // ficou preso no IP da Evolution de dev depois da VPS ser refeita).
+  const url = (process.env.EVOLUTION_API_URL || "").replace(/\/$/, "")
 
   const apiKey = process.env.EVOLUTION_API_KEY || ""
 

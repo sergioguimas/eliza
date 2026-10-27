@@ -70,10 +70,10 @@ export default async function PublicBookingPage({
     typeof servico === "string" && services.some((s) => s.id === servico) ? servico : undefined
 
   return (
-    <div className={`theme-${organization.niche ?? "generico"} min-h-screen bg-background py-10 px-4`}>
-      <div className="mx-auto w-full max-w-[1400px] space-y-8">
+    <div className={`theme-${organization.niche ?? "generico"} min-h-screen bg-background py-6 sm:py-10 px-4`}>
+      <div className="mx-auto w-full max-w-[1400px] space-y-4 sm:space-y-8">
         <header className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight">{organization.name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{organization.name}</h1>
           <p className="text-muted-foreground">Reserve seu horário em poucos cliques</p>
         </header>
 

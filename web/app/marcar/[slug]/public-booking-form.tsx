@@ -88,6 +88,17 @@ interface PublicBookingFormProps {
 
 type BookingStep = 1 | 2 | 3
 
+function StepHeading({ step, title }: { step: BookingStep; title: string }) {
+  return (
+    <div className="space-y-1">
+      <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+        Etapa {step} de 3
+      </p>
+      <h3 className="text-lg sm:text-xl font-semibold tracking-tight">{title}</h3>
+    </div>
+  )
+}
+
 export function PublicBookingForm({
   organizationId,
   organizationNiche,
@@ -279,6 +290,33 @@ export function PublicBookingForm({
     return true
   }
 
+  const mobileSummary = (() => {
+    const parts = [
+      selectedService?.titulo,
+      selectedProfessional?.nome,
+      selectedDate ? format(selectedDate, "dd/MM", { locale: ptBR }) + (selectedTime ? ` às ${selectedTime}` : "") : null,
+      selectedService?.preco ? `R$ ${Number(selectedService.preco).toFixed(2)}` : null,
+    ].filter(Boolean)
+
+    if (parts.length > 0) return parts.join(" · ")
+    return `Etapa ${currentStep} de 3`
+  })()
+
+  function goToNextStep() {
+    if (currentStep === 1 && validateStep1()) setCurrentStep(2)
+    else if (currentStep === 2 && validateStep2()) setCurrentStep(3)
+  }
+
+  // Ao trocar de etapa, traz o topo do formulário de volta à vista: no celular o
+  // botão fica na barra fixa de baixo e a etapa nova começaria fora da tela.
+  useEffect(() => {
+    if (!mounted) return
+    const el = document.getElementById("booking-steps")
+    if (el && el.getBoundingClientRect().top < 0) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" })
+    }
+  }, [currentStep, mounted])
+
   async function handleFinalSubmit(values: z.infer<typeof formSchema>) {
     setIsPending(true)
 
@@ -405,25 +443,27 @@ export function PublicBookingForm({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-[1400px] px-0 sm:px-6 lg:px-8 pb-36 xl:pb-0">
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1.15fr)_380px] 2xl:grid-cols-[minmax(0,1.25fr)_420px]">
         <div className="space-y-6">
+          {/* No celular o herói fica enxuto: o nome da organização já é o h1 da
+              página, e os selos empurravam as etapas para fora da primeira tela. */}
           <div className="space-y-4 text-center xl:text-left">
-            <div className="inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
+            <div className="hidden sm:inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
               <Sparkles className="h-3.5 w-3.5" />
               Atendimento online
             </div>
 
-            <div className="space-y-3">
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight max-w-3xl mx-auto xl:mx-0">
+            <div className="space-y-2 sm:space-y-3">
+              <h2 className="text-xl sm:text-3xl md:text-4xl font-bold tracking-tight max-w-3xl mx-auto xl:mx-0">
                 {headline}
-              </h1>
-              <p className="text-muted-foreground max-w-2xl mx-auto xl:mx-0">
+              </h2>
+              <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto xl:mx-0">
                 {subtitle}
               </p>
             </div>
 
-            <div className="flex flex-wrap justify-center xl:justify-start gap-3 text-sm text-muted-foreground">
+            <div className="hidden sm:flex flex-wrap justify-center xl:justify-start gap-3 text-sm text-muted-foreground">
               <span className="inline-flex items-center gap-2 rounded-xl border bg-background px-3 py-2">
                 <ShieldCheck className="h-4 w-4 text-primary" />
                 Horários atualizados em tempo real
@@ -446,7 +486,7 @@ export function PublicBookingForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <ol id="booking-steps" className="grid grid-cols-3 gap-2 sm:gap-3 scroll-mt-4" aria-label="Etapas do agendamento">
             {[
               { step: 1 as BookingStep, label: "Serviço" },
               { step: 2 as BookingStep, label: "Horário" },
@@ -456,9 +496,10 @@ export function PublicBookingForm({
               const done = currentStep > item.step
 
               return (
+                <li key={item.step}>
                 <button
-                  key={item.step}
                   type="button"
+                  aria-current={active ? "step" : undefined}
                   onClick={() => {
                     if (item.step === 1) {
                       setCurrentStep(1)
@@ -472,43 +513,49 @@ export function PublicBookingForm({
                       setCurrentStep(3)
                     }
                   }}
-                  className={cn(
-                    "rounded-2xl border px-3 py-3 transition-all text-left",
-                    active && "border-primary bg-primary/10 text-foreground",
-                    done && "border-success/40 bg-success/10 text-foreground",
-                    !active && !done && "border-border bg-background text-muted-foreground"
-                  )}
+                  className="group w-full text-left"
                 >
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div
+                  {/* Barra de progresso por etapa: lida como sequência mesmo sem texto */}
+                  <span
+                    className={cn(
+                      "block h-1.5 rounded-full transition-colors",
+                      active && "bg-primary",
+                      done && "bg-success",
+                      !active && !done && "bg-muted"
+                    )}
+                  />
+                  <span className="mt-2 flex items-center gap-1.5 sm:gap-2">
+                    <span
                       className={cn(
-                        "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold border",
+                        "flex h-5 w-5 sm:h-6 sm:w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold border",
                         active && "border-primary bg-primary text-primary-foreground",
                         done && "border-success bg-success text-background",
                         !active && !done && "border-border text-muted-foreground"
                       )}
                     >
-                      {done ? <CheckCircle2 className="h-4 w-4" /> : item.step}
-                    </div>
+                      {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : item.step}
+                    </span>
 
-                    <span className="text-sm font-medium leading-tight">
+                    <span
+                      className={cn(
+                        "text-xs sm:text-sm leading-tight",
+                        active ? "font-semibold text-foreground" : "font-medium text-muted-foreground"
+                      )}
+                    >
                       {item.label}
                     </span>
-                  </div>
+                  </span>
                 </button>
+                </li>
               )
             })}
-          </div>
+          </ol>
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleFinalSubmit, (errors) => console.log("Erros do form: ", errors))} className="space-y-6">
               {currentStep === 1 && (
                 <>
-                  <div className="space-y-2">
-                    <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                      Escolha o atendimento
-                    </h2>
-                  </div>
+                  <StepHeading step={1} title="Escolha o atendimento" />
 
                   <Card className="border-border bg-card shadow-sm">
                     <CardContent className="pt-6 space-y-6">
@@ -521,7 +568,7 @@ export function PublicBookingForm({
                               <FormLabel>Serviço</FormLabel>
                               <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Selecione o tipo de atendimento" />
                                   </SelectTrigger>
                                 </FormControl>
@@ -546,7 +593,7 @@ export function PublicBookingForm({
                               <FormLabel>Profissional</FormLabel>
                               <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Escolha quem irá atender" />
                                   </SelectTrigger>
                                 </FormControl>
@@ -565,12 +612,10 @@ export function PublicBookingForm({
                       </div>
                     </CardContent>
 
-                    <CardFooter className="flex justify-end gap-3">
+                    <CardFooter className="hidden xl:flex justify-end gap-3">
                       <Button
                         type="button"
-                        onClick={() => {
-                          if (validateStep1()) setCurrentStep(2)
-                        }}
+                        onClick={goToNextStep}
                         className="min-w-[160px]"
                       >
                         Continuar
@@ -583,15 +628,11 @@ export function PublicBookingForm({
 
               {currentStep === 2 && (
                 <>
-                  <div className="space-y-2">
-                    <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                      Escolha o horário
-                    </h2>
-                  </div>
+                  <StepHeading step={2} title="Escolha o dia e o horário" />
 
                   <Card className="border-border bg-card shadow-sm">
                     <CardContent className="pt-6 space-y-6">
-                      <div className="grid grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <FormField
                           control={form.control}
                           name="date"
@@ -677,7 +718,7 @@ export function PublicBookingForm({
                                 disabled={loadingSlots || !selectedDate || slots.length === 0}
                               >
                                 <FormControl>
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full">
                                     {loadingSlots ? (
                                       <div className="flex items-center gap-2">
                                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -716,7 +757,7 @@ export function PublicBookingForm({
                       </div>
                     </CardContent>
 
-                    <CardFooter className="flex justify-between gap-3">
+                    <CardFooter className="hidden xl:flex justify-between gap-3">
                       <Button
                         type="button"
                         variant="outline"
@@ -728,9 +769,7 @@ export function PublicBookingForm({
 
                       <Button
                         type="button"
-                        onClick={() => {
-                          if (validateStep2()) setCurrentStep(3)
-                        }}
+                        onClick={goToNextStep}
                         className="min-w-[160px]"
                       >
                         Continuar
@@ -742,14 +781,14 @@ export function PublicBookingForm({
               )}
 
               {currentStep === 3 && (
+                <>
+                <StepHeading step={3} title="Informe seus dados" />
                 <Card className="border-border bg-card shadow-sm">
                   <CardContent className="pt-6 space-y-8">
 
                     {/* 🔹 DADOS DO CLIENTE */}
                     <div className="space-y-6">
-                      <h2 className="text-lg font-semibold">Seus dados</h2>
-
-                      <div className="grid grid-cols-2 xl:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <FormField
                           control={form.control}
                           name="customer_name"
@@ -822,7 +861,7 @@ export function PublicBookingForm({
                               <FormLabel>Gênero (opcional)</FormLabel>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Selecione" />
                                   </SelectTrigger>
                                 </FormControl>
@@ -1018,8 +1057,8 @@ export function PublicBookingForm({
                       </div>
                     )}
 
-                    {/* 🔹 AÇÕES */}
-                    <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                    {/* 🔹 AÇÕES (no celular ficam na barra fixa) */}
+                    <div className="hidden xl:flex gap-4 pt-4">
                       <Button
                         type="button"
                         variant="outline"
@@ -1046,13 +1085,64 @@ export function PublicBookingForm({
                     </div>
                   </CardContent>
                 </Card>
+                </>
               )}
+
+              {/* Barra fixa do celular: o próximo passo é sempre o elemento mais
+                  forte da tela, e o resumo vira uma linha de apoio acima dele. */}
+              <div className="xl:hidden fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+                <div className="mx-auto max-w-xl space-y-2">
+                  <p className="truncate text-xs text-muted-foreground" aria-live="polite">
+                    {mobileSummary}
+                  </p>
+                  <div className="flex gap-2">
+                    {currentStep > 1 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="lg"
+                        className="h-12 px-4"
+                        aria-label="Voltar para a etapa anterior"
+                        onClick={() => setCurrentStep((currentStep - 1) as BookingStep)}
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                      </Button>
+                    )}
+
+                    {currentStep < 3 ? (
+                      <Button key="next" type="button" size="lg" className="h-12 flex-1 text-base" onClick={goToNextStep}>
+                        Continuar
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        key="submit"
+                        type="submit"
+                        size="lg"
+                        className="h-12 flex-1 text-base"
+                        disabled={form.formState.isSubmitting || isPending}
+                      >
+                        {form.formState.isSubmitting || isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Enviando...
+                          </>
+                        ) : (
+                          "Agendar agora"
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
             </form>
           </Form>
           </div>
 
           {/* 🔹 RESUMO LATERAL */}
-          <aside className="space-y-6 xl:sticky xl:top-6 self-start">
+          {/* Só no desktop: no celular ele caía abaixo do formulário e, com o preço
+              em destaque, roubava a atenção do botão de continuar (5 testes). */}
+          <aside className="hidden xl:block space-y-6 xl:sticky xl:top-6 self-start">
             <Card className="border-border bg-card shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg">Resumo do agendamento</CardTitle>
@@ -1131,73 +1221,24 @@ export function PublicBookingForm({
                       }).length} de {documents.length} item(ns) preenchido(s)
                     </p>
 
-                    <div className="space-y-1">
+                    {/* Resumo é só leitura: os campos ficam na etapa 3 */}
+                    <ul className="space-y-1 text-sm">
                       {documents.map((doc) => {
-                        const selectedFile = documentValues?.[doc.id]?.file
+                        const item = documentValues[doc.id]
+                        const filled = Boolean(item?.text || item?.file)
 
                         return (
-                          <div
-                            key={doc.id}
-                            className="border rounded-xl p-4 bg-muted/30 space-y-3"
-                          >
-                            <div className="flex items-center justify-between gap-4">
-                              <div>
-                                <p className="font-medium">{doc.label}</p>
-                                {doc.description && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {doc.description}
-                                  </p>
-                                )}
-                              </div>
-
-                              {doc.required && (
-                                <span className="text-xs px-2 py-1 rounded border border-danger/40 text-danger">
-                                  obrigatório
-                                </span>
-                              )}
-                            </div>
-
-                            <Input
-                              placeholder={`Informe ${doc.label.toLowerCase()}`}
-                              onChange={(e) => {
-                                setDocumentValues((prev) => ({
-                                  ...prev,
-                                  [doc.id]: {
-                                    ...prev[doc.id],
-                                    text: e.target.value,
-                                  },
-                                }))
-                              }}
+                          <li key={doc.id} className="flex items-center gap-2">
+                            <CheckCircle2
+                              className={cn("h-4 w-4 shrink-0", filled ? "text-success" : "text-muted-foreground/40")}
                             />
-
-                            <div className="flex items-center gap-3">
-                              <Input
-                                type="file"
-                                accept={Array.isArray(doc.accept) ? doc.accept.join(",") : doc.accept}
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0]
-                                  if (!file) return
-
-                                  setDocumentValues((prev) => ({
-                                    ...prev,
-                                    [doc.id]: {
-                                      ...prev[doc.id],
-                                      file,
-                                    },
-                                  }))
-                                }}
-                              />
-
-                              {selectedFile && (
-                                <span className="text-xs text-muted-foreground truncate max-w-[140px]">
-                                  {selectedFile.name}
-                                </span>
-                              )}
-                            </div>
-                          </div>
+                            <span className={filled ? "text-foreground" : "text-muted-foreground"}>
+                              {doc.label}
+                            </span>
+                          </li>
                         )
                       })}
-                    </div>
+                    </ul>
                   </div>
                 )}
 

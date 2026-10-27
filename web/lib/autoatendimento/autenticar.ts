@@ -32,6 +32,21 @@ function mesmoSegredo(recebido: string, esperado: string) {
 }
 
 /**
+ * O header Authorization traz o token de serviço do atendente? Falso também
+ * quando AUTOATENDIMENTO_API_TOKEN está ausente ou curto (falha fechada). Usado
+ * pela rota da spec, que não exige ticket.
+ */
+export function tokenDeServicoValido(req: Request) {
+  const tokenEsperado = process.env.AUTOATENDIMENTO_API_TOKEN || ""
+
+  if (tokenEsperado.length < TAMANHO_MINIMO_SEGREDO) return false
+
+  const token = (req.headers.get("authorization") || "").match(/^Bearer\s+(\S+)$/i)?.[1]
+
+  return !!token && mesmoSegredo(token, tokenEsperado)
+}
+
+/**
  * Autenticação do canal (README §2), nesta ordem:
  *   1. envs configuradas (senão falha fechada: 500 e log, sem dizer qual faltou);
  *   2. token de serviço -> UNAUTHORIZED;
@@ -55,9 +70,7 @@ export const autenticarTicket: Autenticador<ContextoAutoatendimento> = async (re
     throw internalError()
   }
 
-  const token = (req.headers.get("authorization") || "").match(/^Bearer\s+(\S+)$/i)?.[1]
-
-  if (!token || !mesmoSegredo(token, tokenEsperado)) {
+  if (!tokenDeServicoValido(req)) {
     console.warn("[autoatendimento:autenticar] token de serviço ausente ou inválido", { path: req.nextUrl.pathname })
     throw new ApiError("UNAUTHORIZED", "Token de serviço ausente ou inválido.")
   }

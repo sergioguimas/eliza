@@ -106,7 +106,7 @@ API para o **atendente de WhatsApp** do Eliza agir em nome de um cliente final: 
 agendar, remarcar, cancelar, confirmar presença, manter o cadastro, responder e pedir ajuda humana.
 É uma **API interna** entre dois serviços; o tenant que quer integrar o próprio sistema usa a API v1.
 
-> Este documento só é servido em desenvolvimento ou com \`API_DOCS_INTERNAS=true\`.
+> Este documento só é servido em desenvolvimento, com \`API_DOCS_INTERNAS=true\` ou com o token de serviço (\`Authorization: Bearer\`).
 
 ## Operações do atendente (\`x-atendente\`)
 
