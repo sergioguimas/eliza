@@ -221,6 +221,7 @@ async function notificar(
       phone: telefone,
       message: mensagem(),
       organizationId: ator.organizationId,
+      registrarComo: "notificacao",
     })
 
     if (!resultado?.success) {

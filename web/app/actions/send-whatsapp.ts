@@ -7,12 +7,19 @@ import "server-only"
 
 import { createClient, SupabaseClient } from "@supabase/supabase-js"
 import { Database } from "@/utils/database.types"
+import { registrarEnvioSistema, type TipoAviso } from "@/lib/autoatendimento/envios-sistema"
 import { getEvolutionServer } from "@/lib/evolution"
 
 interface SendMessageProps {
   phone: string
   message: string
   organizationId: string
+  /**
+   * Envio automático do sistema (09-avisos-do-sistema): registra antes de
+   * enviar para o eco chegar ao atendente como aviso, não como a equipe.
+   * Omitido = não registra (resposta do atendente, mensagem da equipe).
+   */
+  registrarComo?: TipoAviso
 }
 
 interface SendMediaProps {
@@ -109,6 +116,7 @@ export async function sendWhatsAppMessage({
   phone,
   message,
   organizationId,
+  registrarComo,
 }: SendMessageProps) {
   const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -131,6 +139,10 @@ export async function sendWhatsAppMessage({
 
   const cleanPhone = normalizePhone(phone)
   const finalEndpoint = `${evolutionUrl}/message/sendText/${instanceName}`
+
+  if (registrarComo) {
+    await registrarEnvioSistema({ organizationId, tipo: registrarComo, texto: message })
+  }
 
   try {
     const response = await fetch(finalEndpoint, {

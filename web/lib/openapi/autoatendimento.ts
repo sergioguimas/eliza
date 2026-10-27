@@ -656,7 +656,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
             HEADER_ASSINATURA +
             "` = `hex(HMAC-SHA256(ATENDENTE_ENCAMINHAMENTO_SECRET, timestamp + \".\" + corpoBruto))`, calculada sobre o corpo **exato** recebido. `" +
             HEADER_TIMESTAMP +
-            "` é epoch em segundos; rejeite se `|agora - timestamp| > 300`.\n\n**Fallback:** se o atendente estiver fora, der timeout ou responder diferente de `202`, o Eliza processa a mensagem pelo fluxo antigo de palavra-chave (apenas para `deMim: false`).\n\n`deMim: true` é o eco da sua própria mensagem (o `mensagemId` bate com o que `POST /mensagens` devolveu) **ou** alguém da equipe respondendo pelo celular, o que deve pausar o atendente. Mensagens de grupo e de status nunca são encaminhadas.",
+            "` é epoch em segundos; rejeite se `|agora - timestamp| > 300`.\n\n**Fallback:** se o atendente estiver fora, der timeout ou responder diferente de `202`, o Eliza processa a mensagem pelo fluxo antigo de palavra-chave (apenas para `deMim: false`).\n\n`deMim: true` é o eco da sua própria mensagem (o `mensagemId` bate com o que `POST /mensagens` devolveu), um **envio automático do Eliza** (lembrete, notificação: vem com `aviso: { tipo }` — guarde como contexto, não pause e não responda) **ou** alguém da equipe respondendo pelo celular (`aviso: null`), o que deve pausar o atendente. Mensagens de grupo e de status nunca são encaminhadas.",
           parameters: [
             { name: HEADER_ASSINATURA, in: "header", required: true, description: "Assinatura HMAC-SHA256 em hexadecimal.", schema: { type: "string" } },
             { name: HEADER_TIMESTAMP, in: "header", required: true, description: "Epoch em segundos.", schema: { type: "integer" } },
@@ -678,6 +678,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
                       deMim: false,
                       conteudo: { tipo: "texto", texto: "Quero marcar um corte amanhã" },
                       ticket: { token: TICKET_EXEMPLO, expiraEm: "2026-10-02T13:30:00.000Z" },
+                      aviso: null,
                     },
                   },
                   audioDoCliente: {
@@ -692,6 +693,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
                       deMim: false,
                       conteudo: { tipo: "audio", duracaoS: 12, mime: "audio/ogg; codecs=opus", tamanho: 18432, encaminhado: false },
                       ticket: { token: TICKET_EXEMPLO, expiraEm: "2026-10-02T13:32:00.000Z" },
+                      aviso: null,
                     },
                   },
                   daEquipe: {
@@ -705,6 +707,21 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
                       deMim: true,
                       conteudo: { tipo: "texto", texto: "Oi, aqui é a Ana!" },
                       ticket: null,
+                      aviso: null,
+                    },
+                  },
+                  lembrete: {
+                    summary: "Lembrete automático do Eliza (aviso, não pausa)",
+                    value: {
+                      versao: 1,
+                      mensagemId: "3EB0A1B2C3D4E5F60718",
+                      recebidaEm: "2026-10-02T11:00:00.000Z",
+                      organizacao: { id: ID_EXEMPLO.organizacao, nome: "Studio Exemplo" },
+                      contato: { telefone: "5511900000001", nomeExibicao: null },
+                      deMim: true,
+                      conteudo: { tipo: "texto", texto: "⏰ Lembrete: Corte às 14:00" },
+                      ticket: null,
+                      aviso: { tipo: "lembrete" },
                     },
                   },
                 },

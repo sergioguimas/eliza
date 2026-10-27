@@ -11,6 +11,7 @@ import type { Db } from "@/lib/domain/db"
 import { extractAudio, extractIncomingNumber, extractInstanceName, extractMessageText } from "@/lib/whatsapp/extrair-mensagem"
 import { createAdminClient } from "@/utils/supabase/admin"
 import { carregarConfig } from "./config"
+import { tipoDoEnvioSistema, type TipoAviso } from "./envios-sistema"
 import { emitirTicket } from "./ticket"
 
 /**
@@ -108,7 +109,7 @@ export async function encaminharParaAtendente(body: PayloadDaEvolution, deps: De
     // Sem org, sem linha de config, config inativa ou org demo: fluxo atual.
     if (!org || !(await carregarConfig(db, org.id))) return false
 
-    return await enviarAoAtendente({ base, id: key.id, data, org, instancia, telefone, recebidaEm, deMim, fetchFn: deps.fetch ?? fetch })
+    return await enviarAoAtendente({ base, db, id: key.id, data, org, instancia, telefone, recebidaEm, deMim, fetchFn: deps.fetch ?? fetch })
   } catch (error) {
     return recuar(deMim, `erro_inesperado (${error instanceof Error ? error.message : "desconhecido"})`)
   }
@@ -116,6 +117,7 @@ export async function encaminharParaAtendente(body: PayloadDaEvolution, deps: De
 
 async function enviarAoAtendente(p: {
   base: string
+  db: Db
   id: string
   data: NonNullable<PayloadDaEvolution["data"]>
   org: { id: string; name: string }
@@ -132,6 +134,18 @@ async function enviarAoAtendente(p: {
   const texto = extractMessageText(p.data.message)
   const audio = texto ? null : extractAudio(p.data.message)
   let ticket: TicketEmitido | null = null
+  let aviso: { tipo: TipoAviso } | null = null
+
+  // Eco de envio automático do Eliza (lembrete, notificação...) vai como aviso:
+  // o atendente guarda o contexto e não pausa (09 §4). Na dúvida, equipe.
+  if (p.deMim && texto) {
+    try {
+      const tipo = await tipoDoEnvioSistema(p.db, p.org.id, texto)
+      if (tipo) aviso = { tipo }
+    } catch (error) {
+      console.error("[autoatendimento:encaminhar] aviso_indisponivel", (error as Error)?.message)
+    }
+  }
 
   if (!p.deMim) {
     try {
@@ -156,6 +170,7 @@ async function enviarAoAtendente(p: {
       ? { tipo: "texto", texto }
       : (audio ?? { tipo: "nao_suportado", tipoOriginal: tipoOriginal(p.data.message) }),
     ticket,
+    aviso,
   })
 
   if (!mensagem.success) return recuar(p.deMim, "payload_invalido")

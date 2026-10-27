@@ -49,7 +49,7 @@ export async function escalarParaEquipe(
     p.entrada.resumo,
   ].join("\n")
 
-  const envio = await enviarTexto({ organizationId: p.org, telefone: destino, texto })
+  const envio = await enviarTexto({ organizationId: p.org, telefone: destino, texto, registrarComo: "escalonamento" })
 
   if (!envio.ok) console.error("[autoatendimento:escalonamentos] falha ao avisar a equipe:", envio.erro)
 

@@ -9,6 +9,7 @@ import { createAdminClient } from "@/utils/supabase/admin"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Database } from "@/utils/database.types"
+import { registrarEnvioSistema } from "@/lib/autoatendimento/envios-sistema"
 import { getEvolutionServer } from "@/lib/evolution"
 
 type AppointmentMessageType = "pending" | "created" | "canceled"
@@ -78,6 +79,7 @@ async function sendAppointmentMessage(
     .from("appointments")
     .select(`
       id,
+      organization_id,
       status,
       start_time,
       customers (
@@ -160,6 +162,10 @@ async function sendAppointmentMessage(
     service: service?.title || "Consulta",
     professional: professional?.name || "Profissional",
   })
+
+  // Não usa sendWhatsAppMessage (normaliza o telefone de outro jeito); registra
+  // aqui o mesmo `text` para o eco chegar ao atendente como aviso (09 §3.1).
+  await registrarEnvioSistema({ organizationId: appointment.organization_id, tipo: "notificacao", texto: text })
 
   try {
     console.log(`📤 [WhatsApp] Enviando mensagem "${type}" para ${phone}`)

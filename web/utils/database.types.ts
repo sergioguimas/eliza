@@ -326,6 +326,38 @@ export type Database = {
           },
         ]
       }
+      autoatendimento_envios_sistema: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          texto_hash: string
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          texto_hash: string
+          tipo: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          texto_hash?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "autoatendimento_envios_sistema_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           active: boolean | null
