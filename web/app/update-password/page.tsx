@@ -12,7 +12,7 @@ export default async function UpdatePasswordPage() {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect("/reset-password?error=recovery_session_invalid")
+    redirect("/forgot-password?error=recovery_session_invalid")
   }
 
   return (

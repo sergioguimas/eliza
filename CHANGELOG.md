@@ -12,6 +12,11 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 - Celular: a barra inferior ganhou o botão "Mais", que abre um painel com Configurações, Equipe e Horários (para
   proprietário e admin), Meu perfil, Painel Super Admin e **Sair do sistema**. Antes não havia como sair pelo celular,
   e Equipe e Horários só eram acessíveis no computador.
+- Recuperação de senha: o link do e-mail passa a funcionar aberto em qualquer aparelho ou navegador (antes só
+  funcionava no mesmo navegador que pediu a recuperação; nos outros, voltava para a tela de pedir o e-mail).
+  **Exige trocar o template "Reset Password" no Supabase** — ver `docs/AUTH_E_RECUPERACAO.md`.
+- Link de recuperação expirado, já usado ou substituído por um pedido mais novo agora mostra um aviso explicando o
+  motivo, em vez de abrir o formulário de e-mail sem explicação.
 
 ## [1.0.0] - 2026-10-29
 
