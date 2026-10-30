@@ -7,6 +7,12 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Não publicado]
 
+### Corrigido
+
+- Celular: a barra inferior ganhou o botão "Mais", que abre um painel com Configurações, Equipe e Horários (para
+  proprietário e admin), Meu perfil, Painel Super Admin e **Sair do sistema**. Antes não havia como sair pelo celular,
+  e Equipe e Horários só eram acessíveis no computador.
+
 ## [1.0.0] - 2026-10-29
 
 ### Adicionado
