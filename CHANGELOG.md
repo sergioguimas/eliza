@@ -7,6 +7,8 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Não publicado]
 
+## [1.0.1] - 2026-10-30
+
 ### Corrigido
 
 - Celular: a barra inferior ganhou o botão "Mais", que abre um painel com Configurações, Equipe e Horários (para
@@ -34,5 +36,6 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
   API pública de catálogo.
 - O histórico anterior a esta versão, por data, fica em `docs/CHANGELOG.md`.
 
-[Não publicado]: https://github.com/sergioguimas/eliza/compare/v1.0.0...HEAD
+[Não publicado]: https://github.com/sergioguimas/eliza/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/sergioguimas/eliza/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/sergioguimas/eliza/releases/tag/v1.0.0
