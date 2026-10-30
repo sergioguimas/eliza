@@ -18,6 +18,11 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 - Link de recuperação expirado, já usado ou substituído por um pedido mais novo agora mostra um aviso explicando o
   motivo, em vez de abrir o formulário de e-mail sem explicação.
 
+### Segurança
+
+- Links de e-mail (recuperação e primeiro acesso) não aceitam mais um destino `next` com barra invertida, que o
+  navegador interpretava como outro domínio e permitia redirecionar a pessoa para fora do Eliza.
+
 ## [1.0.0] - 2026-10-29
 
 ### Adicionado

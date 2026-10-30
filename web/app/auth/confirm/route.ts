@@ -15,8 +15,17 @@ import { createClient } from "@/utils/supabase/server"
 
 const ALLOWED_TYPES: EmailOtpType[] = ["recovery", "invite", "magiclink", "email"]
 
+// Location relativa de propósito: atrás do proxy da VPS o `request.url` traz o
+// host interno do container (saía `https://localhost:3000/...` em produção), e
+// o navegador resolve a relativa contra o domínio que ele mesmo acessou.
+// `NextResponse.redirect` exige URL absoluta, por isso a resposta é montada à mão.
+function redirectTo(path: string) {
+  return new NextResponse(null, { status: 303, headers: { Location: path } })
+}
+
 function getSafeNextPath(value: string | null) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+  // Barra invertida conta: o navegador lê "/\evil.com" como "//evil.com" (outro domínio).
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
     return "/update-password"
   }
 
@@ -37,13 +46,11 @@ export async function GET(request: NextRequest) {
     })
 
     if (!error) {
-      return NextResponse.redirect(new URL(nextPath, request.url))
+      return redirectTo(nextPath)
     }
 
     console.error("[auth/confirm]", error)
   }
 
-  return NextResponse.redirect(
-    new URL("/forgot-password?error=recovery_link_invalid", request.url)
-  )
+  return redirectTo("/forgot-password?error=recovery_link_invalid")
 }

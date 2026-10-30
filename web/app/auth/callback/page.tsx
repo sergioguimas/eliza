@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation"
 import { createClient } from "@/utils/supabase/client"
 
 function getSafeNextPath(value: string | null) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+  // Barra invertida conta: o navegador lê "/\evil.com" como "//evil.com" (outro domínio).
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
     return "/update-password"
   }
 
