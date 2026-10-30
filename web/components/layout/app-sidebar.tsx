@@ -10,6 +10,7 @@ import {
   Clock,
   Home,
   LogOut,
+  Menu,
   Settings,
   ShieldAlert,
   User,
@@ -29,6 +30,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 
 interface AppSidebarProps {
   user: any
@@ -59,6 +67,7 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
 
   const [collapsed, setCollapsed] = useState(false)
   const [hydrated, setHydrated] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
 
   const entities = dict.entities || {}
   const nav = dict.nav || {}
@@ -89,7 +98,9 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
     : user?.email?.substring(0, 2).toUpperCase()
 
   async function handleSignOut() {
+    setMoreOpen(false)
     await supabase.auth.signOut()
+    router.replace("/login")
     router.refresh()
   }
 
@@ -157,17 +168,13 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
     (item) => !item.adminOnly || canManageOrg
   )
 
-  const mobileItems = useMemo(() => {
-    const settingsItem = visibleManagementItems.find(
-      (item) => item.href === "/configuracoes"
-    )
-
-    return settingsItem
-      ? [...operationalItems, settingsItem]
-      : operationalItems
-  }, [operationalItems, visibleManagementItems])
-
-  const mobileGridCols = mobileItems.length >= 5 ? "grid-cols-5" : "grid-cols-4"
+  // No mobile a sidebar some inteira (inclusive o menu do usuário), então o
+  // que não cabe na barra — gestão, perfil, super admin e sair — vai para o
+  // painel "Mais". Antes a barra levava só Configurações e ninguém conseguia
+  // sair do sistema pelo celular.
+  const moreActive = visibleManagementItems.some((item) =>
+    pathname.startsWith(item.href)
+  )
 
   // `admin` não tinha ramo próprio e caía no fallback, aparecendo como "Staff".
   // "Proprietário" para owner alinha com o cargo exibido na dashboard.
@@ -322,8 +329,8 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
       </aside>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 backdrop-blur md:hidden">
-        <div className={cn("mx-auto grid max-w-lg gap-1", mobileGridCols)}>
-          {mobileItems.map((item) => {
+        <div className="mx-auto grid max-w-lg grid-cols-5 gap-1">
+          {operationalItems.map((item) => {
             const active =
               pathname === item.href ||
               (item.href !== "/dashboard" && pathname.startsWith(item.href))
@@ -349,8 +356,111 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
               </Link>
             )
           })}
+
+          <button
+            type="button"
+            onClick={() => setMoreOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={moreOpen}
+            className={cn(
+              "flex min-h-16 flex-col items-center justify-center rounded-lg px-2 py-2 text-[11px] font-medium transition-all duration-200",
+              moreActive ? "sidebar-item-active" : "sidebar-item-hover"
+            )}
+          >
+            <Menu className="mb-1 h-5 w-5" />
+            <span className="max-w-full truncate">
+              {messages.more_menu || "Mais"}
+            </span>
+          </button>
         </div>
       </nav>
+
+      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+        <SheetContent
+          side="bottom"
+          className="max-h-[85dvh] gap-0 overflow-y-auto rounded-t-2xl pb-[max(env(safe-area-inset-bottom),1rem)] md:hidden"
+        >
+          <SheetHeader className="flex-row items-center gap-3 border-b pr-12">
+            <Avatar className="h-11 w-11 rounded-xl">
+              <AvatarImage
+                src={profile?.avatar_url || user?.user_metadata?.avatar_url}
+              />
+              <AvatarFallback className="rounded-xl">{userInitials}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <SheetTitle className="truncate text-base">
+                {profile?.full_name || messages.default_user || "Usuário"}
+              </SheetTitle>
+              <SheetDescription className="truncate text-xs">
+                {roleLabel}
+                {organization?.name ? ` · ${organization.name}` : ""}
+              </SheetDescription>
+            </div>
+          </SheetHeader>
+
+          {visibleManagementItems.length > 0 && (
+            <div className="border-b px-3 py-3">
+              <p className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                {messages.management_section || meta.sidebarLabel}
+              </p>
+              {visibleManagementItems.map((item) => {
+                const active =
+                  item.href === "/configuracoes"
+                    ? pathname === item.href
+                    : pathname.startsWith(item.href)
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMoreOpen(false)}
+                    className={cn(
+                      "flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors",
+                      active ? "bg-brand-soft" : "hover:bg-accent"
+                    )}
+                  >
+                    <item.icon className="size-5 text-muted-foreground" />
+                    {item.mobileLabel || item.label}
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+
+          <div className="px-3 py-3">
+            {isSuperAdmin && (
+              <Link
+                href="/admin"
+                onClick={() => setMoreOpen(false)}
+                className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors hover:bg-accent"
+              >
+                <ShieldAlert className="size-5 text-muted-foreground" />
+                {messages.super_admin_panel || "Painel Super Admin"}
+              </Link>
+            )}
+
+            {!canManageOrg && (
+              <Link
+                href="/configuracoes"
+                onClick={() => setMoreOpen(false)}
+                className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors hover:bg-accent"
+              >
+                <User className="size-5 text-muted-foreground" />
+                {messages.my_profile || "Meu Perfil"}
+              </Link>
+            )}
+
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+            >
+              <LogOut className="size-5" />
+              {messages.sign_out || "Sair do sistema"}
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </>
   )
 }

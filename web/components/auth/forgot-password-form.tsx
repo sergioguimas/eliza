@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
-import { Mail } from "lucide-react"
+import { AlertCircle, Mail } from "lucide-react"
 
 import { requestPasswordReset } from "@/app/actions/password"
 import { isValidEmail, normalizeEmail } from "@/lib/validation"
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 
-export function ForgotPasswordForm() {
+export function ForgotPasswordForm({ errorMessage }: { errorMessage?: string }) {
   const [email, setEmail] = useState("")
   const [isPending, startTransition] = useTransition()
 
@@ -63,6 +63,16 @@ export function ForgotPasswordForm() {
 
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {errorMessage && (
+            <div
+              role="alert"
+              className="flex gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>{errorMessage}</p>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="email">E-mail</Label>
 

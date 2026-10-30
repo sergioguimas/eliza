@@ -1,9 +1,17 @@
-import { ForgotPasswordForm } from "@/components/auth/forgot-password-form"
+import { redirect } from "next/navigation"
 
-export default function ResetPasswordPage() {
-  return (
-    <main className="min-h-screen flex items-center justify-center bg-muted/30 px-4">
-      <ForgotPasswordForm />
-    </main>
+// Rota antiga, mantida só para links já enviados: era uma cópia de
+// /forgot-password, e a definição da nova senha mora em /update-password.
+export default async function ResetPasswordPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
+  const { error } = await searchParams
+
+  redirect(
+    error
+      ? `/forgot-password?error=${encodeURIComponent(error)}`
+      : "/forgot-password"
   )
 }

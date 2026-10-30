@@ -205,7 +205,10 @@ Retenção: o aviso segue a mesma regra das outras mensagens (90 dias de texto).
    também não. **Correção:** o webhook passa a aceitar `send.message` e o encaminha ao atendente com
    `deMim` forçado, sem passar pelo fluxo de palavra-chave; a instância passa a assinar
    `["MESSAGES_UPSERT", "SEND_MESSAGE"]`. Com isso a resposta do bot volta como eco e o lembrete como
-   `aviso`. A conferência do texto (emoji, `*negrito*`, quebras) fica para depois desse deploy.
+   `aviso`. **Confirmado no mesmo dia, depois do deploy (PR #50):** `eco` após cada resposta do bot,
+   `aviso tipo=notificacao` após o agendamento criado no painel (o hash do texto do `send.message`
+   bateu com o registrado, então a normalização de `hashDoTexto` serve como está), nenhuma `pausa`, e
+   o pedido seguinte do cliente remarcou o agendamento do aviso.
 1. Eliza: migration → `supabase gen types` → `envios-sistema.ts` → `send-whatsapp.ts`/`gateway.ts` →
    chamadas da §3.1 → `encaminhar.ts` → Zod → OpenAPI e docs → `tsc`, `lint`, `build`.
 2. sola-agens: store (migration `0002`, `storetest`) → entrada → `demim.go` → histórico e prompt
