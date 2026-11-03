@@ -22,8 +22,8 @@ export async function handleAppointmentRequest(
   }
 
   try {
-    // aoResponderPedido: o cliente recebe o texto de pedido aprovado/recusado
-    // (com o nome da organização), e não o de confirmação/cancelamento comum.
+    // aoResponderPedido: o cliente recebe o template da org; sem template, o texto
+    // padrão de pedido aprovado/recusado (com o nome da organização).
     // A falha do WhatsApp não desfaz a mudança: o domínio só loga.
     await mudarStatus(
       createAdminClient<Database>(),

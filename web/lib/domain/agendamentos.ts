@@ -522,7 +522,7 @@ export async function mudarStatus(
   para: Status,
   opcoes?: {
     motivo?: string
-    /** O tenant está respondendo a um pedido pendente: usa os textos de aprovação/recusa. */
+    /** O tenant está respondendo a um pedido pendente: sem template da org, usa os textos padrão de aprovação/recusa. */
     aoResponderPedido?: boolean
   }
 ): Promise<{ agendamento: AgendamentoCompleto; alterado: boolean; notificado: boolean }> {
@@ -578,24 +578,28 @@ export async function mudarStatus(
 
   if (ator.podeNotificar && (para === "canceled" || para === "confirmed")) {
     const dados = dadosDaMensagem(linha)
+    const templates = await carregarTemplates(db, orgId)
     let organizacaoNome: string | null = null
-    let templateCancelamento: string | null | undefined
 
     if (opcoes?.aoResponderPedido) {
       const { data } = await db.from("organizations").select("name").eq("id", orgId).maybeSingle()
       organizacaoNome = data?.name ?? null
-    } else if (para === "canceled") {
-      templateCancelamento = (await carregarTemplates(db, orgId))?.msg_appointment_canceled
     }
 
     notificado = await notificar(ator, linha.customers?.phone, () => {
       if (para === "confirmed") {
-        return opcoes?.aoResponderPedido ? mensagemPedidoAprovado(dados, organizacaoNome) : mensagemConfirmacao(dados)
+        const template = templates?.msg_appointment_created
+
+        return opcoes?.aoResponderPedido
+          ? mensagemPedidoAprovado(template, dados, organizacaoNome)
+          : mensagemConfirmacao(template, dados)
       }
 
+      const template = templates?.msg_appointment_canceled
+
       return opcoes?.aoResponderPedido
-        ? mensagemPedidoRecusado(dados, organizacaoNome)
-        : mensagemCancelamento(templateCancelamento, dados)
+        ? mensagemPedidoRecusado(template, dados, organizacaoNome)
+        : mensagemCancelamento(template, dados)
     })
   }
 

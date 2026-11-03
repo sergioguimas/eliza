@@ -14,6 +14,13 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
   versão clara e escura com contraste conferido. Migration `20261103120000_organizations_brand_palette` (coluna
   `organizations.brand_palette`, já aplicada no banco).
 
+### Corrigido
+
+- WhatsApp: ao aprovar um pedido pendente, confirmar um agendamento pela API ou recusar um pedido, o cliente agora
+  recebe o modelo configurado em Configurações → Mensagens ("Ao confirmar agendamento" e "Ao cancelar"). Antes esses
+  envios ignoravam o modelo da organização e usavam um texto fixo do sistema, que continua valendo só para quem não
+  configurou o modelo.
+
 ## [1.0.1] - 2026-10-30
 
 ### Corrigido

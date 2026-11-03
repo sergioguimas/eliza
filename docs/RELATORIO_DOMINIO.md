@@ -297,8 +297,8 @@ Aceite que depende de browser, com o app rodando em `development`:
   `toast.promise(cancelAppointment(...))`, que trata `{ error }` como sucesso; corrigir no passo 5.
 - [ ] Pagar: `scheduled` (sinal) ok; `no_show`/`canceled` erro; pagar duas vezes não muda `paid_at`
   (conferir no banco); método vazio/`Outros` -> erro.
-- [ ] Dashboard: aprovar/recusar pedido pendente manda os textos de "Agendamento Confirmado!" /
-  "Atualização de Agendamento".
+- [ ] Dashboard: aprovar/recusar pedido pendente manda os modelos da org (`msg_appointment_created` /
+  `msg_appointment_canceled`); sem modelo, os textos de "Agendamento Confirmado!" / "Atualização de Agendamento".
 - [ ] Finanças "a prazo" não lista `pending`, `canceled` nem `no_show`.
 - [ ] Duas abas: aba A finaliza, aba B (desatualizada) tenta "Chegou" -> "alterado por outra pessoa".
 - [ ] Público (`/marcar/<slug>`): cliente cadastrado como `11987654321` agenda com `(11) 98765-4321`
