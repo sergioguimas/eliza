@@ -5,6 +5,7 @@ import { notFound } from "next/navigation"
 import { PublicBookingForm } from "./public-booking-form"
 import { Database } from "@/utils/database.types"
 import { Metadata } from "next"
+import { paletteClass } from "@/lib/brand-palette"
 
 export async function generateMetadata(
   { params }: { params: Promise<{ slug: string }> }
@@ -48,7 +49,7 @@ export default async function PublicBookingPage({
   // (credenciais da Evolution e dados de billing ficam fora do alcance).
   const { data: organization } = await supabase
     .from('organizations')
-    .select('id, name, slug, niche')
+    .select('id, name, slug, niche, brand_palette')
     .eq('slug', slug)
     .single()
 
@@ -70,7 +71,7 @@ export default async function PublicBookingPage({
     typeof servico === "string" && services.some((s) => s.id === servico) ? servico : undefined
 
   return (
-    <div className={`theme-${organization.niche ?? "generico"} min-h-screen bg-background py-6 sm:py-10 px-4`}>
+    <div className={`theme-${organization.niche ?? "generico"} ${paletteClass(organization.brand_palette)} min-h-screen bg-background py-6 sm:py-10 px-4`}>
       <div className="mx-auto w-full max-w-[1400px] space-y-4 sm:space-y-8">
         <header className="text-center">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{organization.name}</h1>

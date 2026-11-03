@@ -4,6 +4,7 @@ import { AppSidebar } from "@/components/layout/app-sidebar"
 import { KeckleonProvider } from "@/providers/keckleon-provider"
 import { Database } from "@/utils/database.types"
 import { getNicheMetadata } from "@/lib/niche-config"
+import { paletteClass } from "@/lib/brand-palette"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { TourGuide } from "@/components/demo/tour-guide"
 
@@ -12,6 +13,7 @@ type Organization = {
   name: string
   slug: string
   niche: "clinica" | "psicologia" | "barbearia" | "salao" | "advocacia" | "generico" | "certificado" | "tatuador" | "manicure"
+  brand_palette: string | null
 }
 
 type ProfileWithOrg = {
@@ -37,11 +39,11 @@ export default async function AppLayout({
   if (!user) return redirect("/login")
 
   // Colunas explícitas na org: o papel authenticated só tem SELECT nas colunas
-  // públicas (id, name, slug, niche). `organizations(*)` daria 42501 — e era
+  // públicas (id, name, slug, niche, brand_palette). `organizations(*)` daria 42501 — e era
   // por ele que billing e whatsapp_instance_name vazavam para o client.
   const { data: rawProfile } = await supabase
     .from("profiles")
-    .select("*, organizations(id, name, slug, niche)")
+    .select("*, organizations(id, name, slug, niche, brand_palette)")
     .eq("id", user.id)
     .single()
 
@@ -63,7 +65,7 @@ export default async function AppLayout({
   const meta = getNicheMetadata(niche)
 
   return (
-    <div className={`theme-${niche} min-h-screen bg-background text-foreground`}>
+    <div className={`theme-${niche} ${paletteClass(organization?.brand_palette)} min-h-screen bg-background text-foreground`}>
       <KeckleonProvider niche={niche}>
         {isDemoVisitor && organization && (
           <TourGuide organizationId={organization.id} niche={niche} />

@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { Database } from "@/utils/database.types"
+import { isBrandPalette } from "@/lib/brand-palette"
 
 export async function updateSettings(formData: FormData) {
   const supabase = await createClient<Database>()
@@ -43,6 +44,12 @@ export async function updateSettings(formData: FormData) {
       const niche = formData.get('niche') as string
       const orgUpdateData: any = { name }
       if (niche) orgUpdateData.niche = niche
+      // Paleta: só entra se o form mandou o campo; "" volta para a cor do nicho, valor fora da lista é recusado.
+      if (formData.has('brand_palette')) {
+        const palette = formData.get('brand_palette')
+        if (palette !== '' && !isBrandPalette(palette)) return { error: "Cor inválida." }
+        orgUpdateData.brand_palette = palette === '' ? null : palette
+      }
       
       const { error: orgError } = await (supabase.from('organizations'))
         .update(orgUpdateData)
@@ -53,6 +60,8 @@ export async function updateSettings(formData: FormData) {
 
     revalidatePath('/configuracoes')
     revalidatePath('/setup')
+    // a cor vem do layout do painel e de /marcar: refaz tudo que usa layout
+    if (form_type === 'organization') revalidatePath('/', 'layout')
     
     return { success: true }
     

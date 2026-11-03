@@ -411,6 +411,79 @@
 }
 
 /* =========================================================
+   PALETAS POR ORGANIZAÇÃO (organizations.brand_palette)
+   Vão no MESMO elemento de `theme-<nicho>` e vêm depois dele, então
+   trocam só a cor; terminologia e raio continuam do nicho. Lista fechada
+   em lib/brand-palette.ts. Contraste conferido (03/11/2026):
+   primário sobre branco ≥ 6,5:1; soft-foreground sobre soft ≥ 9:1;
+   no escuro, primário a 64% sobre o card ≥ 6:1 e texto escuro sobre
+   ele ≥ 6,7:1.
+   ========================================================= */
+
+/* Grafite: o cinza-chumbo da LP da Deborah (#4a4f57). */
+.palette-grafite {
+  --brand-primary: 217 8% 32%;
+  --brand-primary-foreground: 0 0% 100%;
+  --brand-ring: 217 8% 32%;
+  --brand-soft: 217 12% 95%;
+  --brand-soft-foreground: 217 8% 24%;
+  --brand-border: 217 8% 85%;
+  --brand-glow: 217 8% 32%;
+}
+
+/* Sálvia: verde acinzentado, tom pastel no soft. */
+.palette-salvia {
+  --brand-primary: 149 14% 34%;
+  --brand-primary-foreground: 0 0% 100%;
+  --brand-ring: 149 14% 34%;
+  --brand-soft: 149 18% 95%;
+  --brand-soft-foreground: 149 14% 24%;
+  --brand-border: 149 12% 85%;
+  --brand-glow: 149 14% 34%;
+}
+
+/* Areia: nude/taupe quente, tom pastel no soft. */
+.palette-areia {
+  --brand-primary: 27 16% 36%;
+  --brand-primary-foreground: 0 0% 100%;
+  --brand-ring: 27 16% 36%;
+  --brand-soft: 27 20% 95%;
+  --brand-soft-foreground: 27 16% 24%;
+  --brand-border: 27 14% 86%;
+  --brand-glow: 27 16% 36%;
+}
+
+.dark .palette-grafite {
+  --brand-primary: 217 14% 64%;
+  --brand-primary-foreground: 240 6% 10%;
+  --brand-ring: 217 14% 64%;
+  --brand-soft: 217 8% 16%;
+  --brand-soft-foreground: 217 14% 82%;
+  --brand-border: 217 8% 32%;
+  --brand-glow: 217 14% 64%;
+}
+
+.dark .palette-salvia {
+  --brand-primary: 149 20% 64%;
+  --brand-primary-foreground: 240 6% 10%;
+  --brand-ring: 149 20% 64%;
+  --brand-soft: 149 14% 16%;
+  --brand-soft-foreground: 149 20% 82%;
+  --brand-border: 149 12% 32%;
+  --brand-glow: 149 20% 64%;
+}
+
+.dark .palette-areia {
+  --brand-primary: 27 22% 64%;
+  --brand-primary-foreground: 240 6% 10%;
+  --brand-ring: 27 22% 64%;
+  --brand-soft: 27 16% 16%;
+  --brand-soft-foreground: 27 22% 82%;
+  --brand-border: 27 14% 32%;
+  --brand-glow: 27 22% 64%;
+}
+
+/* =========================================================
    MAPEAMENTO TAILWIND V4
    ========================================================= */
 

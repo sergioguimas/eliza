@@ -16,6 +16,7 @@ import { updateSettings } from "@/app/actions/update-settings"
 import { toast } from "sonner"
 import { Loader2, Save } from "lucide-react"
 import { useKeckleon } from "@/providers/keckleon-provider"
+import { BRAND_PALETTES } from "@/lib/brand-palette"
 
 export function SettingsForm({ profile, organization }: any) {
   const [isPending, startTransition] = useTransition()
@@ -88,6 +89,33 @@ export function SettingsForm({ profile, organization }: any) {
                       "O identificador é usado na URL e em integrações do sistema."}
                   </p>
                 </div>
+
+                {/* Paleta: troca só a cor (painel e página de agendamento); vazio = cor padrão do nicho. */}
+                <fieldset className="space-y-2">
+                  <legend className="text-sm font-medium leading-none">Cor do sistema</legend>
+                  <p className="text-[0.8rem] text-muted-foreground">
+                    Vale para o painel e para a página de agendamento dos seus clientes.
+                  </p>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {[{ id: "", label: "Padrão", swatch: "hsl(var(--brand-primary))" }, ...BRAND_PALETTES].map((p) => (
+                      <label
+                        key={p.id || "padrao"}
+                        className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm has-[:checked]:border-primary has-[:checked]:bg-brand-soft has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
+                      >
+                        <input
+                          type="radio"
+                          name="brand_palette"
+                          value={p.id}
+                          defaultChecked={(organization?.brand_palette ?? "") === p.id}
+                          className="sr-only"
+                        />
+                        {/* a amostra do "Padrão" usa a classe do nicho para mostrar a cor dele mesmo com outra paleta ativa */}
+                        <span aria-hidden className={`h-4 w-4 rounded-full border ${p.id ? "" : `theme-${meta?.id ?? "generico"}`}`} style={{ background: p.swatch }} />
+                        {p.label}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
               </CardContent>
 
               <div className="flex justify-end p-6 pt-5 border-t mt-4">

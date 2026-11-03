@@ -7,6 +7,13 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Não publicado]
 
+### Adicionado
+
+- Cor do sistema por organização: em Configurações, o proprietário ou admin escolhe entre a cor padrão do nicho e as
+  paletas Grafite, Sálvia e Areia, aplicadas no painel e na página de agendamento (`/marcar`). Todas as paletas têm
+  versão clara e escura com contraste conferido. Migration `20261103120000_organizations_brand_palette` (coluna
+  `organizations.brand_palette`, já aplicada no banco).
+
 ## [1.0.1] - 2026-10-30
 
 ### Corrigido
