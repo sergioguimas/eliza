@@ -854,6 +854,7 @@ export type Database = {
           id: string
           is_demo: boolean
           name: string
+          brand_palette: string | null
           niche: string
           plan: string | null
           slug: string
@@ -869,6 +870,7 @@ export type Database = {
           id?: string
           is_demo?: boolean
           name: string
+          brand_palette?: string | null
           niche: string
           plan?: string | null
           slug: string
@@ -884,6 +886,7 @@ export type Database = {
           id?: string
           is_demo?: boolean
           name?: string
+          brand_palette?: string | null
           niche?: string
           plan?: string | null
           slug?: string

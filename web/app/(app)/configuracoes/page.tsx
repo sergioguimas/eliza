@@ -72,7 +72,7 @@ export default async function SettingsPage() {
     // id/name/slug — o estado do WhatsApp vem de getWhatsappStatus().
     const { data: org } = await supabase
       .from("organizations")
-      .select("id, name, slug, niche")
+      .select("id, name, slug, niche, brand_palette")
       .eq("id", typedProfile.organization_id)
       .single();
 
