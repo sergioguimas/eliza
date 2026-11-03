@@ -1,5 +1,6 @@
 import "server-only"
 
+import { lerAdicionais, type Adicional } from "@/lib/adicionais"
 import type { Db } from "./db"
 import { DomainError } from "./erros"
 
@@ -12,6 +13,8 @@ export type Servico = {
   /** true = `preco` é o piso ("a partir de"); o valor final é combinado no atendimento. */
   precoAPartirDe: boolean
   categoria: string | null
+  /** Custos opcionais além do preço; não entram no valor do agendamento. */
+  adicionais: Adicional[]
 }
 
 export type Profissional = {
@@ -22,7 +25,7 @@ export type Profissional = {
 
 // Colunas explícitas, nunca `*`: o profissional tem `phone`, `license_number`
 // e `user_id`, que não podem chegar à página pública nem à API.
-const COLUNAS_SERVICO = "id, title, description, duration_minutes, price, price_from, category"
+const COLUNAS_SERVICO = "id, title, description, duration_minutes, price, price_from, category, addons"
 const COLUNAS_PROFISSIONAL = "id, name, specialty"
 
 type LinhaServico = {
@@ -33,6 +36,7 @@ type LinhaServico = {
   price: number | null
   price_from: boolean | null
   category: string | null
+  addons: unknown
 }
 
 type LinhaProfissional = { id: string; name: string; specialty: string | null }
@@ -47,6 +51,7 @@ function paraServico(linha: LinhaServico): Servico {
     preco: linha.price,
     precoAPartirDe: linha.price_from === true,
     categoria: linha.category?.trim() ? linha.category.trim() : null,
+    adicionais: lerAdicionais(linha.addons),
   }
 }
 

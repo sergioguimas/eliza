@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Plus, Pencil, Palette } from "lucide-react"
 import { upsertService } from "@/app/actions/create-service"
+import { ServiceAddonsField } from "@/components/services/service-addons-field"
 import { toast } from "sonner"
 import { useKeckleon } from "@/providers/keckleon-provider"
 
@@ -89,7 +90,7 @@ export function CreateServiceDialog({
         )}
       </DialogTrigger>
 
-      <DialogContent className="border-border bg-background text-foreground shadow-xl sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] overflow-y-auto border-border bg-background text-foreground shadow-xl sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-foreground">
             {serviceToEdit
@@ -200,6 +201,8 @@ export function CreateServiceDialog({
               </span>
             </span>
           </label>
+
+          <ServiceAddonsField defaultValue={serviceToEdit?.addons} />
 
           <div className="rounded-lg border border-border bg-muted/30 p-3">
             <Label className="mb-3 flex items-center gap-2 text-foreground">

@@ -1202,6 +1202,7 @@ export type Database = {
           is_active: boolean | null
           organization_id: string
           price: number | null
+          addons: Json
           price_from: boolean
           title: string
         }
@@ -1215,6 +1216,7 @@ export type Database = {
           is_active?: boolean | null
           organization_id: string
           price?: number | null
+          addons?: Json
           price_from?: boolean
           title: string
         }
@@ -1228,6 +1230,7 @@ export type Database = {
           is_active?: boolean | null
           organization_id?: string
           price?: number | null
+          addons?: Json
           price_from?: boolean
           title?: string
         }

@@ -5,6 +5,15 @@
 import { z } from "zod"
 import { DataLocal, HoraLocal, Uuid, apiSuccess } from "./comum"
 
+/** Custo opcional além de `preco`; não entra no valor do agendamento. */
+export const AdicionalServico = z.object({
+  nome: z.string(),
+  /** Em reais. */
+  valor: z.number().positive(),
+  /** Ex.: "por unha". null = valor fixo. */
+  unidade: z.string().nullable(),
+})
+
 export const Servico = z.object({
   id: Uuid,
   nome: z.string(),
@@ -16,6 +25,8 @@ export const Servico = z.object({
   precoAPartirDe: z.boolean(),
   /** Agrupamento opcional definido no painel; null = sem grupo. */
   categoria: z.string().nullable(),
+  /** Sempre presente; [] = sem adicionais. */
+  adicionais: z.array(AdicionalServico),
 })
 
 export const Profissional = z.object({

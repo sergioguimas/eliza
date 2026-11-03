@@ -16,6 +16,7 @@ export const GET = criarRota({
         preco: s.preco ?? null,
         precoAPartirDe: s.precoAPartirDe,
         categoria: s.categoria,
+        adicionais: s.adicionais,
       })),
     },
   }),

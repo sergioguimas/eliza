@@ -103,6 +103,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
         preco: s.preco ?? null,
         precoAPartirDe: s.precoAPartirDe,
         categoria: s.categoria,
+        adicionais: s.adicionais,
       })),
       atualizadoEm: new Date().toISOString(),
     }
