@@ -95,10 +95,14 @@ async function chamarTreino<T>(p: {
 **Assinatura** (igual à `specs/06 §4`), reaproveitando `assinarEncaminhamento` de `encaminhar.ts` com
 o segredo do treino:
 
-- `POST`/`DELETE` com corpo: `corpo = JSON.stringify({ operador, ...p.corpo })`;
-  `X-Eliza-Assinatura = assinarEncaminhamento(segredo, ts, corpo)`.
-- `GET` (e `DELETE` sem corpo): headers `X-Agens-Tenant`, `X-Agens-Operador-Id`,
-  `X-Agens-Operador-Papel`; assina a string `` `${tenant}.${id}.${papel}` `` no lugar do corpo.
+- **Método e caminho entram na assinatura** (S32 do agens): `p.caminho` como foi enviado, com a query.
+  Assim, a assinatura de um `GET /perfil` não serve para `DELETE /perfil`.
+- `POST` com corpo: `corpo = JSON.stringify({ operador, ...p.corpo })`;
+  `X-Eliza-Assinatura = assinarEncaminhamento(segredo, ts, `${metodo}.${caminho}.${corpo}`)`. O corpo HTTP
+  continua sendo só `corpo`.
+- `GET` e `DELETE` sem corpo: headers `X-Agens-Tenant`, `X-Agens-Operador-Id`,
+  `X-Agens-Operador-Papel`; assina `` `${metodo}.${caminho}.${tenant}.${id}.${papel}` ``.
+- Vetores fixos para o teste: `specs/06-treinamento.md` §4 do agens.
 - `X-Eliza-Timestamp` = epoch em segundos, gerado na hora da chamada.
 
 **`operador`** sai **sempre do servidor**: `tenant = profiles.organization_id`, `id = auth user id`,
