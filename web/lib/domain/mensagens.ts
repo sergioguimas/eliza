@@ -106,27 +106,50 @@ export function mensagemCancelamento(template: string | null | undefined, d: Dad
   )
 }
 
-/** Confirmação feita pelo tenant sobre um agendamento que já estava marcado. */
-export function mensagemConfirmacao(d: DadosMensagem) {
+/** Confirmação de um agendamento que já estava marcado: template da org (msg_appointment_created) ou o texto padrão. */
+export function mensagemConfirmacao(template: string | null | undefined, d: DadosMensagem) {
   const { dia, hora } = diaEHora(d.inicio)
 
-  return `✅ *Agendamento confirmado!*\n\nOlá ${d.clienteNome}, seu horário para *${servicoOuPadrao(d)}* em ${dia} às ${hora} está confirmado.`
+  return (
+    renderMessageTemplate(template, variaveis(d)) ||
+    `✅ *Agendamento confirmado!*
+
+Olá ${d.clienteNome}, seu horário para *${servicoOuPadrao(d)}* em ${dia} às ${hora} está confirmado.`
+  )
 }
 
-/** Tenant aprovou um pedido pendente (fila de solicitações do dashboard). */
-export function mensagemPedidoAprovado(d: DadosMensagem, organizacaoNome: string | null) {
+/** Tenant aprovou um pedido pendente: template da org (msg_appointment_created) ou o texto padrão. */
+export function mensagemPedidoAprovado(
+  template: string | null | undefined,
+  d: DadosMensagem,
+  organizacaoNome: string | null
+) {
   const servico = d.servicoTitulo || "serviço"
   const org = organizacaoNome || "nossa clínica"
 
-  return `✅ *Agendamento Confirmado!*\n\nOlá ${d.clienteNome}, o seu horário para *${servico}* em *${org}* foi aprovado com sucesso. Esperamos por si!`
+  return (
+    renderMessageTemplate(template, variaveis(d)) ||
+    `✅ *Agendamento Confirmado!*
+
+Olá ${d.clienteNome}, o seu horário para *${servico}* em *${org}* foi aprovado com sucesso. Esperamos por si!`
+  )
 }
 
-/** Tenant recusou um pedido pendente. */
-export function mensagemPedidoRecusado(d: DadosMensagem, organizacaoNome: string | null) {
+/** Tenant recusou um pedido pendente: template da org (msg_appointment_canceled) ou o texto padrão. */
+export function mensagemPedidoRecusado(
+  template: string | null | undefined,
+  d: DadosMensagem,
+  organizacaoNome: string | null
+) {
   const servico = d.servicoTitulo || "serviço"
   const org = organizacaoNome || "nossa clínica"
 
-  return `❌ *Atualização de Agendamento*\n\nOlá ${d.clienteNome}, infelizmente não conseguimos confirmar o seu pedido de horário para *${servico}* em *${org}*. Por favor, entre em contacto para sugerirmos uma nova data.`
+  return (
+    renderMessageTemplate(template, variaveis(d)) ||
+    `❌ *Atualização de Agendamento*
+
+Olá ${d.clienteNome}, infelizmente não conseguimos confirmar o seu pedido de horário para *${servico}* em *${org}*. Por favor, entre em contacto para sugerirmos uma nova data.`
+  )
 }
 
 /**
