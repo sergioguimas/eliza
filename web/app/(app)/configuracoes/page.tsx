@@ -10,6 +10,9 @@ import { Building, UserPen, NotebookPen, BotMessageSquare, KeyRound } from "luci
 import { Database } from "@/utils/database.types";
 import { organizacaoTemApi } from "@/lib/api/plano-da-org";
 import { getDictionary } from "@/lib/dictionaries/get-dictionary";
+import { acessoTreino } from "@/lib/autoatendimento/treino-acesso";
+import Link from "next/link";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type ProfileWithOrg = Database["public"]["Tables"]["profiles"]["Row"] & {
   organizations?: Pick<
@@ -112,6 +115,10 @@ export default async function SettingsPage() {
     apiLogs = logsResult.data ?? [];
   }
 
+  // Contrato 10 §1: o card aparece para quem pode treinar, mesmo que o servidor
+  // ainda não tenha as envs (a página é que avisa).
+  const podeTreinar = showWhatsappTab && (await acessoTreino()).estado !== "negado";
+
   const defaultTab = isAdminOrOwner ? "organization" : "profile";
 
   return (
@@ -183,7 +190,17 @@ export default async function SettingsPage() {
             )}
 
             {showWhatsappTab && (
-              <TabsContent value="whatsapp">
+              <TabsContent value="whatsapp" className="space-y-4">
+                {podeTreinar && (
+                  <Link href="/configuracoes/atendente" className="block">
+                    <Card className="transition-colors hover:bg-muted/50">
+                      <CardHeader>
+                        <CardTitle className="text-base">Treinar atendente</CardTitle>
+                        <CardDescription>Ensine o atendente a escrever do seu jeito.</CardDescription>
+                      </CardHeader>
+                    </Card>
+                  </Link>
+                )}
                 <WhatsappSettings
                   settings={organization}
                   organizationId={organization.id}
