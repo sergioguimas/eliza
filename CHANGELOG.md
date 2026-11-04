@@ -7,6 +7,8 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Não publicado]
 
+## [1.2.0] - 2026-11-04
+
 ### Adicionado
 
 - Chat na página pública de agendamento: o cliente conversa, tira dúvidas sobre serviços e horários, e o atendente
@@ -94,7 +96,8 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
   API pública de catálogo.
 - O histórico anterior a esta versão, por data, fica em `docs/CHANGELOG.md`.
 
-[Não publicado]: https://github.com/sergioguimas/eliza/compare/v1.1.0...HEAD
+[Não publicado]: https://github.com/sergioguimas/eliza/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/sergioguimas/eliza/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/sergioguimas/eliza/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/sergioguimas/eliza/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/sergioguimas/eliza/releases/tag/v1.0.0
