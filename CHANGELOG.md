@@ -7,6 +7,8 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Não publicado]
 
+## [1.1.0] - 2026-11-03
+
 ### Adicionado
 
 - Treino do atendente: em Configurações, na aba WhatsApp, o dono ou admin abre a página "Treinar atendente", responde a
@@ -74,6 +76,7 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
   API pública de catálogo.
 - O histórico anterior a esta versão, por data, fica em `docs/CHANGELOG.md`.
 
-[Não publicado]: https://github.com/sergioguimas/eliza/compare/v1.0.1...HEAD
+[Não publicado]: https://github.com/sergioguimas/eliza/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/sergioguimas/eliza/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/sergioguimas/eliza/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/sergioguimas/eliza/releases/tag/v1.0.0
