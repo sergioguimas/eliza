@@ -12,9 +12,21 @@
  * de cliente em 23/09.
  */
 import { z } from "zod"
+import { LIMITE_ADICIONAIS, TAMANHO_NOME_ADICIONAL, TAMANHO_UNIDADE_ADICIONAL } from "@/lib/adicionais"
 import { apiSuccess } from "../comum/envelope"
 
 export const LIMITE_SERVICOS_PUBLICOS = 30
+
+/** Custo opcional além de `preco`; não entra no valor do agendamento. */
+export const AdicionalPublico = z
+  .object({
+    nome: z.string().min(1).max(TAMANHO_NOME_ADICIONAL),
+    /** Em reais. */
+    valor: z.number().positive(),
+    /** Ex.: "por unha". null = valor fixo. */
+    unidade: z.string().max(TAMANHO_UNIDADE_ADICIONAL).nullable(),
+  })
+  .strict()
 
 export const ServicoPublico = z
   .object({
@@ -28,6 +40,8 @@ export const ServicoPublico = z
     precoAPartirDe: z.boolean(),
     /** Agrupamento opcional (`services.category`, texto livre até 40). null = sem grupo. */
     categoria: z.string().max(40).nullable(),
+    /** Sempre presente; [] = sem adicionais. */
+    adicionais: z.array(AdicionalPublico).max(LIMITE_ADICIONAIS),
   })
   .strict()
 

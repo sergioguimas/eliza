@@ -9,6 +9,11 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ### Adicionado
 
+- Serviços: adicionais opcionais, com nome, valor e unidade (ex.: "Unha quebrada", R$ 5 por unha), cadastrados no
+  formulário do serviço e mostrados no card. Só informam o cliente: não entram no preço do agendamento. Consultáveis
+  em `GET /api/v1/services` (`addons`), no Autoatendimento (`adicionais`) e no catálogo público (`adicionais`), sempre
+  presentes e `[]` quando não há. Migration `20261103190000_services_addons` (coluna `services.addons`, já aplicada
+  no banco).
 - Cor do sistema por organização: em Configurações, o proprietário ou admin escolhe entre a cor padrão do nicho e as
   paletas Grafite, Sálvia e Areia, aplicadas no painel e na página de agendamento (`/marcar`). Todas as paletas têm
   versão clara e escura com contraste conferido. Migration `20261103120000_organizations_brand_palette` (coluna

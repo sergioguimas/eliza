@@ -323,13 +323,13 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
         operationId: "listarServicos",
         "x-atendente": true,
         summary: "Serviços ativos",
-        description: "Serviços ativos da organização do ticket. Não exige cliente identificado: um desconhecido pode perguntar preço antes de se cadastrar. `preco: null` = não divulgar; preço `0` continua `0`. `precoAPartirDe: true` = `preco` é o valor mínimo; o atendente deve dizer \"a partir de\".",
+        description: "Serviços ativos da organização do ticket. Não exige cliente identificado: um desconhecido pode perguntar preço antes de se cadastrar. `preco: null` = não divulgar; preço `0` continua `0`. `precoAPartirDe: true` = `preco` é o valor mínimo; o atendente deve dizer \"a partir de\". `adicionais` são custos opcionais além de `preco`, cobrados conforme o atendimento (`unidade` ex.: \"por unha\"; `null` = valor fixo): informe-os ao cliente quando forem relevantes e nunca os some ao preço por conta própria. Sempre presente, `[]` quando não há.",
         ...comum,
         responses: {
           "200": respostaOk("Lista de serviços.", rServicos, {
             exemplo: { summary: "Dois serviços", value: { data: { servicos: [
-              { id: ID_EXEMPLO.servico, nome: "Corte de cabelo", descricao: null, duracaoMinutos: 30, preco: 60, precoAPartirDe: false },
-              { id: "9b2e4d18-6a3c-4f71-8e05-d3c1a7b92f46", nome: "Coloração", descricao: "Inclui lavagem", duracaoMinutos: 90, preco: null, precoAPartirDe: false },
+              { id: ID_EXEMPLO.servico, nome: "Corte de cabelo", descricao: null, duracaoMinutos: 30, preco: 60, precoAPartirDe: false, categoria: null, adicionais: [] },
+              { id: "9b2e4d18-6a3c-4f71-8e05-d3c1a7b92f46", nome: "Coloração", descricao: "Inclui lavagem", duracaoMinutos: 90, preco: null, precoAPartirDe: false, categoria: null, adicionais: [{ nome: "Cabelo longo", valor: 20, unidade: null }] },
             ] } } },
           }),
           ...erros(),

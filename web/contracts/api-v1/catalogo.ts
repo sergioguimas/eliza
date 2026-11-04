@@ -1,6 +1,14 @@
 import { z } from "zod"
 import { LocalDate, Uuid } from "./comum"
 
+/** Custo opcional além de `price`; não entra no valor do agendamento. */
+export const ServiceAddon = z.object({
+  name: z.string(),
+  price: z.number().positive(),
+  /** Ex.: "por unha". null = valor fixo. */
+  unit: z.string().nullable(),
+})
+
 /** GET /services */
 export const Service = z.object({
   id: Uuid,
@@ -12,6 +20,8 @@ export const Service = z.object({
   price_from: z.boolean(),
   /** Agrupamento opcional definido no painel; null = sem grupo. */
   category: z.string().nullable(),
+  /** Sempre presente; [] = sem adicionais. */
+  addons: z.array(ServiceAddon),
 })
 
 /** GET /professionals — nunca phone nem license_number. */

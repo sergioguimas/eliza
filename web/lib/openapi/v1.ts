@@ -269,13 +269,13 @@ export function gerarOpenApiV1({ origem }: OpcoesDoDocumento): Objeto {
         tags: ["Catálogo"],
         operationId: "listServices",
         summary: "Serviços ativos",
-        description: "Serviços ativos do tenant. `duration_minutes` é 30 quando o cadastro está sem duração. `price_from: true` = `price` é o valor mínimo (\"a partir de\")." + aviso("read"),
+        description: "Serviços ativos do tenant. `duration_minutes` é 30 quando o cadastro está sem duração. `price_from: true` = `price` é o valor mínimo (\"a partir de\"). `addons` são custos opcionais além de `price`, cobrados conforme o atendimento (`unit` ex.: \"por unha\"; `null` = valor fixo); não entram no valor do agendamento. Sempre presente, `[]` quando não há." + aviso("read"),
         ...leitura("read"),
         responses: {
           "200": respostaOk("Lista de serviços.", respServicos, {
             exemplo: { summary: "Dois serviços", value: { data: [
-              { id: ID_EXEMPLO.servico, title: "Corte de cabelo", description: null, duration_minutes: 30, price: 60, price_from: false },
-              { id: "9b2e4d18-6a3c-4f71-8e05-d3c1a7b92f46", title: "Coloração", description: "Inclui lavagem", duration_minutes: 90, price: null, price_from: false },
+              { id: ID_EXEMPLO.servico, title: "Corte de cabelo", description: null, duration_minutes: 30, price: 60, price_from: false, category: null, addons: [] },
+              { id: "9b2e4d18-6a3c-4f71-8e05-d3c1a7b92f46", title: "Coloração", description: "Inclui lavagem", duration_minutes: 90, price: null, price_from: false, category: null, addons: [{ name: "Cabelo longo", price: 20, unit: null }] },
             ] } },
           }),
           ...respostasDeErro(ERROS_DA_CHAVE, erroRef),

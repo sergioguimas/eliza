@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { Database } from "@/utils/database.types"
+import { validarAdicionais } from "@/lib/adicionais"
 
 export async function upsertService(formData: FormData) {
   const supabase = await createClient<Database>()
@@ -23,6 +24,14 @@ export async function upsertService(formData: FormData) {
     return { error: "Erro interno: ID da organização não identificado." }
   }
 
+  // Campo ausente (aba aberta antes do deploy) mantém o que está gravado, em vez de apagar.
+  const addonsForm = formData.get('addons')
+  const adicionais = typeof addonsForm === 'string' ? validarAdicionais(addonsForm) : null
+
+  if (adicionais && 'error' in adicionais) {
+    return { error: adicionais.error }
+  }
+
   const serviceData = {
     title,
     duration_minutes,
@@ -30,6 +39,7 @@ export async function upsertService(formData: FormData) {
     price_from,
     description,
     category,
+    ...(adicionais ? { addons: adicionais.addons } : {}),
     color,
     organization_id,
     is_active: true

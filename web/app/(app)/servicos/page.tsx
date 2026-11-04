@@ -8,6 +8,8 @@ import { DeleteServiceButton } from "@/components/services/delete-service-button
 import { getDictionary } from "@/lib/dictionaries/get-dictionary"
 import { CategoryIcon } from "@/components/shared/category-icon"
 import { Database } from "@/utils/database.types"
+import { lerAdicionais } from "@/lib/adicionais"
+import { rotuloAdicional } from "@/lib/preco"
 
 type ProfileWithOrg = Database["public"]["Tables"]["profiles"]["Row"] & {
   organizations?: Pick<
@@ -144,6 +146,17 @@ export default async function ProcedimentosPage() {
 
                 {service.description && (
                   <p className="pt-1 text-sm text-muted-foreground line-clamp-2">{service.description}</p>
+                )}
+
+                {lerAdicionais(service.addons).length > 0 && (
+                  <ul className="space-y-0.5 pt-2 text-sm text-muted-foreground">
+                    {lerAdicionais(service.addons).map((adicional) => (
+                      <li key={adicional.nome} className="flex justify-between gap-3">
+                        <span className="min-w-0 truncate">{adicional.nome}</span>
+                        <span className="shrink-0">{rotuloAdicional(adicional)}</span>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </div>
             </CardContent>
