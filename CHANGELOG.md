@@ -14,6 +14,11 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
   pela coluna `autoatendimento_config.canal_web`, desligado por padrão. Migration
   `20261104130000_autoatendimento_canal_web`. A API de Autoatendimento passa a aceitar o ticket de visitante em
   contexto, serviços, profissionais e horários, sem mudar a versão do contrato.
+
+## [1.1.0] - 2026-11-03
+
+### Adicionado
+
 - Treino do atendente: em Configurações, na aba WhatsApp, o dono ou admin abre a página "Treinar atendente", responde a
   ensaios em que o atendente faz o papel de cliente e acompanha o que ele aprendeu, com versões, remoção de padrões e
   notas de fatos do negócio. Requer `ATENDENTE_TREINO_SECRET`; sem ela, a página avisa que não está disponível. O que é
@@ -79,6 +84,7 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
   API pública de catálogo.
 - O histórico anterior a esta versão, por data, fica em `docs/CHANGELOG.md`.
 
-[Não publicado]: https://github.com/sergioguimas/eliza/compare/v1.0.1...HEAD
+[Não publicado]: https://github.com/sergioguimas/eliza/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/sergioguimas/eliza/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/sergioguimas/eliza/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/sergioguimas/eliza/releases/tag/v1.0.0
