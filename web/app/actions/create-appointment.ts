@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
 import { consumeRateLimit, hashIdentifier } from "@/lib/demo/rate-limit"
 import { Database } from "@/utils/database.types"
+import { AdicionaisEscolhidos } from "@/contracts/comum/adicionais"
 import { criarAgendamento, type Ator } from "@/lib/domain/agendamentos"
 import { DomainError } from "@/lib/domain/erros"
 import { horaLocalParaUtc } from "@/lib/domain/tempo"
@@ -166,6 +167,26 @@ async function createAppointmentCore(formData: FormData, ctx: BookingContext) {
     return { error: "Dados incompletos para realizar o agendamento." }
   }
 
+  // Só id e quantidade: nome e valor saem do catálogo no domínio. Campo ausente = sem adicionais.
+  const addonsRaw = formData.get("addons")
+  let adicionais: ReturnType<typeof AdicionaisEscolhidos.parse> = []
+
+  if (typeof addonsRaw === "string" && addonsRaw.trim() !== "") {
+    let json: unknown
+
+    try {
+      json = JSON.parse(addonsRaw)
+    } catch {
+      return { error: "Adicionais inválidos." }
+    }
+
+    const lidos = AdicionaisEscolhidos.safeParse(json)
+
+    if (!lidos.success) return { error: "Adicionais inválidos." }
+
+    adicionais = lidos.data
+  }
+
   let startTime: Date
 
   try {
@@ -212,6 +233,7 @@ async function createAppointmentCore(formData: FormData, ctx: BookingContext) {
       servicoId: service_id,
       inicio: startTime,
       observacao: notes,
+      adicionais,
       status: ctx.isPublic ? "pending" : "scheduled",
       pagamento:
         paymentMethod || paymentPaid

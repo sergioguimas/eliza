@@ -5,8 +5,10 @@
 import { z } from "zod"
 import { DataLocal, HoraLocal, Uuid, apiSuccess } from "./comum"
 
-/** Custo opcional além de `preco`; não entra no valor do agendamento. */
+/** Custo opcional além de `preco`. Escolhido ao agendar, soma ao valor do agendamento. */
 export const AdicionalServico = z.object({
+  /** Estável: referência do adicional ao agendar. */
+  id: Uuid,
   nome: z.string(),
   /** Em reais. */
   valor: z.number().positive(),

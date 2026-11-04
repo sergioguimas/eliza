@@ -13,7 +13,7 @@ export type Servico = {
   /** true = `preco` é o piso ("a partir de"); o valor final é combinado no atendimento. */
   precoAPartirDe: boolean
   categoria: string | null
-  /** Custos opcionais além do preço; não entram no valor do agendamento. */
+  /** Custos opcionais além do preço; o cliente escolhe ao agendar e a soma entra no valor do agendamento. */
   adicionais: Adicional[]
 }
 
@@ -109,6 +109,26 @@ export async function exigirServicoAtivo(db: Db, orgId: string, id: string): Pro
   if (!data) throw new DomainError("NOT_FOUND", "Serviço não encontrado.")
 
   return paraServico(data)
+}
+
+/**
+ * Adicionais do catálogo do serviço, sem filtrar `is_active`: serviço desativado depois
+ * de agendado ainda precisa fechar a conta. Inexistente ou de outro tenant = [].
+ */
+export async function adicionaisDoServico(db: Db, orgId: string, id: string): Promise<Adicional[]> {
+  const { data, error } = await db
+    .from("services")
+    .select("addons")
+    .eq("id", id)
+    .eq("organization_id", orgId)
+    .maybeSingle()
+
+  if (error) {
+    console.error("[domain:adicionaisDoServico]", error)
+    throw error
+  }
+
+  return lerAdicionais(data?.addons)
 }
 
 /** Profissional ativo da org; inexistente, inativo ou de outro tenant é NOT_FOUND. */

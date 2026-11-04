@@ -28,7 +28,7 @@ vazamento.
         "preco": 120,
         "precoAPartirDe": true,
         "categoria": "Nail art",
-        "adicionais": [{ "nome": "Unha quebrada", "valor": 5, "unidade": "por unha" }]
+        "adicionais": [{ "id": "5b1f7d2a-3c4e-4a69-8f10-2d9e6c0a7b13", "nome": "Unha quebrada", "valor": 5, "unidade": "por unha" }]
       }
     ],
     "atualizadoEm": "2026-10-19T14:06:43.454Z"
@@ -43,7 +43,7 @@ vazamento.
 | `preco` | Reais; `null` = não divulgar; `0` continua `0`. Quando `precoAPartirDe` é `true`, é o valor mínimo |
 | `precoAPartirDe` | `true` = preço "a partir de": o valor final depende do que o cliente pedir a mais e é combinado no atendimento. Sempre presente (`false` por padrão). Exibir como "a partir de R$ X" |
 | `categoria` | Texto livre (até 40) definido no painel; `null` = sem grupo. Serviços com a mesma categoria devem ser exibidos juntos (decisão D2 da LP) |
-| `adicionais` | Custos opcionais além de `preco`, cobrados conforme o atendimento: `nome`, `valor` (reais) e `unidade` (ex.: "por unha"; `null` = valor fixo). Até 10 por serviço. Sempre presente; `[]` quando não há |
+| `adicionais` | Custos opcionais além de `preco`: `id` (estável), `nome`, `valor` (reais) e `unidade` (ex.: "por unha"; `null` = valor fixo). O cliente escolhe a quantidade ao agendar na página de agendamento e a soma entra no valor do agendamento. Até 10 por serviço. Sempre presente; `[]` quando não há |
 | `atualizadoEm` | Instante da consulta (`services` não tem `updated_at`) |
 
 Erros no envelope único (`contracts/comum/envelope.ts`): `404 NOT_FOUND`

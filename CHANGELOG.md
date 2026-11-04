@@ -14,10 +14,21 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
   notas de fatos do negócio. Requer `ATENDENTE_TREINO_SECRET`; sem ela, a página avisa que não está disponível. O que é
   aprendido ainda não muda as respostas aos clientes.
 - Serviços: adicionais opcionais, com nome, valor e unidade (ex.: "Unha quebrada", R$ 5 por unha), cadastrados no
-  formulário do serviço e mostrados no card. Só informam o cliente: não entram no preço do agendamento. Consultáveis
-  em `GET /api/v1/services` (`addons`), no Autoatendimento (`adicionais`) e no catálogo público (`adicionais`), sempre
-  presentes e `[]` quando não há. Migration `20261103190000_services_addons` (coluna `services.addons`, já aplicada
-  no banco).
+  formulário do serviço e mostrados no card. Cada adicional tem um `id` estável, que não muda ao editar o serviço.
+  Consultáveis em `GET /api/v1/services` (`addons`), no Autoatendimento (`adicionais`) e no catálogo público
+  (`adicionais`), sempre presentes e `[]` quando não há; em todos eles cada item agora traz `id`. Migrations
+  `20261103190000_services_addons` (coluna `services.addons`) e `20261104120000_appointments_addons` (`id` em cada
+  adicional já cadastrado e a coluna `appointments.addons`), já aplicadas no banco.
+- Agendamento com adicionais: na página pública de agendamento (`/marcar`) a cliente escolhe os adicionais do
+  serviço, com quantidade (de 0 a 20 quando o valor é por unidade, como "por unha"), e vê o **total estimado**,
+  seguido de "O valor final é confirmado no atendimento". No painel, o novo agendamento também permite escolher os
+  adicionais. O valor do agendamento passa a ser o do serviço mais os adicionais, calculado no servidor a partir do
+  catálogo: valor enviado pelo navegador nunca é aceito. O agendamento guarda uma cópia do que foi escolhido, então
+  mudar ou apagar um adicional no catálogo não altera agendamento já feito.
+- Painel: "Ajustar adicionais" no menu do agendamento (card e clique direito) corrige a quantidade real durante ou
+  depois do atendimento, até o pagamento ser registrado, inclusive em agendamento chegou ou finalizado. Agendamento
+  pago ou estornado, cancelado ou com falta não oferece o ajuste. O ajuste recalcula o valor, aparece no histórico e
+  não avisa a cliente pelo WhatsApp. Os adicionais escolhidos aparecem nos cards do painel inicial e da ficha do cliente.
 - Cor do sistema por organização: em Configurações, o proprietário ou admin escolhe entre a cor padrão do nicho e as
   paletas Grafite, Sálvia e Areia, aplicadas no painel e na página de agendamento (`/marcar`). Todas as paletas têm
   versão clara e escura com contraste conferido. Migration `20261103120000_organizations_brand_palette` (coluna
@@ -25,6 +36,10 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ### Corrigido
 
+- Trocar o serviço de um agendamento agora recalcula o valor: `price` passa a ser o do novo serviço e os adicionais
+  escolhidos são removidos (o painel avisa antes de salvar). Antes o valor do serviço antigo ficava gravado em
+  silêncio e seguia para o financeiro. Agendamento já pago ou estornado recusa a troca ("desfaça o pagamento").
+  Vale também para `PATCH /api/v1/appointments/{id}`, cujo `price` passa a acompanhar o serviço.
 - WhatsApp: ao aprovar um pedido pendente, confirmar um agendamento pela API ou recusar um pedido, o cliente agora
   recebe o modelo configurado em Configurações → Mensagens ("Ao confirmar agendamento" e "Ao cancelar"). Antes esses
   envios ignoravam o modelo da organização e usavam um texto fixo do sistema, que continua valendo só para quem não

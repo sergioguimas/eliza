@@ -80,14 +80,14 @@ aceita ISO com offset/`Z`. Saída traz `start_time` (UTC) e `start_local`.
 | Método | Rota | Escopo | Descrição |
 |---|---|---|---|
 | GET | `/me` | read | Tenant e dados da chave |
-| GET | `/services` | read | Serviços ativos (`id, title, description, duration_minutes, price, price_from, category, addons`; `addons` são custos opcionais além de `price`, `[{ name, price, unit }]`, `[]` quando não há; `category` é `null` quando o serviço não tem grupo; `price_from: true` = `price` é o valor mínimo, "a partir de"; `description` são as observações do serviço, até 500 caracteres) |
+| GET | `/services` | read | Serviços ativos (`id, title, description, duration_minutes, price, price_from, category, addons`; `addons` são custos opcionais além de `price`, `[{ id, name, price, unit }]` (`id` estável), `[]` quando não há; os escolhidos no painel e na página pública somam ao valor do agendamento, e o `POST /appointments` ainda não os aceita; `category` é `null` quando o serviço não tem grupo; `price_from: true` = `price` é o valor mínimo, "a partir de"; `description` são as observações do serviço, até 500 caracteres) |
 | GET | `/professionals` | read | Profissionais ativos |
 | GET | `/availability?professional_id&service_id&date=YYYY-MM-DD` | read | Horários livres para o serviço. `service_id` é obrigatório (422 sem ele). `meta.grid_step_minutes` traz o passo da grade |
 | GET | `/customers?phone=` `?document=` `?q=` | read | Busca de clientes (máx. 20). Exatamente um critério, senão 422 |
 | GET | `/appointments` | read | Lista. Filtros: `status` (vírgula), `from`, `to` (data ou data/hora), `customer_id`, `professional_id`, `limit` (≤100), `offset` |
 | POST | `/appointments` | write | Cria (201) |
 | GET | `/appointments/{id}` | read | Detalhe |
-| PATCH | `/appointments/{id}` | write | Remarca/altera: `start_time`, `professional_id`, `service_id`, `notes` |
+| PATCH | `/appointments/{id}` | write | Remarca/altera: `start_time`, `professional_id`, `service_id`, `notes`. Trocar o serviço recalcula o valor: `price` passa a ser o do novo serviço e os adicionais escolhidos são removidos (agendamento pago é recusado) |
 | POST | `/appointments/{id}/confirm` | write | Confirma |
 | POST | `/appointments/{id}/cancel` | write | Cancela (mantém o registro). `reason` opcional |
 | POST | `/appointments/{id}/status` | write | Muda status com validação de transição |

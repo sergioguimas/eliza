@@ -69,7 +69,7 @@ export default async function AgendamentosPage({
 
     supabase
       .from('services')
-      .select('id, title, color')
+      .select('id, title, color, addons')
       .eq('organization_id', orgId)
       .eq('is_active', true),
 
@@ -84,13 +84,16 @@ export default async function AgendamentosPage({
       .select(`
         id, 
         customer_id,
+        service_id,
         start_time, 
         end_time, 
         status, 
         professional_id,
         payment_status,
+        price,
+        addons,
         customers ( name ), 
-        services ( title, color ),
+        services ( title, color, addons ),
         professionals ( name )
       `)
       .eq('organization_id', orgId),

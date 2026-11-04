@@ -2,7 +2,15 @@ import "server-only"
 
 import { sendWhatsAppMessage } from "@/app/actions/send-whatsapp"
 import { STATUS_CONFIG } from "@/lib/appointment-config"
-import { exigirProfissionalAtivo, exigirServicoAtivo } from "./catalogo"
+import type { AdicionalEscolhido } from "@/contracts/comum/adicionais"
+import {
+  adicionaisParaColuna,
+  lerAdicionaisAplicados,
+  somarAdicionais,
+  type Adicional,
+  type AdicionalAplicado,
+} from "@/lib/adicionais"
+import { adicionaisDoServico, exigirProfissionalAtivo, exigirServicoAtivo } from "./catalogo"
 import { resolverCliente, type NovoCliente } from "./clientes"
 import type { Db } from "./db"
 import { DomainError } from "./erros"
@@ -21,6 +29,7 @@ import {
   STATUS_DE_PAGAMENTO,
   TRANSICOES,
   ehStatus,
+  podeAjustarAdicionais,
   podeEditar,
   podeReceberPagamento,
   podeTransicionar,
@@ -58,7 +67,10 @@ export type AgendamentoCompleto = {
   customer: { id: string; name: string | null; phone: string | null }
   service: { id: string; title: string; duration_minutes: number } | null
   professional: { id: string; name: string } | null
+  /** Total: serviço mais adicionais. */
   price: number | null
+  /** Cópia do que foi escolhido, com o valor da época. */
+  adicionais: AdicionalAplicado[]
   payment_status: string | null
   payment_method: string | null
   paid_at: string | null
@@ -75,6 +87,7 @@ type Linha = {
   end_time: string
   notes: string | null
   price: number | null
+  addons: unknown
   payment_status: string | null
   payment_method: string | null
   paid_at: string | null
@@ -89,7 +102,7 @@ type Linha = {
 }
 
 const SELECT = `
-  id, organization_id, status, start_time, end_time, notes, price, payment_status,
+  id, organization_id, status, start_time, end_time, notes, price, addons, payment_status,
   payment_method, paid_at, created_at, updated_at, customer_id, professional_id, service_id,
   customers ( id, name, phone ),
   services ( id, title, duration_minutes ),
@@ -97,6 +110,11 @@ const SELECT = `
 `
 
 const MSG_ALTERADO_POR_OUTRA_PESSOA = "O agendamento foi alterado por outra pessoa; atualize a tela."
+
+const arredondar = (valor: number) => Math.round(valor * 100) / 100
+
+const brl = (valor: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valor).replace(/\u00a0/g, " ")
 
 const rotulo = (status: string) => STATUS_CONFIG[status]?.label ?? status
 
@@ -153,6 +171,7 @@ function completo(l: Linha): AgendamentoCompleto {
       : null,
     professional: l.professionals ? { id: l.professionals.id, name: l.professionals.name } : null,
     price: l.price,
+    adicionais: lerAdicionaisAplicados(l.addons),
     payment_status: l.payment_status,
     payment_method: l.payment_method,
     paid_at: l.paid_at,
@@ -260,6 +279,46 @@ function erroDeEscrita(funcao: string, error: ErroDeBanco): never {
 }
 
 // ---------------------------------------------------------------------------
+// Adicionais
+// ---------------------------------------------------------------------------
+
+/**
+ * Transforma a escolha (id e quantidade) na cópia que o agendamento guarda. Nome, valor e
+ * unidade nunca vêm de quem chama: saem de `atuais` (o que o agendamento já guarda, para o
+ * ajuste não reprecificar) ou do catálogo.
+ */
+export function resolverAdicionais(
+  catalogo: Adicional[],
+  escolhidos: AdicionalEscolhido[],
+  atuais: AdicionalAplicado[] = []
+): AdicionalAplicado[] {
+  const vistos = new Set<string>()
+
+  return escolhidos.map((escolhido) => {
+    if (vistos.has(escolhido.id)) throw new DomainError("VALIDATION_ERROR", "Adicional repetido.")
+    vistos.add(escolhido.id)
+
+    const atual = atuais.find((a) => a.id === escolhido.id)
+    const doCatalogo = atual ? null : catalogo.find((c) => c.id === escolhido.id)
+
+    if (!atual && !doCatalogo) {
+      throw new DomainError("VALIDATION_ERROR", "Adicional não disponível para este serviço.")
+    }
+
+    const nome = atual?.nome ?? doCatalogo!.nome
+    const valorUnitario = atual?.valorUnitario ?? doCatalogo!.valor
+    const unidade = atual ? atual.unidade : doCatalogo!.unidade
+    const quantidade = escolhido.quantidade
+
+    if (unidade === null && quantidade !== 1) {
+      throw new DomainError("VALIDATION_ERROR", "Este adicional não aceita quantidade.")
+    }
+
+    return { id: escolhido.id, nome, valorUnitario, unidade, quantidade, total: arredondar(valorUnitario * quantidade) }
+  })
+}
+
+// ---------------------------------------------------------------------------
 // 6.1 Criar
 // ---------------------------------------------------------------------------
 
@@ -271,6 +330,8 @@ export type EntradaCriacao = {
   observacao?: string | null
   status: "pending" | "scheduled" | "confirmed"
   pagamento?: { metodo: string | null; status: "pending" | "paid" } // só painel; demais = pending/null
+  /** Só id e quantidade: nome e valor saem do catálogo (resolverAdicionais). */
+  adicionais?: AdicionalEscolhido[]
   /** Política do add-on de autoatendimento: soma ao "agora" do corte de horário. */
   antecedenciaMinutos?: number
 }
@@ -308,6 +369,9 @@ export async function criarAgendamento(
     exigirProfissionalAtivo(db, orgId, entrada.profissionalId),
   ])
 
+  // Antes de validar horário e cliente: escolha inválida recusa sem tocar em mais nada.
+  const adicionais = resolverAdicionais(servico.adicionais, entrada.adicionais ?? [])
+
   const agora = new Date()
   const fim = new Date(entrada.inicio.getTime() + servico.duracaoMinutos * 60000)
 
@@ -335,7 +399,9 @@ export async function criarAgendamento(
       start_time: entrada.inicio.toISOString(),
       end_time: fim.toISOString(),
       notes: entrada.observacao ?? null,
-      price: servico.preco ?? 0,
+      // Sempre o total: finanças e dashboard somam este campo.
+      price: arredondar((servico.preco ?? 0) + somarAdicionais(adicionais)),
+      addons: adicionaisParaColuna(adicionais),
       payment_status: pagamento.status,
       payment_method: pagamento.metodo,
       paid_at: pagamento.status === "paid" ? agora.toISOString() : null,
@@ -411,6 +477,14 @@ export async function editarAgendamento(
     exigirProfissionalAtivo(db, orgId, profissionalId),
   ])
 
+  // Trocar de serviço refaz o valor e descarta os adicionais (A4): não há como saber se
+  // valem no serviço novo. Pago ou estornado recusa, senão o valor pago mudaria em silêncio.
+  const trocouServico = servico.id !== atual.service_id
+
+  if (trocouServico && !podeAjustarAdicionais(statusAtual, atual.payment_status)) {
+    throw new DomainError("INVALID_TRANSITION", "Agendamento pago: desfaça o pagamento para trocar o serviço.")
+  }
+
   const inicio = entrada.inicio ?? new Date(atual.start_time)
 
   // Só conta como remarcação o que o pedido de fato mudou. Comparar o fim
@@ -451,6 +525,11 @@ export async function editarAgendamento(
 
   if (entrada.observacao !== undefined) mudancas.notes = entrada.observacao
 
+  if (trocouServico) {
+    mudancas.price = servico.preco ?? 0
+    mudancas.addons = []
+  }
+
   // Horário novo: o cron de lembretes precisa avisar de novo.
   if (mudouHorario) {
     mudancas.reminder_sent_at = null
@@ -468,13 +547,22 @@ export async function editarAgendamento(
   }
 
   // E6: só grava se o status continua o que lemos.
-  const { data: escrito, error } = await db
+  let consulta = db
     .from("appointments")
     .update(mudancas)
     .eq("id", id)
     .eq("organization_id", orgId)
     .eq("status", statusAtual)
-    .select("id")
+
+  // Com troca de serviço o valor muda, então o pagamento também precisa seguir como lemos.
+  if (trocouServico) {
+    consulta =
+      atual.payment_status === null
+        ? consulta.is("payment_status", null)
+        : consulta.eq("payment_status", atual.payment_status)
+  }
+
+  const { data: escrito, error } = await consulta.select("id")
 
   if (error) return erroDeEscrita("editarAgendamento", error)
 
@@ -667,6 +755,81 @@ export async function registrarPagamento(
   const linha = await carregar(db, orgId, id)
 
   await registrarLog(db, ator, linha, `payment:${entrada.status}`, entrada.metodo)
+
+  return { agendamento: completo(linha), alterado: true }
+}
+
+// ---------------------------------------------------------------------------
+// 6.5 Ajustar adicionais
+// ---------------------------------------------------------------------------
+
+export async function ajustarAdicionais(
+  db: Db,
+  ator: Ator,
+  id: string,
+  escolhidos: AdicionalEscolhido[]
+): Promise<{ agendamento: AgendamentoCompleto; alterado: boolean }> {
+  const orgId = ator.organizationId
+
+  // A contagem real só existe com a cliente presente: nenhum canal de terceiros ajusta.
+  if (ator.canal !== "painel") {
+    throw new DomainError("INVALID_TRANSITION", "Só o painel ajusta os adicionais.")
+  }
+
+  const atual = await carregar(db, orgId, id)
+  const statusAtual = atual.status as Status
+
+  if (!podeAjustarAdicionais(statusAtual, atual.payment_status)) {
+    const pago = atual.payment_status === "paid" || atual.payment_status === "refunded"
+
+    throw new DomainError(
+      "INVALID_TRANSITION",
+      pago
+        ? "Agendamento pago: desfaça o pagamento para ajustar os adicionais."
+        : `Agendamento ${rotulo(statusAtual).toLowerCase()} não aceita ajuste de adicionais.`
+    )
+  }
+
+  const catalogo = atual.service_id ? await adicionaisDoServico(db, orgId, atual.service_id) : []
+  const atuais = lerAdicionaisAplicados(atual.addons)
+  const novos = resolverAdicionais(catalogo, escolhidos, atuais)
+
+  const mesmaLista =
+    novos.length === atuais.length &&
+    novos.every((n) => atuais.find((a) => a.id === n.id)?.quantidade === n.quantidade)
+
+  if (mesmaLista) return { agendamento: completo(atual), alterado: false }
+
+  // Preço base é derivado (A6): o total gravado menos o que os adicionais atuais somavam.
+  const base = arredondar((atual.price ?? 0) - somarAdicionais(atuais))
+  const novoPreco = arredondar(base + somarAdicionais(novos))
+
+  let consulta = db
+    .from("appointments")
+    .update({ price: novoPreco, addons: adicionaisParaColuna(novos), updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("organization_id", orgId)
+    .eq("status", statusAtual)
+
+  // Status, pagamento e preço como lemos: é o que impede pagar e ajustar ao mesmo tempo.
+  consulta =
+    atual.payment_status === null
+      ? consulta.is("payment_status", null)
+      : consulta.eq("payment_status", atual.payment_status)
+  consulta = atual.price === null ? consulta.is("price", null) : consulta.eq("price", atual.price)
+
+  const { data: escrito, error } = await consulta.select("id")
+
+  if (error) return erroDeEscrita("ajustarAdicionais", error)
+
+  if (!escrito || escrito.length === 0) {
+    throw new DomainError("INVALID_TRANSITION", MSG_ALTERADO_POR_OUTRA_PESSOA)
+  }
+
+  const linha = await carregar(db, orgId, id)
+
+  // A8: o ajuste acontece com a cliente presente, então não notifica.
+  await registrarLog(db, ator, linha, "addons_updated", `${brl(atual.price ?? 0)} -> ${brl(novoPreco)}`)
 
   return { agendamento: completo(linha), alterado: true }
 }
