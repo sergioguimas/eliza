@@ -27,6 +27,7 @@ import { unstable_noStore as noStore } from "next/cache"
 import { Database } from "@/utils/database.types"
 import { AppointmentContextMenu } from "@/components/appointments/appointment-context-menu"
 import { AppointmentCardActions } from "@/components/appointments/appointment-card-actions"
+import { AddonsSummary } from "@/components/appointments/addons-summary"
 import { ReturnModalWrapper } from "@/components/appointments/return-modal-wrapper"
 import { getDictionary } from "@/lib/dictionaries/get-dictionary"
 import { STATUS_CONFIG } from "@/lib/appointment-config"
@@ -107,7 +108,7 @@ export default async function CustomerPage({
       .from("appointments")
       .select(`
         *,
-        services ( title, color ),
+        services ( title, color, addons ),
         professionals ( name ),
         appointment_logs (
           action,
@@ -135,7 +136,7 @@ export default async function CustomerPage({
 
   const { data: services } = await supabase
     .from("services")
-    .select("id, title, price, duration_minutes")
+    .select("id, title, price, duration_minutes, addons")
     .eq("organization_id", typedProfile.organization_id)
     .eq("is_active", true)
 
@@ -243,6 +244,8 @@ export default async function CustomerPage({
                               {apt.professionals?.name || "Não atribuído"}
                             </div>
                           </div>
+
+                          <AddonsSummary addons={apt.addons} />
                         </div>
 
                         {/*
@@ -271,9 +274,11 @@ export default async function CustomerPage({
                               <div className="flex-1 space-y-1">
                                 <div className="flex items-center justify-between">
                                   <p className="text-xs font-semibold uppercase tracking-wider">
-                                    {log.action === "confirmed"
-                                      ? "Confirmação Automática"
-                                      : "Cancelamento via Bot"}
+                                    {log.action === "addons_updated"
+                                      ? "Adicionais ajustados"
+                                      : log.action === "confirmed"
+                                        ? "Confirmação Automática"
+                                        : "Cancelamento via Bot"}
                                   </p>
 
                                   <span className="text-[10px] text-muted-foreground italic">

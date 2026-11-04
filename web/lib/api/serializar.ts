@@ -19,7 +19,7 @@ export function paraService(s: Servico): z.infer<typeof Service> {
     price: s.preco,
     price_from: s.precoAPartirDe,
     category: s.categoria,
-    addons: s.adicionais.map((a) => ({ name: a.nome, price: a.valor, unit: a.unidade })),
+    addons: s.adicionais.map((a) => ({ id: a.id, name: a.nome, price: a.valor, unit: a.unidade })),
   }
 }
 

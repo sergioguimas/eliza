@@ -162,6 +162,7 @@ export type Database = {
       }
       appointments: {
         Row: {
+          addons: Json
           created_at: string
           customer_id: string
           end_time: string
@@ -181,6 +182,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          addons?: Json
           created_at?: string
           customer_id: string
           end_time: string
@@ -200,6 +202,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          addons?: Json
           created_at?: string
           customer_id?: string
           end_time?: string

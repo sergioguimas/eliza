@@ -13,6 +13,10 @@ import { Loader2, CalendarIcon, Clock, User, Plus, AlertTriangle } from "lucide-
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useKeckleon } from "@/providers/keckleon-provider"
+import { AddonsPicker } from "@/components/appointments/addons-picker"
+import type { AdicionalEscolhido } from "@/contracts/comum/adicionais"
+import { lerAdicionais, somarAdicionais } from "@/lib/adicionais"
+import { formatarReais } from "@/lib/preco"
 
 const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
 
@@ -163,6 +167,24 @@ export function CreateAppointmentDialog({
   const [time, setTime] = useState("")
   const [notes, setNotes] = useState("")
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<string>("")
+  const [addons, setAddons] = useState<AdicionalEscolhido[]>([])
+
+  const adicionaisDoServico = useMemo(
+    () => lerAdicionais(services.find((s) => s.id === serviceId)?.addons),
+    [services, serviceId]
+  )
+
+  const totalAdicionais = useMemo(
+    () =>
+      somarAdicionais(
+        adicionaisDoServico.flatMap((a) => {
+          const escolhido = addons.find((e) => e.id === a.id)
+
+          return escolhido ? [{ valorUnitario: a.valor, quantidade: escolhido.quantidade }] : []
+        })
+      ),
+    [adicionaisDoServico, addons]
+  )
 
   const professionalScheduleHint = useMemo(() => {
     const selected = team.find((prof: any) => prof.id === selectedProfessionalId)
@@ -181,6 +203,7 @@ export function CreateAppointmentDialog({
     setCustomerName("")
     setCustomerPhone("")
     setNotes("")
+    setAddons([])
     setIsLoading(false)
     setShowOutsideHoursAlert(false)
 
@@ -359,6 +382,17 @@ export function CreateAppointmentDialog({
     if (serviceId) formData.append('service_id', serviceId)
     formData.append('notes', notes)
     formData.append('professional_id', selectedProfessionalId)
+    // Só o que existe no serviço atual; o valor é calculado no servidor.
+    formData.append(
+      'addons',
+      JSON.stringify(
+        adicionaisDoServico.flatMap((a) => {
+          const escolhido = addons.find((e) => e.id === a.id)
+
+          return escolhido ? [{ id: a.id, quantidade: escolhido.quantidade }] : []
+        })
+      )
+    )
 
     try {
         const result = await createAppointment(formData)
@@ -503,7 +537,14 @@ export function CreateAppointmentDialog({
           <div className="space-y-2">
             <Label>{servico}</Label>
 
-            <Select value={serviceId} onValueChange={setServiceId}>
+            <Select
+              value={serviceId}
+              onValueChange={(valor) => {
+                setServiceId(valor)
+                // Os adicionais pertencem ao serviço: outro serviço começa sem nenhum.
+                setAddons([])
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder={`${servico} (opcional)`} />
               </SelectTrigger>
@@ -525,6 +566,14 @@ export function CreateAppointmentDialog({
               </SelectContent>
             </Select>
           </div>
+
+          <AddonsPicker adicionais={adicionaisDoServico} value={addons} onChange={setAddons} />
+
+          {totalAdicionais > 0 && (
+            <p className="text-sm text-muted-foreground">
+              Adicionais: <strong className="text-foreground">+ {formatarReais(totalAdicionais)}</strong> somados ao valor do serviço.
+            </p>
+          )}
 
           {/* DATA / HORA */}
           <div className="grid grid-cols-2 gap-4">

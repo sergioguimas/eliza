@@ -17,9 +17,11 @@ import { apiSuccess } from "../comum/envelope"
 
 export const LIMITE_SERVICOS_PUBLICOS = 30
 
-/** Custo opcional além de `preco`; não entra no valor do agendamento. */
+/** Custo opcional além de `preco`. Escolhido ao agendar, soma ao valor do agendamento. */
 export const AdicionalPublico = z
   .object({
+    /** Estável: referência do adicional ao agendar. */
+    id: z.uuid(),
     nome: z.string().min(1).max(TAMANHO_NOME_ADICIONAL),
     /** Em reais. */
     valor: z.number().positive(),

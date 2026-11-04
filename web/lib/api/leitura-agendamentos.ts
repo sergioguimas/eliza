@@ -1,5 +1,6 @@
 import "server-only"
 
+import { lerAdicionaisAplicados } from "@/lib/adicionais"
 import type { AgendamentoCompleto } from "@/lib/domain/agendamentos"
 import type { Db } from "@/lib/domain/db"
 import { DomainError } from "@/lib/domain/erros"
@@ -13,7 +14,7 @@ import { momento } from "@/lib/domain/tempo"
  */
 
 const SELECT = `
-  id, status, start_time, end_time, notes, price, payment_status, payment_method,
+  id, status, start_time, end_time, notes, price, addons, payment_status, payment_method,
   paid_at, created_at, updated_at, customer_id, professional_id, service_id,
   customers ( id, name, phone ),
   services ( id, title, duration_minutes ),
@@ -27,6 +28,7 @@ type Linha = {
   end_time: string
   notes: string | null
   price: number | null
+  addons: unknown
   payment_status: string | null
   payment_method: string | null
   paid_at: string | null
@@ -52,6 +54,7 @@ function paraAgendamento(l: Linha): AgendamentoCompleto {
       : null,
     professional: l.professionals ? { id: l.professionals.id, name: l.professionals.name } : null,
     price: l.price,
+    adicionais: lerAdicionaisAplicados(l.addons),
     payment_status: l.payment_status,
     payment_method: l.payment_method,
     paid_at: l.paid_at,

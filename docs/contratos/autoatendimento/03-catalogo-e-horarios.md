@@ -9,7 +9,7 @@ perguntar preço e horário antes de se cadastrar, como na página pública.
 
 `listarServicosAtivos` / `listarProfissionaisAtivos` de
 [00-dominio §3](../00-dominio/README.md). Profissional nunca expõe `phone` nem
-`license_number`. `preco`: `null` se `price` for nulo; preço 0 continua 0. `precoAPartirDe`: `price_from`; quando `true`, `preco` é o valor mínimo e o atendente deve dizer "a partir de" (acrescentado em 27/10/2026, aditivo). `adicionais`: `addons`, custos opcionais além de `preco` (`nome`, `valor`, `unidade`), que o atendente informa sem somar ao preço (acrescentado em 03/11/2026, aditivo; a versão do contrato continua `1`).
+`license_number`. `preco`: `null` se `price` for nulo; preço 0 continua 0. `precoAPartirDe`: `price_from`; quando `true`, `preco` é o valor mínimo e o atendente deve dizer "a partir de" (acrescentado em 27/10/2026, aditivo). `adicionais`: `addons`, custos opcionais além de `preco` (`id`, `nome`, `valor`, `unidade`), que o atendente informa ao cliente (por enquanto o agendamento por este canal nasce com o preço base; escolher adicionais pelo atendente é a fase 2 do contrato `adicionais`) (acrescentado em 03/11/2026, aditivo; a versão do contrato continua `1`). O `id` é estável e é a referência que o contrato `adicionais` usa ao agendar (fase 2).
 
 `GET /servicos` e `GET /profissionais`: sem query; devolvem as listas.
 

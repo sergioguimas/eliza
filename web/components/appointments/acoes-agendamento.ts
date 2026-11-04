@@ -13,6 +13,7 @@ import {
   type AcoesDisponiveis,
   type MetodoPagamento,
 } from "@/lib/domain/status"
+import { lerAdicionais, lerAdicionaisAplicados } from "@/lib/adicionais"
 
 const NENHUMA: AcoesDisponiveis = {
   confirmar: false,
@@ -22,12 +23,28 @@ const NENHUMA: AcoesDisponiveis = {
   cancelar: false,
   editar: false,
   pagar: false,
+  adicionais: false,
 }
 
 type AgendamentoDoPainel = {
   status?: string | null
   start_time?: string | null
   payment_status?: string | null
+}
+
+/**
+ * "Ajustar adicionais" só vale a pena quando há o que ajustar: o serviço tem adicionais no
+ * catálogo ou o agendamento já guarda algum (que pode ter saído do catálogo depois).
+ * Junta a regra de domínio (`acoes.adicionais`) com essa checagem dos dados da tela.
+ */
+export function podeAjustarAdicionaisNoPainel(
+  agendamento: { addons?: unknown; services?: { addons?: unknown } | null },
+  acoes: AcoesDisponiveis
+): boolean {
+  return (
+    acoes.adicionais &&
+    (lerAdicionaisAplicados(agendamento.addons).length > 0 || lerAdicionais(agendamento.services?.addons).length > 0)
+  )
 }
 
 /**

@@ -23,6 +23,7 @@ import {
 } from "@/lib/utils"
 import { limitesDoDiaUtc } from "@/lib/domain/tempo"
 import { AppointmentCardActions } from "@/components/appointments/appointment-card-actions"
+import { AddonsSummary } from "@/components/appointments/addons-summary"
 import { RealtimeAppointments } from "@/components/layout/realtime-appointments"
 import { Database } from "@/utils/database.types"
 import { STATUS_CONFIG } from "@/lib/appointment-config"
@@ -149,8 +150,10 @@ export default async function DashboardPage() {
         professional_id,
         payment_status,
         payment_method,
+        price,
+        addons,
         customers(name),
-        services(title, color)
+        services(title, color, addons)
       `)
       .eq("organization_id", orgId)
       .gte("start_time", todayStart)
@@ -196,6 +199,7 @@ export default async function DashboardPage() {
     services: {
       title: app.services?.title || dict.entities?.servico || "Serviço",
       color: app.services?.color,
+      addons: app.services?.addons,
     },
   }))
 
@@ -472,6 +476,7 @@ function AppointmentRow({
                   {formatSaoPauloTime(app.start_time)}
                 </span>
               </div>
+              <AddonsSummary addons={app.addons} />
             </div>
           </div>
 
