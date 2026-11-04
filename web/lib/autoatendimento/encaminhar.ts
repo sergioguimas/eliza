@@ -1,6 +1,5 @@
 import "server-only"
 
-import { createHmac } from "node:crypto"
 import {
   HEADER_ASSINATURA,
   HEADER_TIMESTAMP,
@@ -10,6 +9,7 @@ import {
 import type { Db } from "@/lib/domain/db"
 import { extractAudio, extractIncomingNumber, extractInstanceName, extractMessageText } from "@/lib/whatsapp/extrair-mensagem"
 import { createAdminClient } from "@/utils/supabase/admin"
+import { assinarEncaminhamento } from "./assinatura"
 import { carregarConfig } from "./config"
 import { tipoDoEnvioSistema, type TipoAviso } from "./envios-sistema"
 import { emitirTicket } from "./ticket"
@@ -31,11 +31,6 @@ export type DependenciasDoEncaminhamento = {
   db?: Db
   fetch?: typeof fetch
   agora?: () => Date
-}
-
-/** hex(HMAC-SHA256(segredo, `${timestamp}.${corpo}`)) sobre a string exata que vai no corpo. */
-export function assinarEncaminhamento(segredo: string, timestamp: string, corpo: string) {
-  return createHmac("sha256", segredo).update(`${timestamp}.${corpo}`).digest("hex")
 }
 
 /** Primeira chave de `data.message` (ignora o envelope `messageContextInfo`), para `nao_suportado`. */

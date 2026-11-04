@@ -9,6 +9,10 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ### Adicionado
 
+- Treino do atendente: em Configurações, na aba WhatsApp, o dono ou admin abre a página "Treinar atendente", responde a
+  ensaios em que o atendente faz o papel de cliente e acompanha o que ele aprendeu, com versões, remoção de padrões e
+  notas de fatos do negócio. Requer `ATENDENTE_TREINO_SECRET`; sem ela, a página avisa que não está disponível. O que é
+  aprendido ainda não muda as respostas aos clientes.
 - Serviços: adicionais opcionais, com nome, valor e unidade (ex.: "Unha quebrada", R$ 5 por unha), cadastrados no
   formulário do serviço e mostrados no card. Só informam o cliente: não entram no preço do agendamento. Consultáveis
   em `GET /api/v1/services` (`addons`), no Autoatendimento (`adicionais`) e no catálogo público (`adicionais`), sempre
