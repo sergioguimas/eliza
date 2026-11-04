@@ -56,7 +56,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { createPublicAppointment } from "@/app/actions/create-appointment"
 import { getAvailableSlots } from "@/app/actions/get-available-slots"
 import type { Profissional, Servico } from "@/lib/domain/catalogo"
-import { rotuloPreco } from "@/lib/preco"
+import type { AdicionalEscolhido } from "@/contracts/comum/adicionais"
+import { somarAdicionais } from "@/lib/adicionais"
+import { formatarReais, rotuloPreco } from "@/lib/preco"
+import { AddonsPicker } from "@/components/appointments/addons-picker"
 import { getNicheDocuments } from "@/lib/niche-documents"
 
 const formSchema = z.object({
@@ -121,6 +124,8 @@ export function PublicBookingForm({
   const [documentNotes, setDocumentNotes] = useState<Record<string, string>>({})
   const documents = useMemo(() => getNicheDocuments(organizationNiche), [organizationNiche])
   const [slotMessage, setSlotMessage] = useState<string | null>(null)
+  // Só id e quantidade: nome e valor saem do catálogo no servidor.
+  const [addons, setAddons] = useState<AdicionalEscolhido[]>([])
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -196,6 +201,27 @@ export function PublicBookingForm({
     () => professionals.find((p) => p.id === selectedProf),
     [professionals, selectedProf]
   )
+
+  // Escolhas com os dados do catálogo, para exibir. Id que não é do serviço atual é ignorado.
+  const adicionaisEscolhidos = useMemo(
+    () =>
+      (selectedService?.adicionais ?? []).flatMap((a) => {
+        const escolhido = addons.find((e) => e.id === a.id)
+
+        if (!escolhido) return []
+
+        const item = { valorUnitario: a.valor, quantidade: escolhido.quantidade }
+
+        return [{ ...a, ...item, total: somarAdicionais([item]) }]
+      }),
+    [selectedService, addons]
+  )
+
+  const totalAdicionais = somarAdicionais(adicionaisEscolhidos)
+  const precoDoServico = Number(selectedService?.preco ?? 0)
+  const temPreco = precoDoServico > 0
+  const totalEstimado = Math.round((precoDoServico + totalAdicionais) * 100) / 100
+  const rotuloTotal = selectedService?.precoAPartirDe ? "Total a partir de" : "Total estimado"
 
   useEffect(() => {
     async function updateSlots() {
@@ -296,7 +322,11 @@ export function PublicBookingForm({
       selectedService?.titulo,
       selectedProfessional?.nome,
       selectedDate ? format(selectedDate, "dd/MM", { locale: ptBR }) + (selectedTime ? ` às ${selectedTime}` : "") : null,
-      selectedService?.preco ? rotuloPreco(selectedService) : null,
+      adicionaisEscolhidos.length === 0
+        ? selectedService?.preco ? rotuloPreco(selectedService) : null
+        : temPreco
+          ? `${rotuloTotal.toLowerCase()} ${formatarReais(totalEstimado)}`
+          : `adicionais + ${formatarReais(totalAdicionais)}`,
     ].filter(Boolean)
 
     if (parts.length > 0) return parts.join(" · ")
@@ -340,6 +370,10 @@ export function PublicBookingForm({
       formData.append('customer_phone', phoneWithDDI)
       formData.append('notes', values.notes || "")
       formData.append('source', 'public')
+      formData.append(
+        'addons',
+        JSON.stringify(adicionaisEscolhidos.map((a) => ({ id: a.id, quantidade: a.quantidade })))
+      )
 
       formData.append(
         "document_summary",
@@ -429,6 +463,27 @@ export function PublicBookingForm({
             <p className="text-sm">
               <strong>Horário:</strong> {selectedTime || "—"}
             </p>
+            {adicionaisEscolhidos.length > 0 && (
+              <p className="text-sm">
+                <strong>Adicionais:</strong>{" "}
+                {adicionaisEscolhidos
+                  .map((a) => (a.unidade ? `${a.nome} (${a.quantidade})` : a.nome))
+                  .join(", ")}
+              </p>
+            )}
+            {adicionaisEscolhidos.length > 0 && temPreco && (
+              <p className="text-sm">
+                <strong>{rotuloTotal}:</strong> {formatarReais(totalEstimado)}
+              </p>
+            )}
+            {adicionaisEscolhidos.length > 0 && !temPreco && (
+              <p className="text-sm">
+                <strong>Valor dos adicionais:</strong> + {formatarReais(totalAdicionais)}
+              </p>
+            )}
+            {adicionaisEscolhidos.length > 0 && (
+              <p className="text-xs text-muted-foreground">O valor final é confirmado no atendimento.</p>
+            )}
           </div>
 
           <p className="text-xs text-muted-foreground">
@@ -567,7 +622,14 @@ export function PublicBookingForm({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Serviço</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
+                              <Select
+                                onValueChange={(valor) => {
+                                  field.onChange(valor)
+                                  // Os adicionais pertencem ao serviço: outro serviço começa sem nenhum.
+                                  setAddons([])
+                                }}
+                                value={field.value}
+                              >
                                 <FormControl>
                                   <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Selecione o tipo de atendimento" />
@@ -611,6 +673,28 @@ export function PublicBookingForm({
                           )}
                         />
                       </div>
+
+                      <AddonsPicker adicionais={selectedService?.adicionais ?? []} value={addons} onChange={setAddons} />
+
+                      {/* No celular o resumo lateral não aparece: o total estimado fica junto da escolha. */}
+                      {adicionaisEscolhidos.length > 0 && (
+                        <p className="text-sm text-foreground xl:hidden" aria-live="polite">
+                          {temPreco ? (
+                            <>
+                              <span className="text-muted-foreground">{rotuloTotal}: </span>
+                              <strong>{formatarReais(totalEstimado)}</strong>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-muted-foreground">Adicionais: </span>
+                              <strong>+ {formatarReais(totalAdicionais)}</strong>
+                            </>
+                          )}
+                          <span className="block text-xs text-muted-foreground">
+                            O valor final é confirmado no atendimento.
+                          </span>
+                        </p>
+                      )}
                     </CardContent>
 
                     <CardFooter className="hidden xl:flex justify-end gap-3">
@@ -1198,7 +1282,7 @@ export function PublicBookingForm({
                   </div>
                 </div>
 
-                {selectedService?.preco && (
+                {selectedService?.preco && adicionaisEscolhidos.length === 0 && (
                   <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
                     <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
                       {selectedService.precoAPartirDe ? "Valor a partir de" : "Valor do serviço"}
@@ -1211,6 +1295,40 @@ export function PublicBookingForm({
                         O valor final depende do que você escolher; combinamos no atendimento.
                       </p>
                     )}
+                  </div>
+                )}
+
+                {adicionaisEscolhidos.length > 0 && (
+                  <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2">
+                    {temPreco && (
+                      <div className="flex items-baseline justify-between gap-3 text-sm">
+                        <span className="text-muted-foreground">{selectedService?.titulo}</span>
+                        <span className="font-medium text-foreground">{formatarReais(precoDoServico)}</span>
+                      </div>
+                    )}
+
+                    {adicionaisEscolhidos.map((a) => (
+                      <div key={a.id} className="flex items-baseline justify-between gap-3 text-sm">
+                        <span className="text-muted-foreground">
+                          {a.unidade ? `${a.nome} × ${a.quantidade}` : a.nome}
+                        </span>
+                        <span className="font-medium text-foreground">+ {formatarReais(a.total)}</span>
+                      </div>
+                    ))}
+
+                    <div className="border-t border-border pt-2">
+                      {temPreco ? (
+                        <>
+                          <p className="text-[11px] uppercase tracking-wider text-muted-foreground">{rotuloTotal}</p>
+                          <p className="mt-1 text-2xl font-bold text-foreground">{formatarReais(totalEstimado)}</p>
+                        </>
+                      ) : (
+                        <p className="text-sm font-medium text-foreground">
+                          Adicionais: + {formatarReais(totalAdicionais)}
+                        </p>
+                      )}
+                      <p className="mt-1 text-xs text-muted-foreground">O valor final é confirmado no atendimento.</p>
+                    </div>
                   </div>
                 )}
 

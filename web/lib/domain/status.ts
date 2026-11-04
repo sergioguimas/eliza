@@ -4,7 +4,8 @@
 // Uma função só nos dois lados é o que impede os menus de divergirem da regra.
 //
 // Regra (D4, ditada pelo dono do produto): `completed`, `no_show` e `canceled`
-// são finais. Depois de `completed` só se registra pagamento.
+// são finais. Depois de `completed` registra-se pagamento e ajustam-se os
+// adicionais enquanto o agendamento não estiver pago (A2 do contrato de adicionais).
 
 export const STATUS = [
   "pending",
@@ -62,6 +63,15 @@ export function podeReceberPagamento(s: Status): boolean {
   return s !== "canceled" && s !== "no_show"
 }
 
+/**
+ * A contagem real dos adicionais só existe no atendimento, então o ajuste vale até
+ * ser pago, inclusive em `arrived` e `completed`. `refunded` também recusa: alteraria
+ * o valor de um pagamento já estornado.
+ */
+export function podeAjustarAdicionais(s: Status, pagamento: string | null): boolean {
+  return s !== "canceled" && s !== "no_show" && pagamento !== "paid" && pagamento !== "refunded"
+}
+
 // = appointments_payment_method_check no banco.
 export const METODOS_PAGAMENTO = ["dinheiro", "pix", "cartao_credito", "cartao_debito", "outro"] as const
 export type MetodoPagamento = (typeof METODOS_PAGAMENTO)[number]
@@ -77,6 +87,7 @@ export type AcoesDisponiveis = {
   cancelar: boolean
   editar: boolean
   pagar: boolean
+  adicionais: boolean
 }
 
 /**
@@ -96,5 +107,6 @@ export function acoesDisponiveis(
     cancelar: podeTransicionar(a.status, "canceled", a.inicio, agora),
     editar: podeEditar(a.status),
     pagar: podeReceberPagamento(a.status) && a.pagamento !== "paid",
+    adicionais: podeAjustarAdicionais(a.status, a.pagamento),
   }
 }

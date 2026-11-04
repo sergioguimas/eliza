@@ -44,6 +44,7 @@ import {
 import { useKeckleon } from "@/providers/keckleon-provider"
 import { acoesDoAgendamento } from "@/components/appointments/acoes-agendamento"
 import { STATUS_CONFIG } from "@/lib/appointment-config"
+import { lerAdicionaisAplicados } from "@/lib/adicionais"
 
 interface UpdateAppointmentDialogProps {
   appointment: any | null
@@ -190,6 +191,10 @@ export function UpdateAppointmentDialog({
   // Quem decide se dá para editar/cancelar é a máquina de status, não este diálogo.
   const acoes = acoesDoAgendamento(appointment)
 
+  // Trocar de serviço refaz o valor e descarta os adicionais (o domínio faz; aqui só avisa).
+  const trocaDeServico = Boolean(serviceId) && serviceId !== (appointment.service_id || "")
+  const temAdicionais = lerAdicionaisAplicados(appointment.addons).length > 0
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -257,6 +262,16 @@ export function UpdateAppointmentDialog({
                   ))}
                 </SelectContent>
               </Select>
+
+              {trocaDeServico && (
+                <p className="flex items-start gap-2 text-xs text-warning">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    O valor passa a ser o do novo {servico.toLowerCase()}
+                    {temAdicionais ? " e os adicionais escolhidos serão removidos" : ""}.
+                  </span>
+                </p>
+              )}
             </div>
 
             {/* DATA E HORA */}

@@ -19,10 +19,12 @@ import {
   CreditCard,
   Banknote,
   UserX,
+  ListPlus,
 } from "lucide-react"
 import { toast } from "sonner"
 import { updateAppointmentStatus } from "@/app/actions/update-appointment-status"
 import { cancelAppointment } from "@/app/actions/cancel-appointment"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { updateAppointmentPayment } from "@/app/actions/update-appointment-payment"
 import { useKeckleon } from "@/providers/keckleon-provider"
@@ -32,8 +34,10 @@ import {
   acoesDoAgendamento,
   lancarSeErro,
   METODOS_NOS_MENUS,
+  podeAjustarAdicionaisNoPainel,
   rotuloMetodo,
 } from "@/components/appointments/acoes-agendamento"
+import { AdjustAddonsDialog } from "@/components/appointments/adjust-addons-dialog"
 
 export function AppointmentCardActions({
   appointment,
@@ -51,8 +55,12 @@ export function AppointmentCardActions({
 
   // Única fonte do que mostrar: a máquina de status (ver acoes-agendamento.ts).
   const acoes = acoesDoAgendamento(appointment)
+  const ajustaAdicionais = podeAjustarAdicionaisNoPainel(appointment, acoes)
   const temAcao =
-    acoes.confirmar || acoes.chegou || acoes.finalizar || acoes.faltou || acoes.pagar || acoes.cancelar
+    acoes.confirmar || acoes.chegou || acoes.finalizar || acoes.faltou || acoes.pagar || acoes.cancelar || ajustaAdicionais
+
+  // O diálogo fica fora do menu: o menu desmonta ao fechar e levaria o diálogo junto.
+  const [ajustando, setAjustando] = useState(false)
 
   async function handleStatusChange(status: string) {
     const result = await updateAppointmentStatus(appointment.id, status)
@@ -133,6 +141,7 @@ export function AppointmentCardActions({
   }
 
   return (
+    <>
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
@@ -214,6 +223,17 @@ export function AppointmentCardActions({
               </DropdownMenuItem>
             )}
 
+            {ajustaAdicionais && (
+              <>
+                {(acoes.confirmar || acoes.chegou || acoes.finalizar || acoes.faltou) && <DropdownMenuSeparator />}
+
+                <DropdownMenuItem onClick={() => setAjustando(true)}>
+                  <ListPlus className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <span>Ajustar adicionais</span>
+                </DropdownMenuItem>
+              </>
+            )}
+
             {acoes.pagar && (
               <>
                 <DropdownMenuLabel>
@@ -256,5 +276,10 @@ export function AppointmentCardActions({
         )}
       </DropdownMenuContent>
     </DropdownMenu>
+
+    {ajustaAdicionais && (
+      <AdjustAddonsDialog appointment={appointment} open={ajustando} onOpenChange={setAjustando} />
+    )}
+    </>
   )
 }

@@ -72,7 +72,7 @@ export function gerarOpenApiPublica({ origem }: OpcoesDoDocumento): Objeto {
     preco: "Em reais. `null` = não divulgar. `0` continua `0`. Com `precoAPartirDe`, é o valor mínimo.",
     precoAPartirDe: "`true` = preço \"a partir de\": o valor final é combinado no atendimento. Sempre presente.",
     categoria: "Agrupamento opcional (até 40 caracteres); `null` = sem grupo.",
-    adicionais: "Custos opcionais além de `preco`, cobrados conforme o atendimento (`unidade` ex.: \"por unha\"; `null` = valor fixo). Sempre presente, `[]` quando não há.",
+    adicionais: "Custos opcionais além de `preco` (`unidade` ex.: \"por unha\"; `null` = valor fixo), cada um com `id` estável. O cliente escolhe ao agendar na página de agendamento e a soma entra no valor. Sempre presente, `[]` quando não há.",
   })
 
   const erros = respostasDeErro(ERROS_DA_ROTA, erroRef)
@@ -143,7 +143,7 @@ export function gerarOpenApiPublica({ origem }: OpcoesDoDocumento): Objeto {
                         data: {
                           organizacao: { nome: "Studio Exemplo", slug: "studio-exemplo" },
                           servicos: [
-                            { id: ID_EXEMPLO.servico, nome: "Alongamento em fibra", descricao: null, duracaoMinutos: 120, preco: 180, precoAPartirDe: true, categoria: "Alongamento", adicionais: [{ nome: "Unha quebrada", valor: 5, unidade: "por unha" }] },
+                            { id: ID_EXEMPLO.servico, nome: "Alongamento em fibra", descricao: null, duracaoMinutos: 120, preco: 180, precoAPartirDe: true, categoria: "Alongamento", adicionais: [{ id: "5b1f7d2a-3c4e-4a69-8f10-2d9e6c0a7b13", nome: "Unha quebrada", valor: 5, unidade: "por unha" }] },
                             { id: "9b2e4d18-6a3c-4f71-8e05-d3c1a7b92f46", nome: "Esmaltação", descricao: "Inclui cuticulagem", duracaoMinutos: 45, preco: 0, precoAPartirDe: false, categoria: null, adicionais: [] },
                           ],
                           atualizadoEm: "2026-10-19T14:06:43.454Z",

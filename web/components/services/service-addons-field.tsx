@@ -13,7 +13,8 @@ import {
   lerAdicionais,
 } from "@/lib/adicionais"
 
-type Linha = { chave: number; nome: string; valor: string; unidade: string }
+// `id` só existe em linha que já estava gravada: reenviá-lo mantém a referência dos agendamentos.
+type Linha = { chave: number; id?: string; nome: string; valor: string; unidade: string }
 
 const CLASSE_INPUT = "border-input bg-background text-foreground placeholder:text-muted-foreground"
 
@@ -25,6 +26,7 @@ export function ServiceAddonsField({ defaultValue }: { defaultValue?: unknown })
   const [linhas, setLinhas] = useState<Linha[]>(() =>
     lerAdicionais(defaultValue).map((a, chave) => ({
       chave,
+      id: a.id,
       nome: a.nome,
       valor: String(a.valor),
       unidade: a.unidade ?? "",
@@ -41,7 +43,7 @@ export function ServiceAddonsField({ defaultValue }: { defaultValue?: unknown })
     setLinhas((atuais) => atuais.map((l) => (l.chave === chave ? { ...l, [campo]: valor } : l)))
   }
 
-  const addons = linhas.map((l) => ({ name: l.nome, price: Number(l.valor), unit: l.unidade }))
+  const addons = linhas.map((l) => ({ id: l.id, name: l.nome, price: Number(l.valor), unit: l.unidade }))
 
   return (
     <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">

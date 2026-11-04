@@ -269,13 +269,13 @@ export function gerarOpenApiV1({ origem }: OpcoesDoDocumento): Objeto {
         tags: ["Catálogo"],
         operationId: "listServices",
         summary: "Serviços ativos",
-        description: "Serviços ativos do tenant. `duration_minutes` é 30 quando o cadastro está sem duração. `price_from: true` = `price` é o valor mínimo (\"a partir de\"). `addons` são custos opcionais além de `price`, cobrados conforme o atendimento (`unit` ex.: \"por unha\"; `null` = valor fixo); não entram no valor do agendamento. Sempre presente, `[]` quando não há." + aviso("read"),
+        description: "Serviços ativos do tenant. `duration_minutes` é 30 quando o cadastro está sem duração. `price_from: true` = `price` é o valor mínimo (\"a partir de\"). `addons` são custos opcionais além de `price` (`unit` ex.: \"por unha\"; `null` = valor fixo); cada item tem `id` estável. Os escolhidos no painel e na página pública de agendamento somam ao valor do agendamento; o `POST /appointments` ainda não os aceita. Sempre presente, `[]` quando não há." + aviso("read"),
         ...leitura("read"),
         responses: {
           "200": respostaOk("Lista de serviços.", respServicos, {
             exemplo: { summary: "Dois serviços", value: { data: [
               { id: ID_EXEMPLO.servico, title: "Corte de cabelo", description: null, duration_minutes: 30, price: 60, price_from: false, category: null, addons: [] },
-              { id: "9b2e4d18-6a3c-4f71-8e05-d3c1a7b92f46", title: "Coloração", description: "Inclui lavagem", duration_minutes: 90, price: null, price_from: false, category: null, addons: [{ name: "Cabelo longo", price: 20, unit: null }] },
+              { id: "9b2e4d18-6a3c-4f71-8e05-d3c1a7b92f46", title: "Coloração", description: "Inclui lavagem", duration_minutes: 90, price: null, price_from: false, category: null, addons: [{ id: "e3a8c4d0-7b21-4f5e-9a36-1c0d8b2f6e47", name: "Cabelo longo", price: 20, unit: null }] },
             ] } },
           }),
           ...respostasDeErro(ERROS_DA_CHAVE, erroRef),
@@ -432,7 +432,7 @@ export function gerarOpenApiV1({ origem }: OpcoesDoDocumento): Objeto {
         operationId: "updateAppointment",
         summary: "Remarca ou altera",
         description:
-          "Altera horário, profissional, serviço e/ou observação. Só em `pending`, `scheduled` ou `confirmed`; fora disso `409 INVALID_TRANSITION`. Mudar horário/profissional/serviço **revalida a agenda** (`409 SLOT_UNAVAILABLE` com `sugestoes`; o próprio agendamento não conta como ocupado) e **zera os lembretes**, para o cron avisar do novo horário. Mudar só `notes` não revalida. Pelo menos um campo é obrigatório." +
+          "Altera horário, profissional, serviço e/ou observação. Só em `pending`, `scheduled` ou `confirmed`; fora disso `409 INVALID_TRANSITION`. Trocar o serviço **recalcula o valor** (`price` passa a ser o do novo serviço e os adicionais escolhidos são removidos; agendamento já pago é recusado com `409 INVALID_TRANSITION`). Mudar horário/profissional/serviço **revalida a agenda** (`409 SLOT_UNAVAILABLE` com `sugestoes`; o próprio agendamento não conta como ocupado) e **zera os lembretes**, para o cron avisar do novo horário. Mudar só `notes` não revalida. Pelo menos um campo é obrigatório." +
           aviso("write"),
         ...leitura("write"),
         parameters: [parametroId("Id do agendamento.")],

@@ -323,13 +323,13 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
         operationId: "listarServicos",
         "x-atendente": true,
         summary: "Serviços ativos",
-        description: "Serviços ativos da organização do ticket. Não exige cliente identificado: um desconhecido pode perguntar preço antes de se cadastrar. `preco: null` = não divulgar; preço `0` continua `0`. `precoAPartirDe: true` = `preco` é o valor mínimo; o atendente deve dizer \"a partir de\". `adicionais` são custos opcionais além de `preco`, cobrados conforme o atendimento (`unidade` ex.: \"por unha\"; `null` = valor fixo): informe-os ao cliente quando forem relevantes e nunca os some ao preço por conta própria. Sempre presente, `[]` quando não há.",
+        description: "Serviços ativos da organização do ticket. Não exige cliente identificado: um desconhecido pode perguntar preço antes de se cadastrar. `preco: null` = não divulgar; preço `0` continua `0`. `precoAPartirDe: true` = `preco` é o valor mínimo; o atendente deve dizer \"a partir de\". `adicionais` são custos opcionais além de `preco` (`unidade` ex.: \"por unha\"; `null` = valor fixo), cada um com `id` estável: informe-os ao cliente quando forem relevantes e nunca os some ao preço por conta própria. Por enquanto o agendamento criado por este canal ainda nasce com o preço base do serviço. Sempre presente, `[]` quando não há.",
         ...comum,
         responses: {
           "200": respostaOk("Lista de serviços.", rServicos, {
             exemplo: { summary: "Dois serviços", value: { data: { servicos: [
               { id: ID_EXEMPLO.servico, nome: "Corte de cabelo", descricao: null, duracaoMinutos: 30, preco: 60, precoAPartirDe: false, categoria: null, adicionais: [] },
-              { id: "9b2e4d18-6a3c-4f71-8e05-d3c1a7b92f46", nome: "Coloração", descricao: "Inclui lavagem", duracaoMinutos: 90, preco: null, precoAPartirDe: false, categoria: null, adicionais: [{ nome: "Cabelo longo", valor: 20, unidade: null }] },
+              { id: "9b2e4d18-6a3c-4f71-8e05-d3c1a7b92f46", nome: "Coloração", descricao: "Inclui lavagem", duracaoMinutos: 90, preco: null, precoAPartirDe: false, categoria: null, adicionais: [{ id: "e3a8c4d0-7b21-4f5e-9a36-1c0d8b2f6e47", nome: "Cabelo longo", valor: 20, unidade: null }] },
             ] } } },
           }),
           ...erros(),

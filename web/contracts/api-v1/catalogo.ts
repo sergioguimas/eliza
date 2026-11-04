@@ -1,8 +1,10 @@
 import { z } from "zod"
 import { LocalDate, Uuid } from "./comum"
 
-/** Custo opcional além de `price`; não entra no valor do agendamento. */
+/** Custo opcional além de `price`. Escolhido ao agendar, soma ao valor do agendamento. */
 export const ServiceAddon = z.object({
+  /** Estável: referência do adicional ao agendar. */
+  id: Uuid,
   name: z.string(),
   price: z.number().positive(),
   /** Ex.: "por unha". null = valor fixo. */
