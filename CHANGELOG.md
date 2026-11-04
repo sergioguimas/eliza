@@ -14,6 +14,16 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
   pela coluna `autoatendimento_config.canal_web`, desligado por padrão. Migration
   `20261104130000_autoatendimento_canal_web`. A API de Autoatendimento passa a aceitar o ticket de visitante em
   contexto, serviços, profissionais e horários, sem mudar a versão do contrato.
+- API v1: `POST /api/v1/appointments` aceita `addons` (opcional), com só `id` e `quantity` de cada adicional do
+  serviço; o Eliza copia nome e valor do catálogo e grava em `price` o total (serviço mais adicionais). `GET`
+  e as respostas de escrita passam a devolver `addons` (`id`, `name`, `unit_price`, `unit`, `quantity`, `total`),
+  sempre presente e `[]` quando não há. Sem o campo, nada muda. Adicional que não é do serviço, repetido ou com
+  quantidade fora de 1 a 20, ou campo de valor no item, responde `422 VALIDATION_ERROR`.
+- Autoatendimento: `POST /agendamentos` aceita `adicionais` (opcional, `id` e `quantidade`), e todo
+  `AgendamentoResumo` (criação, listagem e contexto) traz `adicionais` e `valorTotal`, o total calculado pelo
+  Eliza. O atendente passa a poder incluir adicionais no agendamento e deve apresentar o total como estimado.
+  A versão do contrato continua `1`: tudo é aditivo. Remarcar mantém adicionais e valor, e pedido repetido
+  devolve o agendamento já criado sem somar de novo.
 
 ## [1.1.0] - 2026-11-03
 

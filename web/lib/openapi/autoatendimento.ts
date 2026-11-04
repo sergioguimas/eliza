@@ -66,6 +66,8 @@ const resumo = {
   fim: { utc: "2026-10-05T18:00:00.000Z", local: "2026-10-05T15:00" },
   servico: { id: ID_EXEMPLO.servico, nome: "Corte de cabelo" },
   profissional: { id: ID_EXEMPLO.profissional, nome: "Ana Profissional" },
+  adicionais: [],
+  valorTotal: 60,
   podeCancelar: true,
   podeRemarcar: true,
   podeConfirmar: false,
@@ -151,7 +153,8 @@ Entrada: \`AAAA-MM-DDTHH:mm\` no relógio de **São Paulo**, sem offset. Saída:
 ## Regras de agendamento
 
 - Todo agendamento criado nasce **\`pending\`**: aguarda o estabelecimento aprovar. Só quem aprova é o tenant.
-- **Remarcar** mantém o mesmo registro e o volta para \`pending\`; o serviço não muda.
+- **Remarcar** mantém o mesmo registro e o volta para \`pending\`; o serviço não muda, e os adicionais e o valor total continuam os mesmos.
+- **Adicionais:** o valor do agendamento é o do serviço mais os adicionais escolhidos, calculado pelo Eliza (\`valorTotal\`). Apresente-o como estimado e nunca calcule outro valor.
 - **Confirmar** é o cliente dizer "vou": só \`scheduled\`. \`pending\` não se confirma.
 - **Posse:** só os agendamentos do cliente do ticket; o resto responde \`404\`.
 - **Política** (vem em \`politica\` no contexto): antecedência mínima, janela máxima em dias e máximo de agendamentos ativos.
@@ -222,6 +225,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
     profissionalId: "Profissional ativo (de `GET /horarios`).",
     inicio: "`AAAA-MM-DDTHH:mm`, relógio de São Paulo. Tem de ser um dos horários de `GET /horarios`, dentro da janela e da antecedência.",
     observacao: "Texto livre do cliente (até 500 caracteres).",
+    adicionais: "Opcional. Só adicionais que o serviço tem em `GET /servicos`, cada um com `id` e `quantidade` (1 a 20; `1` quando o adicional não tem `unidade`). Sem `id` repetido, até 10. Nome e valor saem do catálogo: `valor` e qualquer outro campo são recusados.",
   })
   anotar(componentes, "RemarcarAgendamentoBody", {
     inicio: "Novo horário, mesmas regras da criação.",
@@ -243,6 +247,8 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
   anotar(componentes, "EnviarMensagemBody", { texto: "Texto enviado como está, sem template, para o telefone do ticket." })
   anotar(componentes, "EscalonarBody", { motivo: "Por que a equipe precisa agir.", resumo: "Resumo para a equipe, sem dado sensível além do necessário." })
   anotar(componentes, "AgendamentoResumo", {
+    adicionais: "Adicionais escolhidos, com a cópia de nome, valor unitário e `total` de cada um. `[]` quando não há.",
+    valorTotal: "Total do agendamento em reais (serviço + adicionais), calculado pelo Eliza. Apresente como **estimado**, porque o valor final é confirmado no atendimento; nunca recalcule. `null` = sem valor gravado.",
     podeCancelar: "Calculado pelo Eliza com a política do estabelecimento; não recalcule.",
     podeRemarcar: "Igual a `podeCancelar`.",
     podeConfirmar: "`true` só em `scheduled` e antes do horário.",
@@ -326,7 +332,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
         "x-atendente": true,
         "x-atendente-publico": true,
         summary: "Serviços ativos",
-        description: "Serviços ativos da organização do ticket. Não exige cliente identificado: um desconhecido pode perguntar preço antes de se cadastrar. `preco: null` = não divulgar; preço `0` continua `0`. `precoAPartirDe: true` = `preco` é o valor mínimo; o atendente deve dizer \"a partir de\". `adicionais` são custos opcionais além de `preco` (`unidade` ex.: \"por unha\"; `null` = valor fixo), cada um com `id` estável: informe-os ao cliente quando forem relevantes e nunca os some ao preço por conta própria. Por enquanto o agendamento criado por este canal ainda nasce com o preço base do serviço. Sempre presente, `[]` quando não há.",
+        description: "Serviços ativos da organização do ticket. Não exige cliente identificado: um desconhecido pode perguntar preço antes de se cadastrar. `preco: null` = não divulgar; preço `0` continua `0`. `precoAPartirDe: true` = `preco` é o valor mínimo; o atendente deve dizer \"a partir de\". `adicionais` são custos opcionais além de `preco` (`unidade` ex.: \"por unha\"; `null` = valor fixo), cada um com `id` estável: informe-os ao cliente quando forem relevantes e, para incluí-los, envie `id` e `quantidade` em `POST /agendamentos`. Nunca some um adicional ao preço por conta própria: o valor do pedido é calculado pelo Eliza e devolvido em `valorTotal`. Sempre presente, `[]` quando não há.",
         ...comum,
         responses: {
           "200": respostaOk("Lista de serviços.", rServicos, {
@@ -409,10 +415,10 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
         "x-atendente": true,
         summary: "Cria um agendamento (nasce pending)",
         description:
-          "Cria um agendamento para o **cliente do ticket** (nunca do body). Nasce `pending`: aguarda o estabelecimento aprovar, então diga isso ao cliente. O preço vem do serviço. Nenhuma mensagem de WhatsApp é enviada pelo Eliza (quem responde é você).\n\nValidações, nesta ordem: serviço e profissional ativos (`NOT_FOUND`) → limite de agendamentos ativos (`ACTIVE_LIMIT_REACHED`) → janela (`OUT_OF_WINDOW`) → antecedência (`NOTICE_TOO_SHORT`) → horário livre e na grade (`SLOT_UNAVAILABLE`, com até 3 `sugestoes` do mesmo dia e profissional).\n\n**Idempotência:** repetir o mesmo pedido (mesmo cliente, profissional e início) em até 10 minutos devolve o agendamento já criado, com o mesmo `id`.\n\nLimites: `aa-escrita` (20/h) e `aa-criar` (5/24h)." +
+          "Cria um agendamento para o **cliente do ticket** (nunca do body). Nasce `pending`: aguarda o estabelecimento aprovar, então diga isso ao cliente. O valor vem do serviço mais os `adicionais` escolhidos. Nenhuma mensagem de WhatsApp é enviada pelo Eliza (quem responde é você).\n\n**Adicionais** (campo opcional `adicionais`): só ofereça adicional que o serviço tem em `GET /servicos`, nunca um item inventado. Quando o adicional tem `unidade` (ex.: \"por unha\"), pergunte a quantidade ao cliente (1 a 20); sem `unidade` o valor é fixo e a quantidade é sempre 1. Envie só `id` e `quantidade`: o Eliza copia nome e valor do catálogo, e campo `valor` ou `nome` é recusado. O Eliza calcula o total e o devolve em `valorTotal` (e os itens em `adicionais`): apresente esse valor ao cliente como **estimado**, porque o valor final é confirmado no atendimento, e nunca calcule outro valor por conta própria. Sem `adicionais`, o agendamento nasce só com o preço do serviço.\n\nValidações, nesta ordem: serviço e profissional ativos (`NOT_FOUND`) → limite de agendamentos ativos (`ACTIVE_LIMIT_REACHED`) → janela (`OUT_OF_WINDOW`) → antecedência (`NOTICE_TOO_SHORT`) → adicional válido (`VALIDATION_ERROR`: não é do serviço, repetido ou quantidade inválida) → horário livre e na grade (`SLOT_UNAVAILABLE`, com até 3 `sugestoes` do mesmo dia e profissional).\n\n**Idempotência:** repetir o mesmo pedido (mesmo cliente, profissional e início) em até 10 minutos devolve o agendamento já criado, com o mesmo `id`, os mesmos `adicionais` e o mesmo `valorTotal`: nada é somado de novo, e `adicionais` diferentes no pedido repetido não alteram o que já foi criado.\n\nLimites: `aa-escrita` (20/h) e `aa-criar` (5/24h)." +
           "\n\n> No Swagger, este botão **cria dados reais** na organização do ticket.",
         ...comum,
-        requestBody: corpoJson(bCriar, { exemplo: { summary: "Corte às 14:30", value: { servicoId: ID_EXEMPLO.servico, profissionalId: ID_EXEMPLO.profissional, inicio: "2026-10-05T14:30", observacao: "Primeira vez" } } }),
+        requestBody: corpoJson(bCriar, { exemplo: { summary: "Corte às 14:30", value: { servicoId: ID_EXEMPLO.servico, profissionalId: ID_EXEMPLO.profissional, inicio: "2026-10-05T14:30", observacao: "Primeira vez" } }, comAdicionais: { summary: "Manutenção com 2 unhas quebradas", value: { servicoId: ID_EXEMPLO.servico, profissionalId: ID_EXEMPLO.profissional, inicio: "2026-10-05T14:30", adicionais: [{ id: "4f6a1c92-3d58-4b07-a1e4-8c2b9d703e15", quantidade: 2 }] } } }),
         responses: {
           "201": respostaOk("Agendamento criado em `pending`.", rAgendamento, { exemplo: { summary: "Criado", value: { data: { agendamento: resumo } } } }),
           ...erros(

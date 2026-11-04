@@ -80,13 +80,13 @@ aceita ISO com offset/`Z`. Saída traz `start_time` (UTC) e `start_local`.
 | Método | Rota | Escopo | Descrição |
 |---|---|---|---|
 | GET | `/me` | read | Tenant e dados da chave |
-| GET | `/services` | read | Serviços ativos (`id, title, description, duration_minutes, price, price_from, category, addons`; `addons` são custos opcionais além de `price`, `[{ id, name, price, unit }]` (`id` estável), `[]` quando não há; os escolhidos no painel e na página pública somam ao valor do agendamento, e o `POST /appointments` ainda não os aceita; `category` é `null` quando o serviço não tem grupo; `price_from: true` = `price` é o valor mínimo, "a partir de"; `description` são as observações do serviço, até 500 caracteres) |
+| GET | `/services` | read | Serviços ativos (`id, title, description, duration_minutes, price, price_from, category, addons`; `addons` são custos opcionais além de `price`, `[{ id, name, price, unit }]` (`id` estável), `[]` quando não há; o `POST /appointments` aceita os escolhidos em `addons` (só `id` e `quantity`) e o valor do agendamento passa a ser o total; `category` é `null` quando o serviço não tem grupo; `price_from: true` = `price` é o valor mínimo, "a partir de"; `description` são as observações do serviço, até 500 caracteres) |
 | GET | `/professionals` | read | Profissionais ativos |
 | GET | `/availability?professional_id&service_id&date=YYYY-MM-DD` | read | Horários livres para o serviço. `service_id` é obrigatório (422 sem ele). `meta.grid_step_minutes` traz o passo da grade |
 | GET | `/customers?phone=` `?document=` `?q=` | read | Busca de clientes (máx. 20). Exatamente um critério, senão 422 |
 | GET | `/appointments` | read | Lista. Filtros: `status` (vírgula), `from`, `to` (data ou data/hora), `customer_id`, `professional_id`, `limit` (≤100), `offset` |
-| POST | `/appointments` | write | Cria (201) |
-| GET | `/appointments/{id}` | read | Detalhe |
+| POST | `/appointments` | write | Cria (201). Aceita `addons` opcional (ver abaixo) |
+| GET | `/appointments/{id}` | read | Detalhe. `price` é o total (serviço + adicionais) e `addons` traz a cópia dos adicionais escolhidos, `[]` quando não há |
 | PATCH | `/appointments/{id}` | write | Remarca/altera: `start_time`, `professional_id`, `service_id`, `notes`. Trocar o serviço recalcula o valor: `price` passa a ser o do novo serviço e os adicionais escolhidos são removidos (agendamento pago é recusado) |
 | POST | `/appointments/{id}/confirm` | write | Confirma |
 | POST | `/appointments/{id}/cancel` | write | Cancela (mantém o registro). `reason` opcional |
@@ -105,6 +105,7 @@ POST /api/v1/appointments
   "start_time": "2026-10-05T14:30",
   "notes": "opcional",
   "status": "scheduled",
+  "addons": [{ "id": "uuid-do-adicional", "quantity": 2 }],
   "notify": false
 }
 ```
@@ -114,6 +115,21 @@ reusa o cliente do tenant que casar por telefone/documento (sem sobrescrever
 cadastro) ou cria um novo; se o telefone/documento casar com mais de um
 cadastro, responde 409 `CUSTOMER_AMBIGUOUS`. `status` inicial: `pending`,
 `scheduled` (padrão) ou `confirmed`.
+
+**Adicionais (`addons`, opcional).** Escolha adicionais do serviço informando só
+`id` (o de `addons` em `GET /services`, do mesmo serviço) e `quantity` (1 a 20;
+`1` quando o adicional não tem `unit`). Nome e valor saem do catálogo no
+servidor: `price` ou qualquer outro campo no item é recusado, assim como `id`
+repetido, mais de 10 itens, adicional que não é do serviço e quantidade fora de
+1 a 20 (`422 VALIDATION_ERROR`). O agendamento grava `price` = preço do serviço
+mais a soma dos adicionais (**`price` é sempre o total**, o que entra nas
+finanças) e guarda uma cópia em `addons`. Sem o campo, o comportamento é o de
+antes: `price` é o do serviço e `addons` é `[]`.
+
+Cada item de `addons` na resposta tem o formato
+`{ id, name, unit_price, unit, quantity, total }`. A cópia não muda quando o
+catálogo muda. Não há rota para ajustar os adicionais depois de criado; trocar
+o serviço (`PATCH`) remove os adicionais e recalcula o valor.
 
 **Notificação (`notify`, padrão `false`).** Envia WhatsApp pela instância do
 tenant, mas só para cliente que **já existia** antes do request (por

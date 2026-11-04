@@ -1,6 +1,6 @@
 /**
- * Adicionais escolhidos num agendamento. Fase 1: painel e /marcar usam `AdicionaisEscolhidos`;
- * as demais schemas entram na fase 2 (API v1 e Autoatendimento).
+ * Adicionais escolhidos num agendamento. Painel, /marcar e Autoatendimento usam `AdicionaisEscolhidos`
+ * (entrada) e `AdicionalDoAgendamento` (saída); a API v1 usa `AppointmentAddonsInput` e `AppointmentAddon`.
  * Documentação: docs/contratos/adicionais/README.md
  *
  * Quem chama só informa `id` e quantidade. Nome e valor saem do catálogo no

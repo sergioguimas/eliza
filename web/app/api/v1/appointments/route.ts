@@ -68,6 +68,7 @@ export const POST = apiRoute("write", async ({ db, organizationId, keyPrefix, bo
       inicio: horaLocalParaUtc(input.start_time),
       observacao: input.notes,
       status: input.status,
+      adicionais: input.addons?.map((a) => ({ id: a.id, quantidade: a.quantity })),
     }
   )
 

@@ -8,6 +8,7 @@ import {
   UtcInstant,
   Uuid,
 } from "./comum"
+import { AppointmentAddon, AppointmentAddonsInput } from "../comum/adicionais"
 import { CustomerInput } from "./clientes"
 
 // ---------------------------------------------------------------- resposta
@@ -23,7 +24,10 @@ export const Appointment = z.object({
   customer: z.object({ id: Uuid, name: z.string().nullable(), phone: z.string().nullable() }),
   service: z.object({ id: Uuid, title: z.string(), duration_minutes: z.number().int() }).nullable(),
   professional: z.object({ id: Uuid, name: z.string() }).nullable(),
+  /** Total do agendamento: serviço mais `addons`. */
   price: z.number().nullable(),
+  /** Cópia dos adicionais escolhidos ao agendar. `[]` quando não há. */
+  addons: z.array(AppointmentAddon),
   payment_status: PaymentStatus.nullable(),
   payment_method: z.string().nullable(),
   paid_at: UtcInstant.nullable(),
@@ -66,6 +70,8 @@ export const CreateAppointmentBody = z
     start_time: DateTimeInput,
     notes: z.string().trim().max(500).nullable().optional(),
     status: z.enum(["pending", "scheduled", "confirmed"]).default("scheduled"),
+    /** Opcional. Só `id` e `quantity`: nome e valor saem do catálogo, e campo `price` é recusado. */
+    addons: AppointmentAddonsInput.optional(),
     notify,
   })
   .strict()
