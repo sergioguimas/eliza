@@ -99,7 +99,7 @@ para `desconhecido`.
    (`organizacao.termos`: use "cliente", "profissional" etc. como o estabelecimento fala), o expediente, a política, quem é o cliente e os
    agendamentos futuros. `politica.instrucoesAtendimento` é texto do estabelecimento para você (avisos, tom).
 3. **Entender o pedido** (isso é com o atendente). Para agendar:
-   - `GET /servicos` (inclui `categoria`, `null` quando sem grupo, e `adicionais`, `[]` quando não há) e `GET /profissionais` (catálogo ativo; todo profissional atende todo serviço).
+   - `GET /servicos` (inclui `categoria`, `null` quando sem grupo, e `adicionais`, `[]` quando não há; o `id` de cada adicional é a referência para agendar) e `GET /profissionais` (catálogo ativo; todo profissional atende todo serviço).
    - **`GET /horarios?servicoId=…&data=AAAA-MM-DD`** devolve os horários livres de **cada** profissional (com `motivoVazio` quando não há).
      Ofereça ao cliente só horários desta lista.
 4. **`POST /agendamentos`** com `servicoId`, `profissionalId` e `inicio` (um dos horários oferecidos). Responde `201` com o agendamento em
@@ -123,6 +123,8 @@ curl -s "$B/contexto" "${H[@]}"
 curl -s "$B/horarios?servicoId=$SERVICO&data=2026-10-05" "${H[@]}"
 curl -s -X POST "$B/agendamentos" "${H[@]}" -H "Content-Type: application/json" \
   -d '{"servicoId":"'$SERVICO'","profissionalId":"'$PROF'","inicio":"2026-10-05T14:30","observacao":"Primeira vez"}'
+# Com adicionais do serviço (só id e quantidade; o valor é calculado pelo Eliza e volta em valorTotal):
+#   -d '{"servicoId":"'$SERVICO'","profissionalId":"'$PROF'","inicio":"2026-10-05T14:30","adicionais":[{"id":"'$ADICIONAL'","quantidade":2}]}'
 curl -s -X POST "$B/mensagens" "${H[@]}" -H "Content-Type: application/json" \
   -d '{"texto":"Pronto! Seu horário está aguardando a aprovação do estabelecimento."}'
 ```
@@ -139,6 +141,18 @@ curl -s -X POST "$B/mensagens" "${H[@]}" -H "Content-Type: application/json" \
   aprova de novo. Avise o cliente.
 - Cancelar muda para `canceled` e **nunca apaga** o registro.
 - Use `podeCancelar`, `podeRemarcar` e `podeConfirmar` de cada agendamento: o Eliza já calculou com a política do estabelecimento. Não recalcule.
+
+**Adicionais e valor** (aditivo; a versão do contrato continua `1`)
+
+- `POST /agendamentos` aceita `adicionais` (opcional): `[{ id, quantidade }]`, até 10, sem `id` repetido, quantidade de 1 a 20.
+  Só ofereça adicional que o serviço tem em `GET /servicos`; quando o adicional tem `unidade` (ex.: "por unha"), pergunte a
+  quantidade; sem `unidade` o valor é fixo e a quantidade é 1. Nunca invente item. Nome e valor saem do catálogo: `valor` e
+  qualquer outro campo no item são recusados (`422`).
+- Todo agendamento (`AgendamentoResumo`, na criação, na listagem e no contexto) traz `adicionais` (a cópia escolhida, `[]` quando
+  não há) e `valorTotal`: serviço mais adicionais, calculado pelo Eliza. Apresente `valorTotal` ao cliente como **estimado**: o
+  valor final é confirmado no atendimento. Nunca calcule outro valor.
+- Pedido repetido em até 10 minutos devolve o agendamento já criado, com os mesmos adicionais e o mesmo total; nada é somado de novo.
+- **Remarcar** não mexe nos adicionais nem no valor.
 
 **Política do estabelecimento** (`contexto.politica`; valores padrão entre parênteses)
 

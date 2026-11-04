@@ -137,3 +137,77 @@ Diff do domínio, das actions e das telas lido contra o contrato. Aceite rodado 
 - A entrada do log não apareceu na ficha da cliente no teste, então o rótulo novo não foi visto em tela.
 
 **Pendente no deploy:** rodar de novo o `update` de ids do §2.
+
+---
+
+# Fase 2, lado do Eliza: API v1 e Autoatendimento
+
+> Contrato: §8, §9 (parte Eliza) e passos 9 e 10 do §10. Executado em 2026-11-03 na branch `development`, **sem commit**.
+> O `sola-agens` (passo 11) não foi tocado.
+
+## Arquivos alterados
+
+- Contratos Zod: `web/contracts/api-v1/agendamentos.ts` (`CreateAppointmentBody.addons`, `Appointment.addons`), `web/contracts/autoatendimento/agendamentos.ts` (`CriarAgendamentoBody.adicionais`, `AgendamentoResumo.adicionais` e `valorTotal`), `web/contracts/comum/adicionais.ts` (só o comentário do cabeçalho).
+- API v1: `web/lib/api/serializar.ts` (`paraAppointment` devolve `addons`), `web/app/api/v1/appointments/route.ts` (repassa `addons` como `adicionais` ao domínio).
+- Autoatendimento: `web/lib/autoatendimento/agendamentos.ts` (resumo com `adicionais` e `valorTotal`), `web/lib/autoatendimento/escrita.ts` (`criarDoCliente` repassa `adicionais`).
+- OpenAPI: `web/lib/openapi/v1.ts`, `web/lib/openapi/autoatendimento.ts`.
+- Docs: `docs/API.md`, `docs/API_AUTOATENDIMENTO.md`, `docs/contratos/autoatendimento/03-catalogo-e-horarios.md`, `04-agendamentos.md`, cabeçalho de `docs/contratos/adicionais/README.md`, este relatório e `CHANGELOG.md` (`[Não publicado]` › `Adicionado`).
+- `web/lib/api/leitura-agendamentos.ts` e `web/lib/domain/agendamentos.ts` não precisaram de mudança: a fase 1 já lia `addons` e `criarAgendamento` já aceitava `adicionais`.
+
+## O que foi feito
+
+- **v1:** `POST /appointments` aceita `addons: [{ id, quantity }]` (opcional) e o repassa ao domínio; a resposta e o `GET` trazem `addons` (`{ id, name, unit_price, unit, quantity, total }`), sempre presente. Adicional inválido sai como `VALIDATION_ERROR` pelo mapeamento existente de `DomainError`. `price` está documentado como total.
+- **Autoatendimento:** `criarDoCliente` repassa `body.adicionais`. `AgendamentoResumo` ganhou `adicionais` e `valorTotal` (= `appointments.price`). `paraResumo` é o único lugar que monta o resumo e usa `lerAdicionaisAplicados`. Os `select` (listagem, que também alimenta o contexto, posse por id e retentativa C5) agora usam a mesma constante `SELECT_RESUMO`, com `price` e `addons`. A resposta do domínio (`resumoDeCompleto`) passa `price` e a cópia pelo mesmo caminho.
+- **C5:** o pedido repetido devolve o agendamento já criado pelo `select` e nada é somado de novo. O pedido repetido não revalida os `adicionais` do novo corpo (ele nem chega ao domínio); fica documentado nas descrições e no 04.
+- **Remarcar:** nenhuma mudança de código. `editarAgendamento` só toca `price` e `addons` na troca de serviço, e a remarcação do Autoatendimento nunca troca. Documentado no 04.
+- **OpenAPI do atendente:** a descrição do `POST /agendamentos` ganhou a regra (só oferecer adicional que o serviço tem, nunca inventar item; perguntar a quantidade quando há `unidade`; enviar só `id` e `quantidade`; apresentar `valorTotal` como estimado, com o valor final confirmado no atendimento; nunca calcular outro valor). `x-atendente: true` segue no `POST` (conferido gerando o documento). Também ganhou exemplo `comAdicionais`, anotação de campos e menção na seção "Regras de agendamento".
+- **Textos da fase 1:** `GET /servicos` deixou de dizer "nunca os some ao preço" e "nasce com o preço base"; agora manda enviar `id` e `quantidade` e diz que o valor é calculado pelo Eliza (`valorTotal`). `GET /services` da v1, `docs/API.md` e o contrato 03 deixaram de dizer que o `POST` não aceita adicionais.
+
+## Verificações
+
+- `node node_modules/typescript/bin/tsc --noEmit -p .`: sem saída, `exit=0`.
+- `npm test`: `# tests 16`, `# pass 16`, `# fail 0`.
+- ESLint nos 9 arquivos `.ts` tocados (`contracts/autoatendimento/agendamentos.ts`, `contracts/api-v1/agendamentos.ts`, `contracts/comum/adicionais.ts`, `lib/api/serializar.ts`, `app/api/v1/appointments/route.ts`, `lib/autoatendimento/escrita.ts`, `lib/autoatendimento/agendamentos.ts`, `lib/openapi/v1.ts`, `lib/openapi/autoatendimento.ts`): `exit=0`, sem erro nem aviso.
+- Script sem banco `scratchpad/verifica-fase2.cjs`, 31 casos, todos ok. Transpila os arquivos reais do repositório e exercita: `AppointmentAddonsInput` e `AdicionaisEscolhidos` (aceitam válido; recusam id repetido, quantidade 21, mais de 10 itens e campo extra `price` ou `valor`); `CreateAppointmentBody` e `CriarAgendamentoBody` (válidos sem o campo novo e com ele; recusam item com valor, quantidade 21 e repetido); `paraAppointment` (`addons` sai como `[{ id, name: "Unha quebrada", unit_price: 5, unit: "por unha", quantity: 2, total: 10 }]`, `price` 120, `[]` quando não há, saída aceita pelo Zod `Appointment`, que exige `addons`); `paraResumo` e `resumoDeCompleto` (`adicionais` com total, `valorTotal = price`, agendamento antigo vira `[]` e `null`, `addons` malformado vira `[]`, saída aceita pelo Zod `AgendamentoResumo`).
+- Script sem banco `scratchpad/verifica-openapi.cjs`: gera os dois documentos OpenAPI e confere `x-atendente: true` no `POST /agendamentos` do Autoatendimento, as cinco instruções do atendente na descrição, exemplos `comAdicionais`, schemas com `adicionais`, `valorTotal`, `addons` e suas descrições, `Appointment.addons` obrigatório na v1 e o texto antigo de `GET /servicos` ausente.
+- `grep` de `preço base`, `até a fase 2`, `ainda não os aceita`, `nunca os some`, `ainda nasce`, `preço vem do serviço` em `web` e `docs`, fora do contrato e deste relatório: restam só dois comentários ("o preço base é o total gravado menos os adicionais atuais", A6), que são verdadeiros e não falam de canal.
+
+## Divergências do contrato e decisões
+
+1. **`web/lib/api/leitura-agendamentos.ts` não foi alterado.** O contrato (§8) manda tocá-lo, mas a fase 1 já o deixou lendo `addons` e preenchendo `adicionais`; `paraAppointment` era a peça que faltava.
+2. **Pedido repetido não valida o corpo novo contra o catálogo** (a retentativa C5 responde antes de `criarAgendamento`). É o que o contrato pede ("sem somar nada de novo"); anotado nas docs.
+3. **`resumoDeCompleto` converte `adicionais` com `adicionaisParaColuna` e lê de volta com `lerAdicionaisAplicados`**, em vez de copiar direto: `paraResumo` recebe uma linha de banco, então o resumo vindo do domínio reconstrói a linha e passa pelo mesmo leitor. Resultado igual, ao custo de uma conversão de ida e volta.
+4. **`SELECT_RESUMO` virou constante única, movida para o topo do arquivo**, e a listagem passou a usá-la (antes tinha o mesmo texto escrito à mão). Evita que um `select` fique sem `price` e `addons`.
+5. **`CHANGELOG.md`:** um item para a v1 e outro para o Autoatendimento, ambos em `Adicionado`; sem item `Modificado` para os textos de documentação.
+6. **Exemplo `comAdicionais` do Autoatendimento** reaproveita o id de serviço de exemplo ("Corte de cabelo") com adicional de unhas, só para ilustrar o formato.
+
+## Não verificado
+
+- **Nenhuma rota foi chamada** (sem servidor, sem banco): `POST /api/v1/appointments` com `addons`, `POST /autoatendimento/agendamentos` com `adicionais`, os `GET`, o contexto, remarcar pelo bot e a retentativa C5 foram verificados só por leitura de código e pelos scripts de funções puras. O Aceite da fase 2 do §11 fica para depois do deploy.
+- Os `select` do Supabase com `price, addons` não foram exercitados contra o banco; `price` é lido como `number`, como já era na v1.
+- O `422` para adicional inválido na rota do Autoatendimento depende do mapeamento de `DomainError` em `criarRota`, não testado em execução.
+- A "conversa real" com a atendente (último item do Aceite) depende do `sola-agens`, passo 11, que não foi feito.
+- Nenhuma tela foi tocada nem aberta.
+
+## Revisão Opus da fase 2, lado do Eliza (2026-11-03)
+
+Diff lido contra o contrato, sem correções. Rotas chamadas de verdade em servidor local, na org `admin`, com adicionais temporários. Dados de teste removidos em seguida.
+
+| Chamada | Resultado |
+|---|---|
+| `POST /api/v1/appointments` com 2 unidades e 1 fixo | 201, `price` 330 e `addons` com `unit_price`, `quantity` e `total` |
+| Mesmo POST sem `addons` | 201, `price` 300, `addons: []` |
+| `GET /api/v1/appointments/{id}` | 200, com `addons` |
+| v1 com id inexistente, fixo com quantidade 2, quantidade 21, `price` no item, item repetido | 422 nos cinco casos |
+| `GET /autoatendimento/servicos` | `adicionais` com `id` |
+| `POST /autoatendimento/agendamentos` com 3 unidades | 201, `valorTotal` 315, `pending` |
+| Pedido repetido com quantidade 9 (C5) | Mesmo agendamento, `valorTotal` 315 |
+| `GET /autoatendimento/agendamentos` | `valorTotal` e `adicionais` em cada item |
+| Autoatendimento com `valor` no item | 422 |
+| Remarcar pelo Autoatendimento | 200, mantém `valorTotal` e `adicionais` |
+
+**Não provado:** id inexistente no Autoatendimento parou antes em `ACTIVE_LIMIT_REACHED`, gerado pelo próprio teste. A validação é a mesma do domínio, que respondeu 422 na v1.
+
+**Update de ids pós-deploy da fase 1:** não foi preciso rodar. O catálogo no ar já traz `adicionais` com `id`, e o banco tem 0 itens sem `id`.
+
+**Pendente:** passo 11, `sola-agens`, depois do deploy desta fase. Lá `agentes/eliza.yaml` tem mudanças não commitadas de outra sessão.

@@ -1,6 +1,7 @@
 import "server-only"
 
 import type { z } from "zod"
+import { adicionaisParaColuna, lerAdicionaisAplicados } from "@/lib/adicionais"
 import type { AgendamentoResumo } from "@/contracts/autoatendimento"
 import type { AgendamentoCompleto } from "@/lib/domain/agendamentos"
 import type { Db } from "@/lib/domain/db"
@@ -10,6 +11,10 @@ import { ApiError } from "@/lib/http/erros"
 import type { ConfigAutoatendimento } from "./config"
 
 type Resumo = z.infer<typeof AgendamentoResumo>
+
+/** Inclui `price` e `addons`: o resumo mostra o total e a cópia dos adicionais. */
+const SELECT_RESUMO =
+  "id, status, start_time, end_time, reminder_sent_at, price, addons, services ( id, title ), professionals ( id, name )"
 
 /**
  * Agendamento do cliente no formato `AgendamentoResumo` (04), mais o que só o
@@ -23,6 +28,8 @@ type Linha = {
   start_time: string
   end_time: string
   reminder_sent_at: string | null
+  price: number | null
+  addons: unknown
   services: { id: string; title: string } | null
   professionals: { id: string; name: string } | null
 }
@@ -50,6 +57,8 @@ export function paraResumo(linha: Linha, config: ConfigAutoatendimento, agora: D
       fim: momento(linha.end_time),
       servico: linha.services ? { id: linha.services.id, nome: linha.services.title } : null,
       profissional: linha.professionals ? { id: linha.professionals.id, nome: linha.professionals.name } : null,
+      adicionais: lerAdicionaisAplicados(linha.addons),
+      valorTotal: linha.price,
       podeCancelar,
       podeRemarcar: podeCancelar,
       podeConfirmar: status === "scheduled" && inicio > agora,
@@ -69,7 +78,7 @@ export async function listarAgendamentosDoCliente(
 
   const { data, error } = await db
     .from("appointments")
-    .select("id, status, start_time, end_time, reminder_sent_at, services ( id, title ), professionals ( id, name )")
+    .select(SELECT_RESUMO)
     .eq("organization_id", p.orgId)
     .eq("customer_id", p.clienteId)
     .in("status", EDITAVEIS)
@@ -84,8 +93,6 @@ export async function listarAgendamentosDoCliente(
 
   return (data ?? []).map((linha) => paraResumo(linha as unknown as Linha, p.config, agora))
 }
-
-const SELECT_RESUMO = "id, status, start_time, end_time, reminder_sent_at, services ( id, title ), professionals ( id, name )"
 
 /**
  * Posse (04): id E org do ticket E cliente identificado. Qualquer outra coisa,
@@ -124,6 +131,8 @@ export function resumoDeCompleto(a: AgendamentoCompleto, config: ConfigAutoatend
       start_time: a.inicio.utc,
       end_time: a.fim.utc,
       reminder_sent_at: null,
+      price: a.price,
+      addons: adicionaisParaColuna(a.adicionais),
       services: a.service ? { id: a.service.id, title: a.service.title } : null,
       professionals: a.professional ? { id: a.professional.id, name: a.professional.name } : null,
     } as Linha,

@@ -55,12 +55,23 @@ const agendamento = {
   service: { id: ID_EXEMPLO.servico, title: "Corte de cabelo", duration_minutes: 30 },
   professional: { id: ID_EXEMPLO.profissional, name: "Ana Profissional" },
   price: 60,
+  addons: [],
   payment_status: "pending",
   payment_method: null,
   paid_at: null,
   notes: null,
   created_at: "2026-10-01T12:00:00.000Z",
   updated_at: null,
+}
+
+const ADICIONAL_EXEMPLO = "4f6a1c92-3d58-4b07-a1e4-8c2b9d703e15"
+
+// Manutenção de R$ 110 com 2 unhas quebradas a R$ 5 cada: `price` já é o total.
+const agendamentoComAdicionais = {
+  ...agendamento,
+  service: { id: "b7d3e9a1-52c4-4f86-9e10-6a8f2c4d1b73", title: "Manutenção de unhas", duration_minutes: 90 },
+  price: 120,
+  addons: [{ id: ADICIONAL_EXEMPLO, name: "Unha quebrada", unit_price: 5, unit: "por unha", quantity: 2, total: 10 }],
 }
 
 const metaSemAviso = { notified: false }
@@ -212,6 +223,7 @@ export function gerarOpenApiV1({ origem }: OpcoesDoDocumento): Objeto {
     start_time: "`AAAA-MM-DDTHH:mm` (São Paulo) ou ISO 8601 com offset. Não precisa cair na grade de /availability, só estar livre e dentro do expediente. Horário passado: 409.",
     notes: "Observação do agendamento (até 500 caracteres).",
     status: "Status inicial. Padrão `scheduled`.",
+    addons: "Adicionais escolhidos, só `id` (de `addons` em `GET /services`, do serviço escolhido) e `quantity` (1 a 20; `1` quando o adicional não tem `unit`). Nome e valor saem do catálogo: campo `price` ou qualquer outro é recusado. Sem `id` repetido, até 10. Omitido = nenhum.",
     notify: NOTIFY,
   })
   anotar(componentes, "UpdateAppointmentBody", {
@@ -231,7 +243,8 @@ export function gerarOpenApiV1({ origem }: OpcoesDoDocumento): Objeto {
   anotar(componentes, "Appointment", {
     start_time: "Início em UTC.",
     start_local: "Início no relógio de São Paulo (`AAAA-MM-DDTHH:mm`).",
-    price: "Preço do serviço no agendamento, em reais.",
+    price: "Total do agendamento em reais: preço do serviço mais a soma de `addons`. É o valor que entra nas finanças.",
+    addons: "Cópia dos adicionais escolhidos ao agendar (`unit_price` é o valor unitário da época; `total` = `unit_price` x `quantity`). `[]` quando não há. Mudar o catálogo depois não altera esta cópia.",
   })
   anotar(componentes, "Availability", { slots: 'Horários de início livres ("HH:mm", relógio de São Paulo), só futuros.', empty_reason: "Por que não há horário. Só vem preenchido quando `slots` está vazio." })
 
@@ -269,7 +282,7 @@ export function gerarOpenApiV1({ origem }: OpcoesDoDocumento): Objeto {
         tags: ["Catálogo"],
         operationId: "listServices",
         summary: "Serviços ativos",
-        description: "Serviços ativos do tenant. `duration_minutes` é 30 quando o cadastro está sem duração. `price_from: true` = `price` é o valor mínimo (\"a partir de\"). `addons` são custos opcionais além de `price` (`unit` ex.: \"por unha\"; `null` = valor fixo); cada item tem `id` estável. Os escolhidos no painel e na página pública de agendamento somam ao valor do agendamento; o `POST /appointments` ainda não os aceita. Sempre presente, `[]` quando não há." + aviso("read"),
+        description: "Serviços ativos do tenant. `duration_minutes` é 30 quando o cadastro está sem duração. `price_from: true` = `price` é o valor mínimo (\"a partir de\"). `addons` são custos opcionais além de `price` (`unit` ex.: \"por unha\"; `null` = valor fixo); cada item tem `id` estável. O `POST /appointments` aceita os escolhidos em `addons` (só `id` e `quantity`) e o valor do agendamento passa a ser o total. Sempre presente, `[]` quando não há." + aviso("read"),
         ...leitura("read"),
         responses: {
           "200": respostaOk("Lista de serviços.", respServicos, {
@@ -379,6 +392,7 @@ export function gerarOpenApiV1({ origem }: OpcoesDoDocumento): Objeto {
         description:
           "Cria o agendamento pela regra de domínio compartilhada com o painel e a página pública. Diferenças do canal API: aceita horário **fora da grade** (basta estar livre e dentro do expediente), **não exige documento** do cliente e recusa horário passado ou ocupado com `409 SLOT_UNAVAILABLE` e `details.sugestoes`. O horário passado vem com `details.motivo = \"antecedencia_minima\"`.\n\n" +
           "`customer` aceita `{ customer_id }` ou `{ name, phone, ... }`; neste caso reaproveita o cadastro do tenant que casar por telefone/documento (sem sobrescrever) ou cria um novo. Se casar com mais de um, `409 CUSTOMER_AMBIGUOUS`: envie `customer_id`.\n\n" +
+          "**`addons`** (opcional) escolhe adicionais do serviço por `id` e `quantity`; o servidor copia nome e valor do catálogo e grava em `price` o **total** (serviço + adicionais). Adicional que não é do serviço, repetido ou com quantidade inválida: `422 VALIDATION_ERROR`. Sem `addons`, o agendamento nasce com o preço do serviço.\n\n" +
           "**`notify`** só envia WhatsApp para cliente que já existia; cliente criado por este request nunca recebe (`meta.notify_skipped = \"new_customer\"`)." +
           aviso("write") +
           "\n\n> No Swagger, este botão **cria dados reais** no tenant da chave; com `notify: true` envia WhatsApp real a cliente existente.",
@@ -392,17 +406,22 @@ export function gerarOpenApiV1({ origem }: OpcoesDoDocumento): Objeto {
             summary: "Cliente novo por nome e telefone",
             value: { customer: { name: "Maria Exemplo", phone: "(11) 90000-0001" }, professional_id: ID_EXEMPLO.profissional, service_id: ID_EXEMPLO.servico, start_time: "2026-10-05T14:30" },
           },
+          comAdicionais: {
+            summary: "Com adicionais (2 unhas quebradas)",
+            value: { customer: { customer_id: ID_EXEMPLO.cliente }, professional_id: ID_EXEMPLO.profissional, service_id: "b7d3e9a1-52c4-4f86-9e10-6a8f2c4d1b73", start_time: "2026-10-05T14:30", addons: [{ id: ADICIONAL_EXEMPLO, quantity: 2 }] },
+          },
         }),
         responses: {
           "201": respostaOk("Agendamento criado.", respAgendamento, {
             criado: { summary: "Criado sem aviso", value: { data: agendamento, meta: metaSemAviso } },
             clienteNovoComNotify: { summary: "notify:true com cliente novo", value: { data: agendamento, meta: { notified: false, notify_skipped: "new_customer" } } },
+            comAdicionais: { summary: "Com adicionais: price é o total", value: { data: agendamentoComAdicionais, meta: metaSemAviso } },
           }),
           ...respostasDeErro(
             [
               ...ERROS_DA_CHAVE,
               "INVALID_JSON",
-              ["VALIDATION_ERROR", "Body inválido, campo desconhecido (o body é estrito) ou status inicial não permitido."],
+              ["VALIDATION_ERROR", "Body inválido, campo desconhecido (o body é estrito), status inicial não permitido ou adicional inválido (que não é do serviço, repetido ou com quantidade fora de 1 a 20)."],
               ["NOT_FOUND", "Serviço, profissional ou `customer_id` inexistente, inativo ou de outro tenant."],
               "SLOT_UNAVAILABLE",
               "CUSTOMER_AMBIGUOUS",
