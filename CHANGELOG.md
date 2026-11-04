@@ -7,6 +7,14 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Não publicado]
 
+### Adicionado
+
+- Chat na página pública de agendamento: o cliente conversa, tira dúvidas sobre serviços e horários, e o atendente
+  preenche o formulário. Quem confirma é sempre o cliente, no "Agendar agora"; o chat nunca grava nada. Ligado por org
+  pela coluna `autoatendimento_config.canal_web`, desligado por padrão. Migration
+  `20261104130000_autoatendimento_canal_web`. A API de Autoatendimento passa a aceitar o ticket de visitante em
+  contexto, serviços, profissionais e horários, sem mudar a versão do contrato.
+
 ## [1.1.0] - 2026-11-03
 
 ### Adicionado

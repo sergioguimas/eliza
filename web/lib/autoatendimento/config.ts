@@ -22,6 +22,8 @@ export type ConfigAutoatendimento = {
   respostaEquipeSemContato: string | null
   palavrasConfirmar: string[] | null
   palavrasCancelar: string[] | null
+  /** Chat da página pública (08). Sozinho não liga nada: exige a config ativa. */
+  canalWeb: boolean
 }
 
 /**
@@ -60,5 +62,17 @@ export async function carregarConfig(db: Db, orgId: string): Promise<ConfigAutoa
     respostaEquipeSemContato: data.resposta_equipe_sem_contato,
     palavrasConfirmar: data.palavras_confirmar,
     palavrasCancelar: data.palavras_cancelar,
+    canalWeb: data.canal_web,
   }
+}
+
+/** Chat ativo = serviço configurado, config ativa e `canal_web` ligado (08 §1). */
+export function canalWebLigado(config: ConfigAutoatendimento | null) {
+  return Boolean(process.env.ATENDENTE_URL?.trim()) && config?.canalWeb === true
+}
+
+export async function chatWebAtivo(db: Db, orgId: string) {
+  if (!process.env.ATENDENTE_URL?.trim()) return false
+
+  return canalWebLigado(await carregarConfig(db, orgId))
 }

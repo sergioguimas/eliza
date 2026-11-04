@@ -32,6 +32,24 @@ export const TicketPayload = z.object({
   exp: z.number().int(),
 })
 
+/**
+ * Ticket de visitante do canal web (contrato 08 §2). Schema separado e estrito:
+ * nenhum consumidor do `TicketPayload` aceita um visitante por acidente (C15).
+ * Emitido pela rota do chat a cada mensagem; nunca chega ao navegador (C14).
+ */
+export const TicketVisitantePayload = z
+  .object({
+    v: z.literal(1),
+    tipo: z.literal("visitante"),
+    /** organizations.id, resolvido pelo slug da página */
+    org: Uuid,
+    /** id da sessão do chat (cookie) */
+    sess: Uuid,
+    iat: z.number().int(),
+    exp: z.number().int(),
+  })
+  .strict()
+
 /** Como o ticket chega ao atendente, dentro da mensagem encaminhada. */
 export const TicketEmitido = z.object({
   token: z.string().min(1),
@@ -39,4 +57,5 @@ export const TicketEmitido = z.object({
 })
 
 export type TicketPayload = z.infer<typeof TicketPayload>
+export type TicketVisitantePayload = z.infer<typeof TicketVisitantePayload>
 export type TicketEmitido = z.infer<typeof TicketEmitido>

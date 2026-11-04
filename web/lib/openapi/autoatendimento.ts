@@ -112,6 +112,8 @@ agendar, remarcar, cancelar, confirmar presença, manter o cadastro, responder e
 
 Operações com \`x-atendente: true\` são as que o atendente expõe ao modelo como ferramenta; a descrição de cada uma é a instrução que o modelo lê. As demais (\`obterContexto\`, \`enviarMensagem\`, \`escalarParaEquipe\`, \`baixarMidia\`) o atendente chama por conta própria e nunca as oferece ao modelo.
 
+Operações com \`x-atendente-publico: true\` também ficam disponíveis no modo anônimo (canal web, ticket de visitante); as demais recusam esse ticket.
+
 ## Autenticação em duas camadas (três headers em toda chamada)
 
 | Header | Prova |
@@ -274,7 +276,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
         operationId: "obterContexto",
         summary: "Contexto do turno",
         description:
-          "Chame **uma vez por turno**, antes de responder. Devolve o instante atual, o vocabulário do nicho, o expediente, a política do estabelecimento, **quem é** o telefone do ticket e os agendamentos futuros dele.\n\n`desconhecido` e `ambiguo` **não** são erro aqui: são dado. Nunca vem documento, e-mail, data de nascimento, endereço, prontuário nem dado de outro cliente.",
+          "Chame **uma vez por turno**, antes de responder. `identificacao.situacao = \"visitante\"` é a pessoa na página pública, sem identidade: só consulta catálogo e horários e não age sobre agendamento ou cadastro. Devolve o instante atual, o vocabulário do nicho, o expediente, a política do estabelecimento, **quem é** o telefone do ticket e os agendamentos futuros dele.\n\n`desconhecido` e `ambiguo` **não** são erro aqui: são dado. Nunca vem documento, e-mail, data de nascimento, endereço, prontuário nem dado de outro cliente.",
         ...comum,
         responses: {
           "200": respostaOk("Contexto do turno.", rContexto, {
@@ -322,6 +324,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
         tags: ["Catálogo e horários"],
         operationId: "listarServicos",
         "x-atendente": true,
+        "x-atendente-publico": true,
         summary: "Serviços ativos",
         description: "Serviços ativos da organização do ticket. Não exige cliente identificado: um desconhecido pode perguntar preço antes de se cadastrar. `preco: null` = não divulgar; preço `0` continua `0`. `precoAPartirDe: true` = `preco` é o valor mínimo; o atendente deve dizer \"a partir de\". `adicionais` são custos opcionais além de `preco` (`unidade` ex.: \"por unha\"; `null` = valor fixo), cada um com `id` estável: informe-os ao cliente quando forem relevantes e nunca os some ao preço por conta própria. Por enquanto o agendamento criado por este canal ainda nasce com o preço base do serviço. Sempre presente, `[]` quando não há.",
         ...comum,
@@ -342,6 +345,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
         tags: ["Catálogo e horários"],
         operationId: "listarProfissionais",
         "x-atendente": true,
+        "x-atendente-publico": true,
         summary: "Profissionais ativos",
         description: "Profissionais ativos. Nunca expõe telefone nem registro profissional. **Não existe vínculo serviço ↔ profissional:** todo profissional ativo atende todo serviço.",
         ...comum,
@@ -357,6 +361,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
         tags: ["Catálogo e horários"],
         operationId: "consultarHorarios",
         "x-atendente": true,
+        "x-atendente-publico": true,
         summary: "Horários livres de um serviço num dia",
         description:
           "Horários de **início** livres para a duração do serviço, um bloco por profissional (**incluindo** quem ficou sem horário, com `motivoVazio`, para você poder dizer \"com a Ana não há, com o Bruno há\"). Já aplica a antecedência mínima.\n\nÉ o mesmo predicado que valida a criação e a remarcação: **se está na lista, a API aceita; se não está, recusa.**\n\nA query é estrita (`organizationId`, telefone etc. dão `422`). Não exige cliente identificado.",

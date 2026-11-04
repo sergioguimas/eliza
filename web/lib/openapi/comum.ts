@@ -29,6 +29,7 @@ export const SIGNIFICADO_DO_CODIGO: Record<ErrorCode, string> = {
   NOTICE_TOO_SHORT: "Menos tempo do que a antecedência mínima do estabelecimento.",
   RATE_LIMITED: "Limite de requisições excedido. Veja o header Retry-After e `details.retry_after_seconds`.",
   WHATSAPP_UNAVAILABLE: "Não foi possível enviar pelo WhatsApp agora.",
+  ATENDENTE_UNAVAILABLE: "Canal web: o atendente não respondeu.",
   INTERNAL_ERROR: "Erro inesperado. O detalhe fica só no log do servidor; informe o request_id ao suporte.",
 }
 
