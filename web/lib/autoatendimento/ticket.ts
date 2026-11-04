@@ -1,7 +1,7 @@
 import "server-only"
 
 import { createHmac, timingSafeEqual } from "node:crypto"
-import { TICKET_TTL_SEGUNDOS, TicketPayload, type TicketEmitido } from "@/contracts/autoatendimento"
+import { TICKET_TTL_SEGUNDOS, TicketPayload, TicketVisitantePayload, type TicketEmitido } from "@/contracts/autoatendimento"
 
 /**
  * Ticket de conversa (README §2): `base64url(JSON).base64url(HMAC-SHA256)`.
@@ -44,8 +44,25 @@ export function emitirTicket(dados: DadosDoTicket, opcoes: Opcoes = {}): TicketE
   }
 }
 
+/** Ticket do canal web (contrato 08 §2): mesmo formato, segredo e TTL do de conversa. */
+export function emitirTicketVisitante(dados: Pick<TicketVisitantePayload, "org" | "sess">, opcoes: Opcoes = {}): TicketEmitido {
+  const segredo = opcoes.segredo ?? segredoDoTicket()
+  const iat = Math.floor((opcoes.agora ?? new Date()).getTime() / 1000)
+  const exp = iat + TICKET_TTL_SEGUNDOS
+
+  const payload = Buffer.from(
+    JSON.stringify({ v: 1, tipo: "visitante", ...dados, iat, exp } satisfies TicketVisitantePayload)
+  ).toString("base64url")
+
+  return {
+    token: `${payload}.${assinar(payload, segredo)}`,
+    expiraEm: new Date(exp * 1000).toISOString(),
+  }
+}
+
 export type ResultadoDoTicket =
-  | { ok: true; payload: TicketPayload }
+  | { ok: true; tipo: "conversa"; payload: TicketPayload }
+  | { ok: true; tipo: "visitante"; payload: TicketVisitantePayload }
   | { ok: false; motivo: "invalido" | "expirado" }
 
 /**
@@ -74,13 +91,17 @@ export function validarTicket(token: string, opcoes: Opcoes = {}): ResultadoDoTi
     return { ok: false, motivo: "invalido" }
   }
 
-  const lido = TicketPayload.safeParse(bruto)
+  const conversa = TicketPayload.safeParse(bruto)
+  const visitante = conversa.success ? null : TicketVisitantePayload.safeParse(bruto)
+  const exp = conversa.success ? conversa.data.exp : visitante?.success ? visitante.data.exp : null
 
-  if (!lido.success) return { ok: false, motivo: "invalido" }
+  if (exp === null) return { ok: false, motivo: "invalido" }
 
   const agoraSegundos = Math.floor((opcoes.agora ?? new Date()).getTime() / 1000)
 
-  if (lido.data.exp <= agoraSegundos) return { ok: false, motivo: "expirado" }
+  if (exp <= agoraSegundos) return { ok: false, motivo: "expirado" }
 
-  return { ok: true, payload: lido.data }
+  if (conversa.success) return { ok: true, tipo: "conversa", payload: conversa.data }
+
+  return { ok: true, tipo: "visitante", payload: visitante!.data! }
 }

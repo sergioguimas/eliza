@@ -1,17 +1,19 @@
 import "server-only"
 
 import { createHash, timingSafeEqual } from "node:crypto"
-import { CONTRATO_VERSAO, HEADER_TICKET, HEADER_VERSAO } from "@/contracts/autoatendimento"
+import type { NextRequest } from "next/server"
+import { CONTRATO_VERSAO, HEADER_TICKET, HEADER_VERSAO, type TicketPayload } from "@/contracts/autoatendimento"
+import type { Db } from "@/lib/domain/db"
 import { ApiError, internalError } from "@/lib/http/erros"
 import type { Autenticador } from "@/lib/http/rota"
-import { carregarConfig, type ConfigAutoatendimento } from "./config"
+import { canalWebLigado, carregarConfig, type ConfigAutoatendimento } from "./config"
 import { TAMANHO_MINIMO_SEGREDO, segredoDoTicket, validarTicket } from "./ticket"
 
 /**
  * O que a rota recebe. Organização e telefone saem SÓ daqui (do ticket):
  * nenhum endpoint os aceita em header, query ou body.
  */
-export type ContextoAutoatendimento = {
+export type ContextoConversa = {
   /** organizations.id do ticket */
   org: string
   /** telefone do ticket, só dígitos, como veio do WhatsApp */
@@ -19,6 +21,12 @@ export type ContextoAutoatendimento = {
   /** Id da mensagem que gerou o ticket (`payload.msg`). Só a rota de mídia usa. */
   mensagemId: string
   config: ConfigAutoatendimento
+}
+
+/** Conversa ou visitante (08 §3). Dois tipos para o compilador barrar telefone nulo onde ele é obrigatório. */
+export type ContextoAutoatendimento = Omit<ContextoConversa, "telefone" | "mensagemId"> & {
+  telefone: string | null
+  mensagemId: string | null
 }
 
 const MENSAGEM_INATIVO = "O atendimento automático não está disponível para este estabelecimento no momento."
@@ -47,15 +55,13 @@ export function tokenDeServicoValido(req: Request) {
 }
 
 /**
- * Autenticação do canal (README §2), nesta ordem:
+ * Passos 1 a 4 da autenticação do canal (README §2), nesta ordem:
  *   1. envs configuradas (senão falha fechada: 500 e log, sem dizer qual faltou);
  *   2. token de serviço -> UNAUTHORIZED;
  *   3. versão do contrato -> VERSION_MISMATCH;
- *   4. ticket: ausente -> TICKET_MISSING; assinatura/forma -> TICKET_INVALID; vencido -> TICKET_EXPIRED;
- *   5. a org do ticket ainda tem a instância `inst` e o add-on ativo -> senão ADDON_INACTIVE
- *      (cobre add-on desligado no meio da conversa e número trocado de org).
+ *   4. ticket: ausente -> TICKET_MISSING; assinatura/forma -> TICKET_INVALID; vencido -> TICKET_EXPIRED.
  */
-export const autenticarTicket: Autenticador<ContextoAutoatendimento> = async (req, db) => {
+function lerTicket(req: NextRequest) {
   const tokenEsperado = process.env.AUTOATENDIMENTO_API_TOKEN || ""
 
   try {
@@ -94,7 +100,12 @@ export const autenticarTicket: Autenticador<ContextoAutoatendimento> = async (re
       : new ApiError("TICKET_INVALID", "Ticket da conversa inválido.")
   }
 
-  const { org, tel, inst, msg } = ticket.payload
+  return ticket
+}
+
+/** Passo 5 da conversa: a org ainda tem a instância `inst` e o add-on ativo (cobre add-on desligado e número trocado de org). */
+async function contextoDaConversa(db: Db, p: TicketPayload): Promise<ContextoConversa> {
+  const { org, tel, inst, msg } = p
 
   const [organizacao, config] = await Promise.all([
     db.from("organizations").select("whatsapp_instance_name").eq("id", org).maybeSingle(),
@@ -111,4 +122,26 @@ export const autenticarTicket: Autenticador<ContextoAutoatendimento> = async (re
   }
 
   return { org, telefone: tel, mensagemId: msg, config }
+}
+
+/** Só ticket de conversa: o padrão é o restrito, e rota nova nasce fechada para visitante (C16). */
+export const autenticarTicket: Autenticador<ContextoConversa> = async (req, db) => {
+  const ticket = lerTicket(req)
+
+  if (ticket.tipo !== "conversa") throw new ApiError("TICKET_INVALID", "Ticket da conversa inválido.")
+
+  return contextoDaConversa(db, ticket.payload)
+}
+
+/** Conversa ou visitante (08 §3), só em contexto, serviços, profissionais e horários. */
+export const autenticarTicketOuVisitante: Autenticador<ContextoAutoatendimento> = async (req, db) => {
+  const ticket = lerTicket(req)
+
+  if (ticket.tipo === "conversa") return contextoDaConversa(db, ticket.payload)
+
+  const config = await carregarConfig(db, ticket.payload.org)
+
+  if (!config || !canalWebLigado(config)) throw new ApiError("ADDON_INACTIVE", MENSAGEM_INATIVO)
+
+  return { org: ticket.payload.org, telefone: null, mensagemId: null, config }
 }

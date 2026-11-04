@@ -44,6 +44,7 @@ export const ErrorCode = z.enum([
   "RATE_LIMITED",
   // 5xx
   "WHATSAPP_UNAVAILABLE",
+  "ATENDENTE_UNAVAILABLE", //  canal web: o atendente não respondeu
   "INTERNAL_ERROR",
 ])
 
@@ -74,6 +75,7 @@ export const HTTP_STATUS_BY_CODE: Record<ErrorCode, number> = {
   NOTICE_TOO_SHORT: 422,
   RATE_LIMITED: 429,
   WHATSAPP_UNAVAILABLE: 502,
+  ATENDENTE_UNAVAILABLE: 502,
   INTERNAL_ERROR: 500,
 }
 

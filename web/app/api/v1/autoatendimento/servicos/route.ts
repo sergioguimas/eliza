@@ -1,10 +1,10 @@
-import { autenticarTicket } from "@/lib/autoatendimento/autenticar"
+import { autenticarTicketOuVisitante } from "@/lib/autoatendimento/autenticar"
 import { listarServicosAtivos } from "@/lib/domain/catalogo"
 import { criarRota } from "@/lib/http/rota"
 
 /** Serviços ativos da org do ticket. Não exige cliente identificado (03). */
 export const GET = criarRota({
-  autenticar: autenticarTicket,
+  autenticar: autenticarTicketOuVisitante,
   handler: async ({ db, org }) => ({
     data: {
       servicos: (await listarServicosAtivos(db, org)).map((s) => ({
