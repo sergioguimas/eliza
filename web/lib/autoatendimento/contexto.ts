@@ -70,7 +70,8 @@ function montarAtendente(config: ConfigAutoatendimento, templateCancelado: strin
  */
 export async function montarContexto(
   db: Db,
-  p: { org: string; telefone: string; config: ConfigAutoatendimento }
+  /** `telefone` nulo = visitante da página pública (08 §4): sem identificação nem agendamentos. */
+  p: { org: string; telefone: string | null; config: ConfigAutoatendimento }
 ): Promise<ContextoDoTurno> {
   const [organizacao, ajustes, identificacao] = await Promise.all([
     db.from("organizations").select("name, niche").eq("id", p.org).maybeSingle(),
@@ -79,7 +80,7 @@ export async function montarContexto(
       .select("days_of_week, open_hours_start, open_hours_end, lunch_start, lunch_end, msg_appointment_canceled")
       .eq("organization_id", p.org)
       .maybeSingle(),
-    identificarCliente(db, p.org, p.telefone),
+    p.telefone ? identificarCliente(db, p.org, p.telefone) : null,
   ])
 
   if (organizacao.error || ajustes.error || !organizacao.data) {
@@ -93,7 +94,7 @@ export async function montarContexto(
   const almocoFim = hhmm(ajustes.data?.lunch_end ?? null)
 
   const agendamentos =
-    identificacao.situacao === "identificado"
+    identificacao?.situacao === "identificado"
       ? await listarAgendamentosDoCliente(db, {
           orgId: p.org,
           clienteId: identificacao.clienteId,
@@ -118,8 +119,9 @@ export async function montarContexto(
       maxAgendamentosAtivos: p.config.maxAgendamentosAtivos,
       instrucoesAtendimento: p.config.instrucoesAtendimento,
     },
-    identificacao:
-      identificacao.situacao === "identificado"
+    identificacao: !identificacao
+      ? { situacao: "visitante" }
+      : identificacao.situacao === "identificado"
         ? {
             situacao: "identificado",
             cliente: { id: identificacao.clienteId, primeiroNome: identificacao.primeiroNome },

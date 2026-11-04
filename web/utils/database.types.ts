@@ -258,6 +258,7 @@ export type Database = {
           atendente_persona: string | null
           atendente_tom: string | null
           ativo: boolean
+          canal_web: boolean
           contato_humano_telefone: string | null
           created_at: string
           instrucoes_atendimento: string | null
@@ -280,6 +281,7 @@ export type Database = {
           atendente_persona?: string | null
           atendente_tom?: string | null
           ativo?: boolean
+          canal_web?: boolean
           contato_humano_telefone?: string | null
           created_at?: string
           instrucoes_atendimento?: string | null
@@ -302,6 +304,7 @@ export type Database = {
           atendente_persona?: string | null
           atendente_tom?: string | null
           ativo?: boolean
+          canal_web?: boolean
           contato_humano_telefone?: string | null
           created_at?: string
           instrucoes_atendimento?: string | null

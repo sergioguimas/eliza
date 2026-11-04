@@ -1,7 +1,7 @@
 # 08 — Canal web: chat da página pública `/marcar/[slug]`
 
-> TO-BE · Contrato v1, **revisão aditiva** (o header de versão continua `1`, ver C21) · ver [README](README.md)
-> **Escrito em:** 2026-10-26 · **Origem do pedido:** `Projetos/sola-agens/docs/RODADA-4-CANAL-WEB-MARCAR.md`
+> AS-IS · Contrato v1, **revisão aditiva** (o header de versão continua `1`, ver C21) · ver [README](README.md)
+> **Construído em:** 2026-11-04, aceite §11 exercitado na org `admin` · **Escrito em:** 2026-10-26 · **Origem do pedido:** `Projetos/sola-agens/docs/RODADA-4-CANAL-WEB-MARCAR.md`
 > (decisões W1–W10, resumo no `sola-agens/CONTRATO.md §10`, rodada 4)
 > **Zod tocados:** `ticket.ts`, `contexto.ts`, `comum/envelope.ts`; **novo:** `web.ts`
 

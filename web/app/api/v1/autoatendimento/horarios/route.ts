@@ -1,5 +1,5 @@
 import { HorariosQuery } from "@/contracts/autoatendimento"
-import { autenticarTicket } from "@/lib/autoatendimento/autenticar"
+import { autenticarTicketOuVisitante } from "@/lib/autoatendimento/autenticar"
 import { consultarHorarios } from "@/lib/autoatendimento/horarios"
 import { criarRota } from "@/lib/http/rota"
 
@@ -8,7 +8,7 @@ import { criarRota } from "@/lib/http/rota"
  * telefone etc. dão 422. Não exige cliente identificado.
  */
 export const GET = criarRota({
-  autenticar: autenticarTicket,
+  autenticar: autenticarTicketOuVisitante,
   handler: async ({ db, org, config, parseQuery }) => ({
     data: await consultarHorarios(db, org, config, parseQuery(HorariosQuery)),
   }),

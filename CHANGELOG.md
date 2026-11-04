@@ -9,6 +9,11 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ### Adicionado
 
+- Chat na página pública de agendamento: o cliente conversa, tira dúvidas sobre serviços e horários, e o atendente
+  preenche o formulário. Quem confirma é sempre o cliente, no "Agendar agora"; o chat nunca grava nada. Ligado por org
+  pela coluna `autoatendimento_config.canal_web`, desligado por padrão. Migration
+  `20261104130000_autoatendimento_canal_web`. A API de Autoatendimento passa a aceitar o ticket de visitante em
+  contexto, serviços, profissionais e horários, sem mudar a versão do contrato.
 - API v1: `POST /api/v1/appointments` aceita `addons` (opcional), com só `id` e `quantity` de cada adicional do
   serviço; o Eliza copia nome e valor do catálogo e grava em `price` o total (serviço mais adicionais). `GET`
   e as respostas de escrita passam a devolver `addons` (`id`, `name`, `unit_price`, `unit`, `quantity`, `total`),

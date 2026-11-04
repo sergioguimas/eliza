@@ -6,6 +6,7 @@ import { PublicBookingForm } from "./public-booking-form"
 import { Database } from "@/utils/database.types"
 import { Metadata } from "next"
 import { paletteClass } from "@/lib/brand-palette"
+import { chatWebAtivo } from "@/lib/autoatendimento/config"
 
 export async function generateMetadata(
   { params }: { params: Promise<{ slug: string }> }
@@ -60,9 +61,10 @@ export default async function PublicBookingPage({
   // filtra por ela. Não dá para usar o client anon aqui: o profissional tem
   // phone/license_number/user_id, que não podem chegar ao HTML público.
   const admin = createAdminClient<Database>()
-  const [services, professionals] = await Promise.all([
+  const [services, professionals, chatAtivo] = await Promise.all([
     listarServicosAtivos(admin, organization.id),
     listarProfissionaisAtivos(admin, organization.id),
+    chatWebAtivo(admin, organization.id),
   ])
 
   // `?servico=<id>` pré-seleciona o serviço (links do site do cliente). Só vale
@@ -85,6 +87,7 @@ export default async function PublicBookingPage({
           services={services}
           professionals={professionals}
           initialServiceId={initialServiceId}
+          chatSlug={chatAtivo ? organization.slug : undefined}
         />
       </div>
     </div>

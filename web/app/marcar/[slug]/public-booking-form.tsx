@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
+import dynamic from "next/dynamic"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
@@ -61,6 +62,12 @@ import { somarAdicionais } from "@/lib/adicionais"
 import { formatarReais, rotuloPreco } from "@/lib/preco"
 import { AddonsPicker } from "@/components/appointments/addons-picker"
 import { getNicheDocuments } from "@/lib/niche-documents"
+import type { AcaoPreencherAgendamento, FormularioChat } from "@/contracts/autoatendimento"
+import { dataLocal, etapaDaEscolha, filtrarAcao } from "@/lib/marcar/acao-chat"
+import type { ResultadoDaAcao } from "./chat-agendamento"
+
+// Org sem chat não baixa nada dele, nem o botão (contrato 08 §7).
+const ChatFlutuante = dynamic(() => import("./chat-flutuante").then((m) => m.ChatFlutuante), { ssr: false })
 
 const formSchema = z.object({
   organization_id: z.string(),
@@ -86,6 +93,8 @@ interface PublicBookingFormProps {
   organizationName?: string
   /** Serviço pré-selecionado (`?servico=<id>`, ex.: link do site do cliente). Já validado pela página. */
   initialServiceId?: string
+  /** Slug da org quando o chat está ativo (contrato 08). Ausente = nada do chat é carregado. */
+  chatSlug?: string
   headline?: string
   subtitle?: string
 }
@@ -110,6 +119,7 @@ export function PublicBookingForm({
   professionals,
   organizationName,
   initialServiceId,
+  chatSlug,
   headline ="Agende seu atendimento online",
   subtitle = "Escolha o serviço, selecione um horário disponível e receba a confirmação pelo WhatsApp.",
 }: PublicBookingFormProps) {
@@ -126,6 +136,11 @@ export function PublicBookingForm({
   const [slotMessage, setSlotMessage] = useState<string | null>(null)
   // Só id e quantidade: nome e valor saem do catálogo no servidor.
   const [addons, setAddons] = useState<AdicionalEscolhido[]>([])
+  // Hora que veio do chat, à espera dos horários do dia (C19): trocar serviço,
+  // profissional ou data recarrega os horários e zera `time`.
+  const horaPendente = useRef<{ hora: string; resolver: (entrou: boolean) => void } | null>(null)
+  const raiz = useRef<HTMLDivElement>(null)
+  const barra = useRef<HTMLDivElement>(null)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -231,15 +246,24 @@ export function PublicBookingForm({
           const result = await getAvailableSlots(selectedProf, selectedDate, organizationId, selectedServiceId || undefined)
           setSlots(result.slots)
           setSlotMessage(result.message || null)
-          form.setValue("time", "")
+          const pendente = horaPendente.current
+          const entrou = !!pendente && result.slots.includes(pendente.hora)
+
+          form.setValue("time", entrou ? pendente.hora : "", { shouldValidate: entrou })
+          horaPendente.current = null
+          pendente?.resolver(entrou)
         } catch {
           toast.error("Erro ao carregar horários disponíveis.")
+          horaPendente.current?.resolver(false)
+          horaPendente.current = null
         } finally {
           setLoadingSlots(false)
         }
       } else {
         setSlots([])
         setSlotMessage(null)
+        horaPendente.current?.resolver(false)
+        horaPendente.current = null
       }
     }
 
@@ -347,6 +371,97 @@ export function PublicBookingForm({
       el.scrollIntoView({ behavior: "smooth", block: "start" })
     }
   }, [currentStep, mounted])
+
+  // A barra fixa do celular muda de altura; o botão do chat fica sempre acima dela.
+  useEffect(() => {
+    if (!chatSlug || !barra.current) return
+    const observador = new ResizeObserver(([e]) => {
+      raiz.current?.style.setProperty("--altura-barra", `${e.target.getBoundingClientRect().height}px`)
+    })
+    observador.observe(barra.current)
+    return () => observador.disconnect()
+  }, [chatSlug, mounted])
+
+  function lerFormularioDoChat(): FormularioChat {
+    const v = form.getValues()
+
+    return {
+      etapa: currentStep,
+      servicoId: v.service_id || null,
+      profissionalId: v.professional_id || null,
+      data: v.date ? format(v.date, "yyyy-MM-dd") : null,
+      hora: v.time || null,
+    }
+  }
+
+  /** Contrato 08 §7.3. O agente sugere; só entra o que a página conhece. Nunca submete. */
+  async function aplicarAcao(acao: AcaoPreencherAgendamento): Promise<ResultadoDaAcao> {
+    const escolha = filtrarAcao(acao, {
+      servicoIds: services.map((s) => s.id),
+      profissionalIds: professionals.map((p) => p.id),
+      hoje: new Date(),
+    })
+    const antes = form.getValues()
+    const novaData = escolha.data ? dataLocal(escolha.data) : null
+    const mudouServico = !!escolha.servicoId && escolha.servicoId !== antes.service_id
+    const mudouProfissional = !!escolha.profissionalId && escolha.profissionalId !== antes.professional_id
+    const mudouData = !!novaData && novaData.getTime() !== antes.date?.getTime()
+    const recarrega = mudouServico || mudouProfissional || mudouData
+
+    if (escolha.servicoId) form.setValue("service_id", escolha.servicoId, { shouldValidate: true })
+    if (escolha.profissionalId) form.setValue("professional_id", escolha.profissionalId, { shouldValidate: true })
+    if (novaData) form.setValue("date", novaData, { shouldValidate: true })
+
+    const v = form.getValues()
+    let horaEntrou = false
+
+    if (escolha.hora) {
+      // Sem data ou profissional o efeito não busca horários: nada a conferir.
+      if (recarrega && v.date && v.professional_id) {
+        horaEntrou = await new Promise<boolean>((resolver) => {
+          horaPendente.current = { hora: escolha.hora!, resolver }
+        })
+      } else if (!recarrega && slots.includes(escolha.hora)) {
+        form.setValue("time", escolha.hora, { shouldValidate: true })
+        horaEntrou = true
+      }
+    }
+
+    const final = form.getValues()
+
+    setCurrentStep(
+      etapaDaEscolha({
+        servicoId: final.service_id,
+        profissionalId: final.professional_id,
+        data: final.date,
+        hora: final.time,
+      }) as BookingStep
+    )
+
+    const servico = services.find((s) => s.id === final.service_id)
+    const profissional = professionals.find((p) => p.id === final.professional_id)
+    const partes = [
+      servico?.titulo,
+      profissional && `com ${profissional.nome}`,
+      final.date && format(final.date, "EEE dd/MM", { locale: ptBR }),
+      final.time && `às ${final.time}`,
+    ].filter(Boolean)
+    const linhas: string[] = []
+
+    if (escolha.servicoId || escolha.profissionalId || escolha.data || horaEntrou) {
+      linhas.push(`Preenchi: ${partes.join(", ")}.`)
+    }
+    if (escolha.hora && !horaEntrou) {
+      linhas.push(
+        final.date && final.professional_id
+          ? `O horário ${escolha.hora} não está mais livre; escolha outro na etapa 2.`
+          : `Para conferir o horário ${escolha.hora}, escolha antes o profissional e a data.`
+      )
+    }
+    if (escolha.descartou) linhas.push("Parte da sugestão não vale para esta página; confira no formulário.")
+
+    return { linhas }
+  }
 
   async function handleFinalSubmit(values: z.infer<typeof formSchema>) {
     setIsPending(true)
@@ -499,7 +614,15 @@ export function PublicBookingForm({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1400px] px-0 sm:px-6 lg:px-8 pb-36 xl:pb-0">
+    <div ref={raiz} className="mx-auto w-full max-w-[1400px] px-0 sm:px-6 lg:px-8 pb-36 xl:pb-0">
+      {chatSlug && (
+        <ChatFlutuante
+          slug={chatSlug}
+          organizacao={organizationName || "Atendimento"}
+          lerFormulario={lerFormularioDoChat}
+          aplicarAcao={aplicarAcao}
+        />
+      )}
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1.15fr)_380px] 2xl:grid-cols-[minmax(0,1.25fr)_420px]">
         <div className="space-y-6">
           {/* No celular o herói fica enxuto: o nome da organização já é o h1 da
@@ -1175,7 +1298,7 @@ export function PublicBookingForm({
 
               {/* Barra fixa do celular: o próximo passo é sempre o elemento mais
                   forte da tela, e o resumo vira uma linha de apoio acima dele. */}
-              <div className="xl:hidden fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+              <div ref={barra} className="xl:hidden fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
                 <div className="mx-auto max-w-xl space-y-2">
                   <p className="truncate text-xs text-muted-foreground" aria-live="polite">
                     {mobileSummary}

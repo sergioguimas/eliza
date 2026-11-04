@@ -28,6 +28,8 @@ export const Identificacao = z.discriminatedUnion("situacao", [
   z.object({ situacao: z.literal("desconhecido") }),
   /** Mais de um cadastro bate com o telefone: só leitura de catálogo; escalar. */
   z.object({ situacao: z.literal("ambiguo") }),
+  /** Pessoa na página pública, sem identidade: só consulta catálogo e horários (08 §4). */
+  z.object({ situacao: z.literal("visitante") }),
 ])
 
 /** Personalização do atendente por org, já combinada com os padrões do Eliza (07 §5). */
