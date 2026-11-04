@@ -21,6 +21,12 @@ agendamento existe mas é de outro cliente.
   - `podeCancelar` = status ∈ {`pending`, `scheduled`, `confirmed`} e `antecedenciaOk`
   - `podeRemarcar` = `podeCancelar`
   - `podeConfirmar` = status = `scheduled` e `inicio > agora`
+- `adicionais` (acrescentado em 04/11/2026, aditivo; a versão do contrato continua `1`): cópia gravada em
+  `appointments.addons`, lida com `lerAdicionaisAplicados`, no formato `AdicionalDoAgendamento`
+  (`id`, `nome`, `valorUnitario`, `unidade`, `quantidade`, `total`). `[]` quando não há e em agendamento antigo.
+- `valorTotal`: `appointments.price`, que é o total (serviço + adicionais). `null` se não houver valor gravado.
+  O atendente o apresenta como **estimado** e nunca recalcula. Todo lugar que monta o resumo (listagem, contexto,
+  posse por id, retentativa e a resposta do domínio) seleciona `price` e `addons`.
 
 `pending` significa **aguardando aprovação do estabelecimento**. Confirmar
 é o cliente dizer "vou", não aprovar; por isso `pending` não se confirma.
@@ -31,7 +37,9 @@ Os futuros e ativos do cliente (mesmo filtro do contexto, máx. 20).
 
 ## `POST /agendamentos` — criar
 
-Body `CriarAgendamentoBody`. Passo a passo:
+Body `CriarAgendamentoBody`. `adicionais` é opcional (`AdicionaisEscolhidos`: `[{ id, quantidade }]`, até 10, sem
+repetir `id`, quantidade de 1 a 20); sem ele a criação é idêntica à de antes. Só `id` e `quantidade` entram: `valor`
+e qualquer outro campo são recusados pelo `.strict()`. Passo a passo:
 
 1. `aa-escrita` e `aa-criar` (README §6).
 2. Serviço e profissional ativos e da org; senão `NOT_FOUND`.
@@ -48,11 +56,14 @@ Body `CriarAgendamentoBody`. Passo a passo:
    `Ator { canal: "autoatendimento", origem: "autoatendimento", podeNotificar: null }`
    (o atendente responde; sem mensagem duplicada), `cliente: { id: clienteId }`
    do ticket (nunca do body) e **`status: "pending"`** (D8: aguarda o
-   estabelecimento confirmar, igual à página pública). `price` vem do serviço,
+   estabelecimento confirmar, igual à página pública). `price` é o do serviço mais
+   os `adicionais` (`resolverAdicionais`: nome e valor do catálogo; adicional que o serviço não
+   tem, repetido ou com quantidade inválida é `VALIDATION_ERROR`; `addons` guarda a cópia),
    `payment_status = 'pending'`, `payment_method = null`, `notes` = `observacao`.
 7. `23P01` na inserção: se já existe agendamento **deste cliente** com mesmo
    profissional e mesmo `start_time`, criado há menos de 10 min, devolver
-   esse como sucesso (retentativa; decisão C5). Senão, `SLOT_UNAVAILABLE`.
+   esse como sucesso (retentativa; decisão C5), com os adicionais e o total que ele já tem:
+   nada é somado de novo e `adicionais` diferentes no pedido repetido são ignorados. Senão, `SLOT_UNAVAILABLE`.
 8. `appointment_logs`: `action = 'created'`, `source = 'autoatendimento'`,
    `raw_message = null`, `push_name = null`.
 9. Resposta: `AgendamentoResposta` com status 201.
@@ -77,7 +88,8 @@ Body `RemarcarAgendamentoBody`.
 6. Log `action = 'rescheduled'`, com `raw_message` = `"<inicio antigo local> -> <inicio novo local>"`.
 
 Remarcar é um `UPDATE` só, não um cancelar + criar: o histórico, o pagamento e
-o id continuam os mesmos.
+o id continuam os mesmos. `price` e `adicionais` também: `editarAgendamento` só os toca quando o
+serviço troca, e aqui o serviço nunca troca.
 
 ## `POST /agendamentos/{id}/cancelar`
 

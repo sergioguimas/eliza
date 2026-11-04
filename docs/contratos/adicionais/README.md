@@ -1,6 +1,6 @@
 # Adicionais no agendamento — contrato
 
-> **TO-BE** · fase 1 implementada e revisada em 2026-11-04, fase 2 não iniciada · relatório da execução: `docs/RELATORIO_ADICIONAIS.md`
+> **TO-BE** · fase 1 implementada e revisada em 2026-11-04; fase 2, lado do Eliza (API v1 e Autoatendimento, passos 9 e 10), implementada e revisada em 2026-11-03; falta o `sola-agens` (passo 11) · relatório da execução: `docs/RELATORIO_ADICIONAIS.md`
 > **Escrito em:** 2026-11-03 · **Origem:** pedido da Deborah (R$ 5 por unha em mudança de formato e em unha quebrada), decisões do Sérgio na mesma data
 > **Pré-requisito:** PR #56 (`services.addons`) na `main`
 > **Zod novo:** `web/contracts/comum/adicionais.ts`

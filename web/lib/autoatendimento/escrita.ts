@@ -118,7 +118,8 @@ export async function criarDoCliente(db: Db, a: Alvo, body: CriarAgendamentoBody
       config: a.config,
     })
 
-  // C5, caso comum: o pedido repetido responde com o agendamento que já criou
+  // C5, caso comum: o pedido repetido responde com o agendamento que já criou, como está
+  // (adicionais e total incluídos; nada é somado de novo)
   // (antes do limite de ativos, que o próprio agendamento original já consumiu).
   const repetido = await retentativa()
 
@@ -143,6 +144,7 @@ export async function criarDoCliente(db: Db, a: Alvo, body: CriarAgendamentoBody
       servicoId: body.servicoId,
       inicio,
       observacao: body.observacao || null,
+      adicionais: body.adicionais,
       status: "pending",
       antecedenciaMinutos: a.config.antecedenciaMinimaMinutos,
     })
