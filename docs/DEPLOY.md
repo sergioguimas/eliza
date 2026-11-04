@@ -93,6 +93,7 @@ Quatro envs, nenhuma `NEXT_PUBLIC_*`, todas só no servidor do Eliza (contrato e
 | `AUTOATENDIMENTO_TICKET_SECRET` | HMAC do ticket de conversa. Existe só no Eliza, nunca no atendente. |
 | `ATENDENTE_URL` | Base do serviço, ex.: `http://eliza-atendente:4100`. Vazia = encaminhamento desligado globalmente (usada no bloco B). |
 | `ATENDENTE_ENCAMINHAMENTO_SECRET` | HMAC do encaminhamento Eliza -> atendente (bloco B). |
+| `ATENDENTE_TREINO_SECRET` | HMAC do treino do atendente (contrato 10), mínimo de 32 caracteres. Mesmo valor de `ELIZA_TREINO_SECRET` no agens. Vazia = a página `/configuracoes/atendente` avisa que o treino não está disponível. |
 
 Gere cada valor com `openssl rand -hex 32` (não repita o `CRON_SECRET=123456`).
 O código recusa token e segredo de ticket com menos de 32 caracteres: sem

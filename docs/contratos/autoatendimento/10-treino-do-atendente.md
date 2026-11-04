@@ -1,6 +1,9 @@
 # 10 — Treino do atendente pelo painel
 
-> TO-BE · **Não toca a API de Autoatendimento** (o header de versão continua `1`, ver C35) · ver [README](README.md)
+> AS-IS, menos a Prévia · **Não toca a API de Autoatendimento** (o header de versão continua `1`, ver C35) · ver [README](README.md)
+> **Executado em:** 2026-11-03. A aba Prévia e `previaAtendente` ficam para quando o contrato 08 existir. Desvios:
+> a página carrega os dados no cliente (§5.1), "O que aprendi" usa uma action só, `lerAprendido`, porque o Next roda
+> as actions em fila, e os testes rodam com `npm test` (`node --test`, sem dependência nova) sobre as regras puras.
 > **Escrito em:** 2026-10-27 · **Origem:** `Projetos/sola-agens/docs/RODADA-5-TREINAMENTO.md` (T1–T12) e o
 > contrato do agens `sola-agens/specs/06-treinamento.md` (a API que este contrato consome)
 > **Zod novos:** `contracts/autoatendimento/treino.ts` · **Migration:** nenhuma
