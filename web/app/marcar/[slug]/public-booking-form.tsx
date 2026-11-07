@@ -79,8 +79,12 @@ const formSchema = z.object({
   customer_name: z.string().min(3, "O nome deve ter pelo menos 3 caracteres"),
   customer_phone: z.string().regex(/^55\d{10,11}$/, "Informe um telefone válido."),
 
-  customer_document: z.string().min(11, "Informe o documento principal"),
-  customer_birth_date: z.string().optional(),
+  // Desde 07/11/2026: documento opcional; a data de nascimento é obrigatória no lugar dele.
+  customer_document: z.string().optional(),
+  customer_birth_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Informe sua data de nascimento")
+    .refine((v) => v >= "1900-01-01" && v <= new Date().toISOString().slice(0, 10), "Data de nascimento inválida"),
   customer_gender: z.string().optional(),
   notes: z.string().optional(),
 })
@@ -479,7 +483,7 @@ export function PublicBookingForm({
       formData.append('professional_id', values.professional_id)
       formData.append('start_time', startDateTime)
       formData.append('customer_name', values.customer_name)
-      formData.append('customer_document', values.customer_document)
+      formData.append('customer_document', values.customer_document || "")
       formData.append('customer_birth_date', values.customer_birth_date || "")
       formData.append('customer_gender', values.customer_gender || "")
       formData.append('customer_phone', phoneWithDDI)
@@ -1036,7 +1040,7 @@ export function PublicBookingForm({
                           name="customer_document"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>CPF/CNPJ</FormLabel>
+                              <FormLabel>CPF/CNPJ (opcional)</FormLabel>
                               <FormControl>
                                 <Input
                                   placeholder="Digite seu CPF ou CNPJ"
@@ -1053,10 +1057,11 @@ export function PublicBookingForm({
                           name="customer_birth_date"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Data de nascimento (opcional)</FormLabel>
+                              <FormLabel>Data de nascimento</FormLabel>
                               <FormControl>
-                                <Input type="date" {...field} />
+                                <Input type="date" max={new Date().toISOString().slice(0, 10)} {...field} />
                               </FormControl>
+                              <FormMessage />
                             </FormItem>
                           )}
                         />

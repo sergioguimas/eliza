@@ -29,6 +29,26 @@ export function normalizarDocumento(documento?: string | null): string | null {
 const soDigitos = (valor?: string | null) => valor?.replace(/\D/g, "") || ""
 
 /**
+ * Data de nascimento em `AAAA-MM-DD`, dia que existe no calendário, entre 1900 e hoje.
+ * Vazio vira null; qualquer outra coisa fora disso é VALIDATION_ERROR (antes ia direto
+ * para a coluna `date` e estourava como erro genérico do banco).
+ */
+export function normalizarDataNascimento(valor?: string | null): string | null {
+  const texto = valor?.trim()
+
+  if (!texto) return null
+
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(texto)
+  const data = m ? new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))) : null
+
+  if (!m || !data || data.toISOString().slice(0, 10) !== texto || Number(m[1]) < 1900 || data.getTime() > Date.now()) {
+    throw new DomainError("VALIDATION_ERROR", "Data de nascimento inválida.")
+  }
+
+  return texto
+}
+
+/**
  * Clientes ativos da org cujo telefone casa, em qualquer forma BR (com/sem DDI,
  * com/sem o 9º dígito). Igualdade exata em `phone_normalized`, nunca sufixo.
  */
@@ -116,6 +136,41 @@ async function candidatos(db: Db, orgId: string, telefone: string, documento: st
   return [...new Map([...porTelefone, ...porDocumento].map((c) => [c.id, c])).values()]
 }
 
+/**
+ * Desempate pela data de nascimento: dois cadastros casaram por telefone/documento e
+ * só um deles nasceu nesse dia? Então é ele. Sem data, ou nenhum/vários com ela,
+ * devolve a lista como veio e `escolher` decide (CUSTOMER_AMBIGUOUS).
+ */
+async function desempatarPorNascimento(
+  db: Db,
+  orgId: string,
+  achados: ClienteResumo[],
+  dataNascimento: string | null
+): Promise<ClienteResumo[]> {
+  if (achados.length < 2 || !dataNascimento) return achados
+
+  const { data, error } = await db
+    .from("customers")
+    .select("id")
+    .eq("organization_id", orgId)
+    .is("deleted_at", null)
+    .in(
+      "id",
+      achados.map((c) => c.id)
+    )
+    .eq("birth_date", dataNascimento)
+
+  if (error) {
+    console.error("[domain:desempatarPorNascimento]", error)
+    throw error
+  }
+
+  const ids = new Set((data ?? []).map((c) => c.id))
+  const mesmos = achados.filter((c) => ids.has(c.id))
+
+  return mesmos.length === 1 ? mesmos : achados
+}
+
 function escolher(achados: ClienteResumo[]): { id: string; criado: false } | null {
   if (achados.length === 0) return null
 
@@ -137,7 +192,7 @@ export async function resolverCliente(
   db: Db,
   orgId: string,
   entrada: { id: string } | NovoCliente,
-  opcoes: { exigirDocumento: boolean }
+  opcoes: { exigirNascimento: boolean }
 ): Promise<{ id: string; criado: boolean }> {
   if ("id" in entrada) {
     const { data, error } = await db
@@ -162,17 +217,22 @@ export async function resolverCliente(
   const nome = entrada.nome?.trim()
   const telefone = soDigitos(entrada.telefone)
   const documento = normalizarDocumento(entrada.documento)
+  const dataNascimento = normalizarDataNascimento(entrada.dataNascimento)
 
-  if (!nome || !telefone || (opcoes.exigirDocumento && !documento)) {
+  // Desde 07/11/2026 o documento é opcional em todo canal; onde ele era exigido (painel
+  // e público) a data de nascimento entra no lugar, e serve de desempate em duplicidade.
+  if (!nome || !telefone || (opcoes.exigirNascimento && !dataNascimento)) {
     throw new DomainError(
       "VALIDATION_ERROR",
-      opcoes.exigirDocumento
-        ? "Nome, telefone e documento do paciente são obrigatórios."
-        : "Nome e telefone do cliente são obrigatórios."
+      opcoes.exigirNascimento
+        ? "Nome, telefone e data de nascimento são obrigatórios."
+        : "Nome e telefone são obrigatórios."
     )
   }
 
-  const existente = escolher(await candidatos(db, orgId, telefone, documento))
+  const existente = escolher(
+    await desempatarPorNascimento(db, orgId, await candidatos(db, orgId, telefone, documento), dataNascimento)
+  )
 
   if (existente) return existente
 
@@ -183,7 +243,7 @@ export async function resolverCliente(
       name: nome,
       phone: telefone,
       document: documento,
-      birth_date: entrada.dataNascimento ?? null,
+      birth_date: dataNascimento,
       gender: entrada.genero ?? null,
       email: entrada.email ?? null,
       active: true,
@@ -195,7 +255,9 @@ export async function resolverCliente(
     // 23505: outro pedido cadastrou o mesmo telefone/documento entre a busca e
     // o insert (índices únicos por org). Se agora há um só cadastro, reusa.
     if (error?.code === "23505") {
-      const concorrente = escolher(await candidatos(db, orgId, telefone, documento))
+      const concorrente = escolher(
+        await desempatarPorNascimento(db, orgId, await candidatos(db, orgId, telefone, documento), dataNascimento)
+      )
 
       if (concorrente) return concorrente
 

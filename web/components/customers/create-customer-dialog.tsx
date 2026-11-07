@@ -81,14 +81,13 @@ export function CreateCustomerDialog({
   }
 
   async function handleSubmit(formData: FormData) {
-    if (dateMask) {
-      const [day, month, year] = dateMask.split("/")
-      if (day && month && year && year.length === 4) {
-        formData.set("birth_date", `${year}-${month}-${day}`)
-      } else {
-        toast.error("Data de nascimento inválida.")
-        return
-      }
+    // Desde 07/11/2026 a data de nascimento é obrigatória (desempate de cadastro); o documento é opcional.
+    const [day, month, year] = dateMask.split("/")
+    if (day?.length === 2 && month?.length === 2 && year?.length === 4) {
+      formData.set("birth_date", `${year}-${month}-${day}`)
+    } else {
+      toast.error(dateMask ? "Data de nascimento inválida." : "Informe a data de nascimento.")
+      return
     }
 
     if (street || city) {
@@ -165,6 +164,8 @@ export function CreateCustomerDialog({
                 onChange={handleDateChange}
                 placeholder="01/01/1980"
                 maxLength={10}
+                inputMode="numeric"
+                required
               />
             </div>
 
@@ -180,7 +181,7 @@ export function CreateCustomerDialog({
 
             <div className="space-y-2">
               <Label htmlFor="document">
-                {messages.document_label || "Documento"}
+                {messages.document_label || "Documento"} (opcional)
               </Label>
               <Input
                 id="document"

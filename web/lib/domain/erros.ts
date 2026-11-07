@@ -11,13 +11,15 @@ export type CodigoDominio =
  * direto ao usuário final; nunca carrega dado de outro cliente. Quem chama
  * converte: a action em `{ error: message }`, a API no seu envelope.
  */
+// Campos declarados à parte (sem "parameter properties") para o `node --test` com strip-types carregar o módulo.
 export class DomainError extends Error {
-  constructor(
-    public codigo: CodigoDominio,
-    message: string,
-    public detalhes?: unknown
-  ) {
+  codigo: CodigoDominio
+  detalhes?: unknown
+
+  constructor(codigo: CodigoDominio, message: string, detalhes?: unknown) {
     super(message)
     this.name = "DomainError"
+    this.codigo = codigo
+    this.detalhes = detalhes
   }
 }
