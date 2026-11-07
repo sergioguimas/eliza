@@ -7,6 +7,7 @@ import {
   type RemarcarAgendamentoBody,
 } from "@/contracts/autoatendimento"
 import { STATUS_CONFIG } from "@/lib/appointment-config"
+import { dentroDaAgendaVisivel } from "@/lib/domain/agenda-visivel"
 import { criarAgendamento, editarAgendamento, mudarStatus, type Ator } from "@/lib/domain/agendamentos"
 import { exigirProfissionalAtivo, exigirServicoAtivo } from "@/lib/domain/catalogo"
 import type { Db } from "@/lib/domain/db"
@@ -21,7 +22,6 @@ import {
   resumoDeCompleto,
 } from "./agendamentos"
 import type { ConfigAutoatendimento } from "./config"
-import { somarDias } from "./horarios"
 
 /**
  * Escrita de agendamentos do cliente do ticket (04). Toda regra de agenda e de
@@ -64,7 +64,9 @@ function validarJanelaEAntecedencia(inicio: Date, config: ConfigAutoatendimento)
   const agora = new Date()
   const hoje = dataLocal(agora)
 
-  if (dataLocal(inicio) < hoje || dataLocal(inicio) > somarDias(hoje, config.janelaMaximaDias)) {
+  if (config.janelaMaximaDias === 0) throw new ApiError("AGENDA_FECHADA", "A agenda está fechada para marcação automática no momento; a equipe vai combinar o horário com você.")
+
+  if (!dentroDaAgendaVisivel(dataLocal(inicio), hoje, config.janelaMaximaDias)) {
     throw new ApiError(
       "OUT_OF_WINDOW",
       `Só é possível agendar de hoje até ${config.janelaMaximaDias} dias à frente.`

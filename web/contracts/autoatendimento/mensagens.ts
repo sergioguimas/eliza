@@ -96,6 +96,7 @@ export const EscalonarBody = z
       "reclamacao",
       "numero_novo",
       "falha_tecnica",
+      "triagem",
       "outro",
     ]),
     /** Resumo para a equipe. Sem dado sensível além do necessário. */

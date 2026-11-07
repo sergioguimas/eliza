@@ -2,6 +2,7 @@ import "server-only"
 
 import type { HorariosQuery, MotivoSemHorario } from "@/contracts/autoatendimento"
 import { exigirProfissionalAtivo, exigirServicoAtivo, listarProfissionaisAtivos } from "@/lib/domain/catalogo"
+import { dentroDaAgendaVisivel } from "@/lib/domain/agenda-visivel"
 import type { Db } from "@/lib/domain/db"
 import { listarHorariosLivres, type MotivoSemHorario as MotivoDoDominio } from "@/lib/domain/horarios"
 import { dataLocal } from "@/lib/domain/tempo"
@@ -37,7 +38,7 @@ export function somarDias(data: string, dias: number) {
  * ordem de `listarProfissionaisAtivos` e incluindo quem ficou sem horário
  * (com `motivoVazio`). Mesmo predicado da validação de criar/remarcar (C4).
  *
- * Ordem das checagens: serviço (NOT_FOUND) -> profissional (NOT_FOUND) -> janela (OUT_OF_WINDOW).
+ * Ordem das checagens: serviço (NOT_FOUND) -> profissional (NOT_FOUND) -> janela (AGENDA_FECHADA se 0; senão OUT_OF_WINDOW).
  */
 export async function consultarHorarios(db: Db, orgId: string, config: ConfigAutoatendimento, q: HorariosQuery) {
   const servico = await exigirServicoAtivo(db, orgId, q.servicoId)
@@ -52,7 +53,9 @@ export async function consultarHorarios(db: Db, orgId: string, config: ConfigAut
   const agora = new Date()
   const hoje = dataLocal(agora)
 
-  if (q.data < hoje || q.data > somarDias(hoje, config.janelaMaximaDias)) {
+  if (config.janelaMaximaDias === 0) throw new ApiError("AGENDA_FECHADA", "A agenda está fechada para marcação automática no momento; a equipe vai combinar o horário com você.")
+
+  if (!dentroDaAgendaVisivel(q.data, hoje, config.janelaMaximaDias)) {
     throw new ApiError(
       "OUT_OF_WINDOW",
       `Só é possível consultar datas de hoje até ${config.janelaMaximaDias} dias à frente.`

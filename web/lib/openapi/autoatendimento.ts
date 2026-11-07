@@ -116,6 +116,8 @@ Operações com \`x-atendente: true\` são as que o atendente expõe ao modelo c
 
 Operações com \`x-atendente-publico: true\` também ficam disponíveis no modo anônimo (canal web, ticket de visitante); as demais recusam esse ticket.
 
+Operações com \`x-atendente-agenda: true\` (\`consultarHorarios\`, \`criarAgendamento\`, \`remarcarAgendamento\`) dependem da agenda aberta: com \`politica.janelaMaximaDias = 0\` o atendente não deve oferecê-las e elas respondem \`AGENDA_FECHADA\`. Nesse modo ele faz triagem e chama a equipe com o motivo \`triagem\`.
+
 ## Autenticação em duas camadas (três headers em toda chamada)
 
 | Header | Prova |
@@ -368,6 +370,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
         operationId: "consultarHorarios",
         "x-atendente": true,
         "x-atendente-publico": true,
+        "x-atendente-agenda": true,
         summary: "Horários livres de um serviço num dia",
         description:
           "Horários de **início** livres para a duração do serviço, um bloco por profissional (**incluindo** quem ficou sem horário, com `motivoVazio`, para você poder dizer \"com a Ana não há, com o Bruno há\"). Já aplica a antecedência mínima.\n\nÉ o mesmo predicado que valida a criação e a remarcação: **se está na lista, a API aceita; se não está, recusa.**\n\nA query é estrita (`organizationId`, telefone etc. dão `422`). Não exige cliente identificado.",
@@ -390,7 +393,8 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
           ...erros(
             ["VALIDATION_ERROR", "Parâmetro ausente, desconhecido ou inválido, ou data de calendário inexistente (ex.: 2026-02-30)."],
             ["NOT_FOUND", "Serviço ou profissional inexistente, inativo ou de outra organização."],
-            ["OUT_OF_WINDOW", "Data anterior a hoje ou além da janela máxima."]
+            ["OUT_OF_WINDOW", "Data anterior a hoje ou além da janela máxima."],
+            ["AGENDA_FECHADA", "A organização fechou a agenda (`politica.janelaMaximaDias = 0`)."]
           ),
         },
       },
@@ -413,9 +417,10 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
         tags: ["Agendamentos"],
         operationId: "criarAgendamento",
         "x-atendente": true,
+        "x-atendente-agenda": true,
         summary: "Cria um agendamento (nasce pending)",
         description:
-          "Cria um agendamento para o **cliente do ticket** (nunca do body). Nasce `pending`: aguarda o estabelecimento aprovar, então diga isso ao cliente. O valor vem do serviço mais os `adicionais` escolhidos. Nenhuma mensagem de WhatsApp é enviada pelo Eliza (quem responde é você).\n\n**Adicionais** (campo opcional `adicionais`): só ofereça adicional que o serviço tem em `GET /servicos`, nunca um item inventado. Quando o adicional tem `unidade` (ex.: \"por unha\"), pergunte a quantidade ao cliente (1 a 20); sem `unidade` o valor é fixo e a quantidade é sempre 1. Envie só `id` e `quantidade`: o Eliza copia nome e valor do catálogo, e campo `valor` ou `nome` é recusado. O Eliza calcula o total e o devolve em `valorTotal` (e os itens em `adicionais`): apresente esse valor ao cliente como **estimado**, porque o valor final é confirmado no atendimento, e nunca calcule outro valor por conta própria. Sem `adicionais`, o agendamento nasce só com o preço do serviço.\n\nValidações, nesta ordem: serviço e profissional ativos (`NOT_FOUND`) → limite de agendamentos ativos (`ACTIVE_LIMIT_REACHED`) → janela (`OUT_OF_WINDOW`) → antecedência (`NOTICE_TOO_SHORT`) → adicional válido (`VALIDATION_ERROR`: não é do serviço, repetido ou quantidade inválida) → horário livre e na grade (`SLOT_UNAVAILABLE`, com até 3 `sugestoes` do mesmo dia e profissional).\n\n**Idempotência:** repetir o mesmo pedido (mesmo cliente, profissional e início) em até 10 minutos devolve o agendamento já criado, com o mesmo `id`, os mesmos `adicionais` e o mesmo `valorTotal`: nada é somado de novo, e `adicionais` diferentes no pedido repetido não alteram o que já foi criado.\n\nLimites: `aa-escrita` (20/h) e `aa-criar` (5/24h)." +
+          "Cria um agendamento para o **cliente do ticket** (nunca do body). Nasce `pending`: aguarda o estabelecimento aprovar, então diga isso ao cliente. O valor vem do serviço mais os `adicionais` escolhidos. Nenhuma mensagem de WhatsApp é enviada pelo Eliza (quem responde é você).\n\n**Adicionais** (campo opcional `adicionais`): só ofereça adicional que o serviço tem em `GET /servicos`, nunca um item inventado. Quando o adicional tem `unidade` (ex.: \"por unha\"), pergunte a quantidade ao cliente (1 a 20); sem `unidade` o valor é fixo e a quantidade é sempre 1. Envie só `id` e `quantidade`: o Eliza copia nome e valor do catálogo, e campo `valor` ou `nome` é recusado. O Eliza calcula o total e o devolve em `valorTotal` (e os itens em `adicionais`): apresente esse valor ao cliente como **estimado**, porque o valor final é confirmado no atendimento, e nunca calcule outro valor por conta própria. Sem `adicionais`, o agendamento nasce só com o preço do serviço.\n\nValidações, nesta ordem: serviço e profissional ativos (`NOT_FOUND`) → limite de agendamentos ativos (`ACTIVE_LIMIT_REACHED`) → janela (`AGENDA_FECHADA` se a agenda está fechada, senão `OUT_OF_WINDOW`) → antecedência (`NOTICE_TOO_SHORT`) → adicional válido (`VALIDATION_ERROR`: não é do serviço, repetido ou quantidade inválida) → horário livre e na grade (`SLOT_UNAVAILABLE`, com até 3 `sugestoes` do mesmo dia e profissional).\n\n**Idempotência:** repetir o mesmo pedido (mesmo cliente, profissional e início) em até 10 minutos devolve o agendamento já criado, com o mesmo `id`, os mesmos `adicionais` e o mesmo `valorTotal`: nada é somado de novo, e `adicionais` diferentes no pedido repetido não alteram o que já foi criado.\n\nLimites: `aa-escrita` (20/h) e `aa-criar` (5/24h)." +
           "\n\n> No Swagger, este botão **cria dados reais** na organização do ticket.",
         ...comum,
         requestBody: corpoJson(bCriar, { exemplo: { summary: "Corte às 14:30", value: { servicoId: ID_EXEMPLO.servico, profissionalId: ID_EXEMPLO.profissional, inicio: "2026-10-05T14:30", observacao: "Primeira vez" } }, comAdicionais: { summary: "Manutenção com 2 unhas quebradas", value: { servicoId: ID_EXEMPLO.servico, profissionalId: ID_EXEMPLO.profissional, inicio: "2026-10-05T14:30", adicionais: [{ id: "4f6a1c92-3d58-4b07-a1e4-8c2b9d703e15", quantidade: 2 }] } } }),
@@ -427,6 +432,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
             ["NOT_FOUND", "Serviço ou profissional inexistente, inativo ou de outra organização."],
             "ACTIVE_LIMIT_REACHED",
             "OUT_OF_WINDOW",
+            "AGENDA_FECHADA",
             "NOTICE_TOO_SHORT",
             "SLOT_UNAVAILABLE"
           ),
@@ -439,6 +445,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
         tags: ["Agendamentos"],
         operationId: "remarcarAgendamento",
         "x-atendente": true,
+        "x-atendente-agenda": true,
         summary: "Remarca (volta a pending)",
         description:
           "Muda o horário (e, se vier, o profissional) do **mesmo registro**: histórico, pagamento e `id` continuam. O serviço nunca muda. O status **volta a `pending`** (um \"confirmado\" valia para o horário antigo; o estabelecimento aprova de novo) e os lembretes são zerados. Remarcar para outro horário que sobreponha o próprio atual é permitido.\n\nSó `pending`/`scheduled`/`confirmed` (`INVALID_TRANSITION` nos demais) e só fora da antecedência mínima (`NOTICE_TOO_SHORT`: escale para a equipe). Mesmas validações de janela, antecedência e horário da criação. Limite: `aa-escrita`.",
@@ -454,6 +461,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
             ["INVALID_TRANSITION", "O agendamento não está em `pending`/`scheduled`/`confirmed`."],
             ["NOTICE_TOO_SHORT", "Faltam menos minutos que a antecedência mínima para o horário atual, ou o novo horário não respeita a antecedência."],
             "OUT_OF_WINDOW",
+            "AGENDA_FECHADA",
             "SLOT_UNAVAILABLE"
           ),
         },
@@ -625,7 +633,7 @@ export function gerarOpenApiAutoatendimento({ origem }: OpcoesDoDocumento): Obje
         operationId: "escalarParaEquipe",
         summary: "Pede ajuda humana",
         description:
-          "Avisa a equipe do estabelecimento pelo WhatsApp da própria organização, com o motivo e o resumo. Não exige cliente identificado (o ambíguo é justamente quem mais escala).\n\n`equipeNotificada: false` **não é erro**: a organização não configurou contato humano, ou o envio falhou. Nesse caso avise o cliente de outro jeito. Nada é gravado em tabela nesta versão. Limite: `aa-escalar` (3/h)." +
+          "Avisa a equipe do estabelecimento pelo WhatsApp da própria organização, com o motivo e o resumo. Não exige cliente identificado (o ambíguo é justamente quem mais escala). Com a agenda fechada (`politica.janelaMaximaDias = 0`), use o motivo `triagem` com o resumo do pedido (serviço, preferência de dia e turno, nome).\n\n`equipeNotificada: false` **não é erro**: a organização não configurou contato humano, ou o envio falhou. Nesse caso avise o cliente de outro jeito. Nada é gravado em tabela nesta versão. Limite: `aa-escalar` (3/h)." +
           "\n\n> No Swagger, este botão **envia WhatsApp real** ao contato da equipe.",
         ...comum,
         requestBody: corpoJson(bEscalar, { exemplo: { summary: "Cliente quer uma pessoa", value: { motivo: "pedido_do_cliente", resumo: "Quer falar com uma pessoa sobre um reembolso" } } }),

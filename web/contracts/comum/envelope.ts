@@ -39,6 +39,7 @@ export const ErrorCode = z.enum([
   // 422
   "VALIDATION_ERROR",
   "OUT_OF_WINDOW", //          autoatendimento: data fora de [hoje, hoje + janela]
+  "AGENDA_FECHADA", //         autoatendimento e /marcar: a org fechou a agenda (agenda_visivel_dias = 0)
   "NOTICE_TOO_SHORT", //       autoatendimento: antes da antecedência mínima
   // 429
   "RATE_LIMITED",
@@ -72,6 +73,7 @@ export const HTTP_STATUS_BY_CODE: Record<ErrorCode, number> = {
   MEDIA_TOO_LARGE: 413,
   VALIDATION_ERROR: 422,
   OUT_OF_WINDOW: 422,
+  AGENDA_FECHADA: 422,
   NOTICE_TOO_SHORT: 422,
   RATE_LIMITED: 429,
   WHATSAPP_UNAVAILABLE: 502,

@@ -26,6 +26,7 @@ export const SIGNIFICADO_DO_CODIGO: Record<ErrorCode, string> = {
   MEDIA_TOO_LARGE: "A mídia pedida passa do tamanho máximo (16 MB decodificados).",
   VALIDATION_ERROR: "Body, query ou parâmetro inválido. `details` é `[{ field, message }]`.",
   OUT_OF_WINDOW: "Data fora da janela [hoje, hoje + janela máxima].",
+  AGENDA_FECHADA: "A organização fechou a agenda (`politica.janelaMaximaDias = 0`): nenhum horário é oferecido nem marcado automaticamente.",
   NOTICE_TOO_SHORT: "Menos tempo do que a antecedência mínima do estabelecimento.",
   RATE_LIMITED: "Limite de requisições excedido. Veja o header Retry-After e `details.retry_after_seconds`.",
   WHATSAPP_UNAVAILABLE: "Não foi possível enviar pelo WhatsApp agora.",
@@ -55,6 +56,7 @@ const MENSAGEM_DE_EXEMPLO: Partial<Record<ErrorCode, string>> = {
   CUSTOMER_NOT_IDENTIFIED: "Este número de WhatsApp ainda não tem cadastro.",
   ACTIVE_LIMIT_REACHED: "Você já tem 3 agendamentos ativos, que é o máximo permitido. Cancele ou conclua um deles antes de marcar outro.",
   OUT_OF_WINDOW: "Só é possível agendar de hoje até 60 dias à frente.",
+  AGENDA_FECHADA: "A agenda está fechada para marcação automática no momento; a equipe vai combinar o horário com você.",
   NOTICE_TOO_SHORT: "É preciso marcar com pelo menos 2 horas de antecedência.",
   WHATSAPP_UNAVAILABLE: "Não foi possível enviar a mensagem pelo WhatsApp agora. Tente novamente em instantes.",
 }

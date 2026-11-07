@@ -24,12 +24,21 @@ export async function updatePreferences(formData: FormData) {
       return { error: "Duração do atendimento inválida." }
     }
 
+    // Number("") é 0 e fecharia a agenda sem querer: vazio é inválido.
+    const agendaBruta = String(formData.get("agenda_visivel_dias") ?? "").trim()
+    const agendaVisivelDias = agendaBruta === "" ? NaN : Number(agendaBruta)
+
+    if (!Number.isInteger(agendaVisivelDias) || agendaVisivelDias < 0 || agendaVisivelDias > 365) {
+      return { error: "Agenda visível deve ser um número de 0 a 365." }
+    }
+
     const updates: OrganizationSettingsUpdate = {
       open_hours_start: formData.get("open_hours_start") as string,
       open_hours_end: formData.get("open_hours_end") as string,
       lunch_start: formData.get("lunch_start") as string,
       lunch_end: formData.get("lunch_end") as string,
       appointment_duration: duration,
+      agenda_visivel_dias: agendaVisivelDias,
       days_of_week: formData
         .getAll("days_of_week")
         .map((d) => Number(d))

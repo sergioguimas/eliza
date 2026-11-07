@@ -796,6 +796,7 @@ export type Database = {
       }
       organization_settings: {
         Row: {
+          agenda_visivel_dias: number
           appointment_duration: number | null
           created_at: string | null
           days_of_week: number[] | null
@@ -812,6 +813,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          agenda_visivel_dias?: number
           appointment_duration?: number | null
           created_at?: string | null
           days_of_week?: number[] | null
@@ -828,6 +830,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          agenda_visivel_dias?: number
           appointment_duration?: number | null
           created_at?: string | null
           days_of_week?: number[] | null

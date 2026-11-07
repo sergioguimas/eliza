@@ -7,6 +7,29 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Não publicado]
 
+### Adicionado
+
+- Agenda visível por número de dias, ajustável em Configurações → Preferências ("Agenda visível para clientes (dias)",
+  de 0 a 365, padrão 60). Vale para o atendente automático (WhatsApp e chat) e para a página pública `/marcar`: a
+  página desabilita no calendário as datas além do limite e recusa no servidor um envio forjado fora dele.
+- Agenda fechada: com o valor 0, o atendente não consulta, marca nem remarca horário (a API responde
+  `AGENDA_FECHADA`, HTTP 422), e a página `/marcar` mostra "Agenda online fechada no momento" no lugar do formulário
+  e do chat. Cancelar e confirmar continuam funcionando. Painel e API v1 não mudam.
+- Novo motivo `triagem` em `POST /autoatendimento/escalonamentos`, para o atendente avisar a equipe de um pedido de
+  horário enquanto a agenda está fechada.
+- A OpenAPI de Autoatendimento marca `consultarHorarios`, `criarAgendamento` e `remarcarAgendamento` com
+  `x-atendente-agenda: true`, para o atendente saber quais ferramentas dependem da agenda aberta.
+
+### Modificado
+
+- `GET /autoatendimento/contexto`: `politica.janelaMaximaDias` agora pode ser `0` (agenda fechada) e passa a vir de
+  Configurações, a mesma fonte da página `/marcar`.
+
+### Obsoleto
+
+- `autoatendimento_config.janela_maxima_dias` deixa de ser lida; a janela vem de
+  `organization_settings.agenda_visivel_dias`. A coluna segue no banco e sai numa versão MAIOR.
+
 ## [1.3.0] - 2026-11-07
 
 ### Modificado

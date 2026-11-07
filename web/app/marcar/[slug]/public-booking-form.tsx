@@ -5,7 +5,7 @@ import dynamic from "next/dynamic"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { format, addDays } from "date-fns"
+import { format, addDays, startOfDay } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import {
   CalendarIcon,
@@ -99,6 +99,8 @@ interface PublicBookingFormProps {
   initialServiceId?: string
   /** Slug da org quando o chat está ativo (contrato 08). Ausente = nada do chat é carregado. */
   chatSlug?: string
+  /** Dias à frente liberados (organization_settings.agenda_visivel_dias, 11). Ausente = 60. */
+  agendaVisivelDias?: number
   headline?: string
   subtitle?: string
 }
@@ -124,6 +126,7 @@ export function PublicBookingForm({
   organizationName,
   initialServiceId,
   chatSlug,
+  agendaVisivelDias = 60,
   headline ="Agende seu atendimento online",
   subtitle = "Escolha o serviço, selecione um horário disponível e receba a confirmação pelo WhatsApp.",
 }: PublicBookingFormProps) {
@@ -508,7 +511,7 @@ export function PublicBookingForm({
 
       const result = await createPublicAppointment(formData)
 
-      if (result?.success) {
+      if (result && "success" in result && result.success) {
         setIsSuccess(true)
 
         if ("foundName" in result && result.foundName) {
@@ -879,7 +882,11 @@ export function PublicBookingForm({
                                       onSelect={(date) => field.onChange(date)}
                                       month={field.value}
                                       onMonthChange={(month) => field.onChange(month)}
-                                      disabled={(date) => date < new Date() || date.getDay() === 0}
+                                      disabled={(date) =>
+                                        date < new Date() ||
+                                        date.getDay() === 0 ||
+                                        date > startOfDay(addDays(new Date(), agendaVisivelDias))
+                                      }
                                       initialFocus
                                       locale={ptBR}
                                     />

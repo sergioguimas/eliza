@@ -171,6 +171,15 @@ export function PreferencesForm({ settings, organizationId, organizationData }: 
                     <Input type="number" name="appointment_duration" defaultValue={settings?.appointment_duration || 30} className="max-w-[200px]" />
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="agenda_visivel_dias">Agenda visível para clientes (dias)</Label>
+                    {/* `??`, não `||`: 0 é um valor válido (agenda fechada). */}
+                    <Input id="agenda_visivel_dias" type="number" name="agenda_visivel_dias" min={0} max={365} step={1} required defaultValue={settings?.agenda_visivel_dias ?? 60} className="max-w-[200px]" />
+                    <p className="text-sm text-muted-foreground">
+                      Até quantos dias à frente o atendente automático e a página de agendamento podem mostrar e marcar horários. Use 0 para fechar a agenda: o atendente só anota o pedido e passa a conversa para você.
+                    </p>
+                  </div>
+
                   <div className="space-y-3">
                     <Label>{messages.attendance_days_label || "Dias de Atendimento"}</Label>
                     <div className="flex flex-wrap gap-4">

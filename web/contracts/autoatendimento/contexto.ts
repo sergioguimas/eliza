@@ -73,7 +73,8 @@ export const Contexto = z.object({
   }),
   politica: z.object({
     antecedenciaMinimaMinutos: z.number().int().nonnegative(),
-    janelaMaximaDias: z.number().int().positive(),
+    /** 0 = agenda fechada: o atendente não oferece horário, faz triagem e chama a equipe (motivo triagem) */
+    janelaMaximaDias: z.number().int().nonnegative(),
     maxAgendamentosAtivos: z.number().int().positive(),
     /** Texto livre do estabelecimento para o atendente (avisos, tom). */
     instrucoesAtendimento: z.string().nullable(),
