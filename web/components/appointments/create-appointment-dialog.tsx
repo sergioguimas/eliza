@@ -162,6 +162,8 @@ export function CreateAppointmentDialog({
   const [customerId, setCustomerId] = useState("new")
   const [customerName, setCustomerName] = useState("")
   const [customerPhone, setCustomerPhone] = useState("")
+  const [customerBirthDate, setCustomerBirthDate] = useState("")
+  const [customerDocument, setCustomerDocument] = useState("")
   const [serviceId, setServiceId] = useState("")
   const [date, setDate] = useState("")
   const [time, setTime] = useState("")
@@ -202,6 +204,8 @@ export function CreateAppointmentDialog({
 
     setCustomerName("")
     setCustomerPhone("")
+    setCustomerBirthDate("")
+    setCustomerDocument("")
     setNotes("")
     setAddons([])
     setIsLoading(false)
@@ -303,6 +307,12 @@ export function CreateAppointmentDialog({
       return
     }
 
+    // Cliente novo: o servidor exige nome, telefone e data de nascimento (o documento é opcional).
+    if (customerId === 'new' && (!customerName.trim() || !customerPhone.trim() || !customerBirthDate)) {
+      toast.error(`Preencha nome, telefone e data de nascimento do ${cliente.toLowerCase()}.`)
+      return
+    }
+
     if (!date || !time || !selectedProfessionalId) {
       toast.error("Preencha data, horário e profissional.")
       return
@@ -375,6 +385,8 @@ export function CreateAppointmentDialog({
     if (customerId === 'new') {
         formData.append('customer_name', customerName)
         formData.append('customer_phone', customerPhone)
+        formData.append('customer_birth_date', customerBirthDate)
+        formData.append('customer_document', customerDocument)
     } else {
         formData.append('customer_id', customerId)
     }
@@ -528,7 +540,32 @@ export function CreateAppointmentDialog({
                   placeholder="Telefone / WhatsApp"
                   value={customerPhone}
                   onChange={e => setCustomerPhone(e.target.value)}
+                  required
                 />
+                <div className="space-y-1">
+                  <Label htmlFor="appt-customer-birth" className="text-xs text-muted-foreground">
+                    {messages.birth_date || "Nascimento"}
+                  </Label>
+                  <Input
+                    id="appt-customer-birth"
+                    type="date"
+                    value={customerBirthDate}
+                    max={new Date().toISOString().slice(0, 10)}
+                    onChange={e => setCustomerBirthDate(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="appt-customer-doc" className="text-xs text-muted-foreground">
+                    {messages.document_label || "Documento"} (opcional)
+                  </Label>
+                  <Input
+                    id="appt-customer-doc"
+                    placeholder={messages.document_placeholder || "CPF / documento"}
+                    value={customerDocument}
+                    onChange={e => setCustomerDocument(e.target.value)}
+                  />
+                </div>
               </div>
             )}
           </div>

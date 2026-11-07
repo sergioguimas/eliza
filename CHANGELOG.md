@@ -7,6 +7,22 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Não publicado]
 
+### Modificado
+
+- Cadastro de cliente: o documento (CPF) deixa de ser obrigatório em todo lugar, e a data de nascimento passa a ser
+  obrigatória onde o documento era (agendamento pelo painel, página pública `/marcar` e cadastro em Clientes). A API
+  v1 e o atendente seguem sem exigir nenhum dos dois.
+- Quando telefone e documento apontam para dois cadastros diferentes, a data de nascimento desempata: se só um deles
+  nasceu nesse dia, o agendamento vai para ele em vez de recusar como cadastro ambíguo.
+- Data de nascimento inválida (dia que não existe, antes de 1900 ou no futuro) é recusada com `VALIDATION_ERROR`
+  em todos os canais, inclusive API v1 e Autoatendimento; antes ia para o banco e virava erro genérico ou era gravada.
+
+### Corrigido
+
+- Agendamento pelo painel com "+ Novo cliente" sempre falhava com "Nome, telefone e documento do paciente são
+  obrigatórios.", porque o formulário não tinha campo de documento. Agora ele pede data de nascimento e documento
+  (opcional), e a mensagem não fala mais em "paciente".
+
 ## [1.2.0] - 2026-11-04
 
 ### Adicionado

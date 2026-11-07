@@ -384,9 +384,10 @@ export async function criarAgendamento(
     exigirGrade: exigeGrade(ator.canal),
   })
 
-  // O documento só é obrigatório onde já era (painel e público); a API v1 não exigia.
+  // Data de nascimento obrigatória onde o documento era (painel e público); a API v1 e o
+  // atendente não exigiam nenhum dos dois e seguem assim. Documento é opcional em todo canal.
   const cliente = await resolverCliente(db, orgId, entrada.cliente, {
-    exigirDocumento: ator.canal === "painel" || ator.canal === "publico",
+    exigirNascimento: ator.canal === "painel" || ator.canal === "publico",
   })
 
   const { data: criado, error } = await db

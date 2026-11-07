@@ -3,6 +3,8 @@
 import { createClient } from "@/utils/supabase/server"
 import { revalidatePath } from "next/cache"
 import { Database } from "@/utils/database.types"
+import { normalizarDataNascimento } from "@/lib/domain/clientes"
+import { DomainError } from "@/lib/domain/erros"
 
 export async function createCustomer(formData: FormData) {
   const supabase = await createClient<Database>()
@@ -17,9 +19,17 @@ export async function createCustomer(formData: FormData) {
   const notes = formData.get('notes') as string || null
   const birthDateRaw = formData.get('birth_date') as string || null
 
-  // 2. Validações Fail-Fast
-  if (!name || !phoneRaw) {
-    return { error: "Nome e Telefone são obrigatórios." }
+  // 2. Validações Fail-Fast. Desde 07/11/2026 a data de nascimento é obrigatória e o documento, opcional.
+  if (!name || !phoneRaw || !birthDateRaw) {
+    return { error: "Nome, telefone e data de nascimento são obrigatórios." }
+  }
+
+  let birthDate: string | null
+  try {
+    birthDate = normalizarDataNascimento(birthDateRaw)
+  } catch (err) {
+    if (err instanceof DomainError) return { error: err.message }
+    throw err
   }
 
   // Sanitização simples
@@ -66,7 +76,7 @@ export async function createCustomer(formData: FormData) {
         gender,
         address,
         notes,
-        birth_date: birthDateRaw ? new Date(birthDateRaw).toISOString() : null,
+        birth_date: birthDate,
         active: true
       })
 

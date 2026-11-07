@@ -110,7 +110,7 @@ export async function createPublicAppointment(formData: FormData) {
   const rawPhone = onlyNumbers(formData.get("customer_phone") as string | null)
 
   if (!rawPhone) {
-    return { error: "Nome, telefone e documento do paciente são obrigatórios." }
+    return { error: "Nome, telefone e data de nascimento são obrigatórios." }
   }
 
   // Mesma normalização do envio (send-whatsapp): com e sem DDI contam juntos.
