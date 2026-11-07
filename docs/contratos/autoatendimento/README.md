@@ -38,6 +38,7 @@ correções de segurança de 2026-09-23 já estão commitadas (`19fff0e`, `a2213
 | [08-canal-web.md](08-canal-web.md) | Revisão aditiva (2026-10-26): chat da página pública `/marcar` que pré-preenche o formulário — ticket de visitante, `canal_web`, `x-atendente-publico`, rota do chat |
 | [09-avisos-do-sistema.md](09-avisos-do-sistema.md) | Revisão aditiva (2026-10-26): lembretes e notificações do Eliza chegam ao atendente como aviso (contexto, sem pausar) — pré-registro por hash, campo `aviso` no encaminhamento |
 | [10-treino-do-atendente.md](10-treino-do-atendente.md) | Painel (2026-10-27): página para o dono/admin treinar o atendente do sola-agens (ensaios, perfil de estilo, versões, notas, prévia). Não toca a API de Autoatendimento |
+| [11-agenda-visivel.md](11-agenda-visivel.md) | Revisão aditiva (2026-11-07): `organization_settings.agenda_visivel_dias` (0 = agenda fechada) para atendente e `/marcar`, erro `AGENDA_FECHADA`, motivo `triagem`, `x-atendente-agenda`, modo triagem no sola-agens |
 
 ## 1. A fronteira (o que "desmembrado" significa aqui)
 

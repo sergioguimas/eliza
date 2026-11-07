@@ -1,10 +1,12 @@
 import "server-only"
 
+import { lerAgendaVisivelDias } from "@/lib/domain/agenda-visivel"
 import type { Db } from "@/lib/domain/db"
 
 /** Política do add-on para uma org (01-configuracao). Colunas em camelCase. */
 export type ConfigAutoatendimento = {
   antecedenciaMinimaMinutos: number
+  /** Vem de organization_settings.agenda_visivel_dias (11). 0 = agenda fechada. */
   janelaMaximaDias: number
   maxAgendamentosAtivos: number
   /** Só o Eliza usa (escalonamento). Nunca vai para o contexto do atendente. */
@@ -45,9 +47,12 @@ export async function carregarConfig(db: Db, orgId: string): Promise<ConfigAutoa
 
   if (!data || !data.ativo || data.organizations?.is_demo) return null
 
+  // A janela mora no núcleo (11); autoatendimento_config.janela_maxima_dias é obsoleta e não é lida.
+  const janelaMaximaDias = await lerAgendaVisivelDias(db, orgId)
+
   return {
     antecedenciaMinimaMinutos: data.antecedencia_minima_minutos,
-    janelaMaximaDias: data.janela_maxima_dias,
+    janelaMaximaDias,
     maxAgendamentosAtivos: data.max_agendamentos_ativos,
     contatoHumanoTelefone: data.contato_humano_telefone,
     instrucoesAtendimento: data.instrucoes_atendimento,

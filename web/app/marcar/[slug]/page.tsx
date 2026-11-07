@@ -1,3 +1,4 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { createClient } from "@/utils/supabase/server"
 import { createAdminClient } from "@/utils/supabase/admin"
 import { listarProfissionaisAtivos, listarServicosAtivos } from "@/lib/domain/catalogo"
@@ -6,6 +7,7 @@ import { PublicBookingForm } from "./public-booking-form"
 import { Database } from "@/utils/database.types"
 import { Metadata } from "next"
 import { paletteClass } from "@/lib/brand-palette"
+import { lerAgendaVisivelDias } from "@/lib/domain/agenda-visivel"
 import { chatWebAtivo } from "@/lib/autoatendimento/config"
 
 export async function generateMetadata(
@@ -61,10 +63,11 @@ export default async function PublicBookingPage({
   // filtra por ela. Não dá para usar o client anon aqui: o profissional tem
   // phone/license_number/user_id, que não podem chegar ao HTML público.
   const admin = createAdminClient<Database>()
-  const [services, professionals, chatAtivo] = await Promise.all([
+  const [services, professionals, chatAtivo, agendaVisivelDias] = await Promise.all([
     listarServicosAtivos(admin, organization.id),
     listarProfissionaisAtivos(admin, organization.id),
     chatWebAtivo(admin, organization.id),
+    lerAgendaVisivelDias(admin, organization.id),
   ])
 
   // `?servico=<id>` pré-seleciona o serviço (links do site do cliente). Só vale
@@ -80,6 +83,17 @@ export default async function PublicBookingPage({
           <p className="text-muted-foreground">Reserve seu horário em poucos cliques</p>
         </header>
 
+        {agendaVisivelDias === 0 ? (
+          // Agenda fechada (11 §4): sem formulário e sem chat. O Eliza não guarda telefone da org.
+          <Card className="mx-auto max-w-xl text-center">
+            <CardHeader>
+              <CardTitle>Agenda online fechada no momento</CardTitle>
+            </CardHeader>
+            <CardContent className="text-muted-foreground">
+              Para marcar um horário, fale diretamente com {organization.name}.
+            </CardContent>
+          </Card>
+        ) : (
         <PublicBookingForm
           organizationId={organization.id}
           organizationNiche={organization.niche}
@@ -88,7 +102,9 @@ export default async function PublicBookingPage({
           professionals={professionals}
           initialServiceId={initialServiceId}
           chatSlug={chatAtivo ? organization.slug : undefined}
+          agendaVisivelDias={agendaVisivelDias}
         />
+        )}
       </div>
     </div>
   )

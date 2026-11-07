@@ -10,6 +10,7 @@ import {
   type Adicional,
   type AdicionalAplicado,
 } from "@/lib/adicionais"
+import { dentroDaAgendaVisivel, lerAgendaVisivelDias, MENSAGEM_AGENDA_FECHADA, MENSAGEM_FORA_DA_JANELA } from "./agenda-visivel"
 import { adicionaisDoServico, exigirProfissionalAtivo, exigirServicoAtivo } from "./catalogo"
 import { resolverCliente, type NovoCliente } from "./clientes"
 import type { Db } from "./db"
@@ -354,6 +355,16 @@ export async function criarAgendamento(
 
   if (!STATUS_INICIAL[ator.canal].includes(entrada.status)) {
     throw new DomainError("VALIDATION_ERROR", "Status inicial não permitido para este canal.")
+  }
+
+  // Agenda visível (11): só a página pública se submete à janela. Painel e API v1 não;
+  // o autoatendimento checa na própria camada (AGENDA_FECHADA/OUT_OF_WINDOW).
+  if (ator.canal === "publico") {
+    const dias = await lerAgendaVisivelDias(db, orgId)
+
+    if (!dentroDaAgendaVisivel(dataLocal(entrada.inicio), dataLocal(new Date()), dias)) {
+      throw new DomainError("VALIDATION_ERROR", dias === 0 ? MENSAGEM_AGENDA_FECHADA : MENSAGEM_FORA_DA_JANELA)
+    }
   }
 
   // Só o painel registra pagamento na criação; nos demais canais é sempre pending/null.

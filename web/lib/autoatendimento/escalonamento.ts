@@ -14,6 +14,7 @@ const ROTULO_DO_MOTIVO: Record<EscalonarBody["motivo"], string> = {
   reclamacao: "reclamação",
   numero_novo: "cliente sem cadastro neste número diz ser alguém já cadastrado — confira e vincule",
   falha_tecnica: "falha técnica no atendimento automático",
+  triagem: "agenda fechada para o atendimento automático: o cliente quer marcar, finalize o horário com ele",
   outro: "outro motivo",
 }
 

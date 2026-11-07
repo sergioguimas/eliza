@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/utils/supabase/admin"
 import { Database } from "@/utils/database.types"
+import { dentroDaAgendaVisivel, lerAgendaVisivelDias, MENSAGEM_AGENDA_FECHADA, MENSAGEM_FORA_DA_JANELA } from "@/lib/domain/agenda-visivel"
 import { exigirServicoAtivo } from "@/lib/domain/catalogo"
 import { DomainError } from "@/lib/domain/erros"
 import { listarHorariosLivres, type MotivoSemHorario } from "@/lib/domain/horarios"
@@ -12,6 +13,8 @@ type AvailableSlotsReason =
   | "professional_unavailable_day"
   | "professional_not_in_organization"
   | "service_unavailable"
+  | "outside_window"
+  | "agenda_closed"
   | "outside_business_hours"
   | "fully_booked"
   | "error"
@@ -73,6 +76,19 @@ export async function getAvailableSlots(
   serviceId?: string
 ): Promise<AvailableSlotsResult> {
   const db = createAdminClient<Database>()
+
+  // Agenda visível (11): fora de [hoje, hoje + N] não há horário a oferecer; 0 = fechada.
+  try {
+    const dias = await lerAgendaVisivelDias(db, organizationId)
+
+    if (!dentroDaAgendaVisivel(dataLocal(date), dataLocal(new Date()), dias)) {
+      return dias === 0
+        ? { slots: [], reason: "agenda_closed", message: MENSAGEM_AGENDA_FECHADA }
+        : { slots: [], reason: "outside_window", message: MENSAGEM_FORA_DA_JANELA }
+    }
+  } catch (error) {
+    return resultadoDeErro(error, "error", "Erro ao carregar horários disponíveis.")
+  }
 
   let duracaoMinutos: number | undefined
 
