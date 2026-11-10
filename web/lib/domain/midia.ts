@@ -70,6 +70,31 @@ async function contarUsos(db: Db, orgId: string, ids: string[]): Promise<Map<str
   return usos
 }
 
+/** Fotos ATIVAS (deleted_at nulo) da org por id, com `usos`. Usada por categorias e vitrine. */
+export async function midiasAtivasPorId(db: Db, orgId: string, ids: string[]): Promise<Map<string, MidiaPainel>> {
+  const mapa = new Map<string, MidiaPainel>()
+  const unicos = [...new Set(ids)]
+  if (unicos.length === 0) return mapa
+
+  const { data, error } = await db
+    .from("org_media")
+    .select(COLUNAS)
+    .eq("organization_id", orgId)
+    .is("deleted_at", null)
+    .in("id", unicos)
+
+  if (error) {
+    console.error("[domain:midiasAtivasPorId]", error)
+    throw error
+  }
+
+  const usos = await contarUsos(db, orgId, (data ?? []).map((l) => l.id))
+
+  for (const l of data ?? []) mapa.set(l.id, paraPainel(l, usos.get(l.id) ?? 0))
+
+  return mapa
+}
+
 /** Fotos ativas, mais novas primeiro, com `usos`. */
 export async function listarBiblioteca(db: Db, orgId: string): Promise<MidiaPainel[]> {
   const { data, error } = await db
