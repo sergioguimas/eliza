@@ -6,7 +6,8 @@
 https://eliza.solasoftware.com.br
 ```
 
-O deploy esperado usa Docker em VPS com Traefik.
+O deploy esperado usa Docker em VPS com Traefik. Na VPS da Sola (`srv1394604`) o repo fica em
+`/opt/stacks/solasoftware/eliza` (app em `web/`).
 
 ## Arquivos
 
@@ -24,7 +25,8 @@ O compose atual usa:
 ## Checklist Antes do Deploy
 
 - `.env` criado no diretório `web`.
-- `NEXT_PUBLIC_APP_URL=https://eliza.solasoftware.com.br`.
+- `NEXT_PUBLIC_APP_URL=https://eliza.solasoftware.com.br`. **Obrigatória:** sem ela o envio de fotos responde 403
+  ("Origem não permitida") e as URLs das fotos saem erradas. Faltava em produção até 10/11/2026.
 - `NEXT_PUBLIC_SITE_URL=https://eliza.solasoftware.com.br`.
 - Redirect URLs configuradas no Supabase.
 - `SUPABASE_SERVICE_ROLE_KEY` presente só no servidor.
