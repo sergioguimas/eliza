@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { ThemeAwareToaster } from "@/components/layout/theme-aware-toaster";
 import "./globals.css";
 import { RealtimeAppointments } from "@/components/layout/realtime-appointments";
 
-const plex = IBM_Plex_Sans({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+// IBM Plex Sans variável (subconjunto latino do Google Fonts, pesos 300–700), no repo: o build não depende da
+// rede. Em 10/11/2026 o Google passou a devolver URLs `/l/font?kit=…&skey=…` para a VPS e o next/font/google
+// do Turbopack quebrou com elas. Licença: app/fonts/OFL.txt.
+const plex = localFont({
+  src: "./fonts/ibm-plex-sans-latin.woff2",
+  weight: "300 700",
   display: "swap",
   variable: "--font-plex",
 });
