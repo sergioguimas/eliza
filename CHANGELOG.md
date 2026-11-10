@@ -23,13 +23,14 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
   larguras (960 e 480 px) e não guarda o arquivo original, então dados de localização da foto (GPS) são descartados.
   Só dona e admin enviam, editam e excluem fotos.
 - Base para foto e ordem por categoria de serviço, e para a vitrine de destaques (foto, legenda e categoria por item).
-  As telas do painel para isso chegam na próxima etapa.
 - Catálogo público (`GET /api/public/v1/orgs/{slug}/catalogo`) passa a trazer `categorias` (ordem e foto de cada uma)
   e `vitrine` (destaques). São campos novos e aditivos: quem já lê o catálogo não precisa mudar nada.
 - Seletor de fotos no painel: escolhe da biblioteca ou envia uma nova, com recorte 3:4 (zoom por pinça ou barra),
   descrição obrigatória e barra de progresso do envio. Dá para editar a descrição e excluir fotos que não estão em uso.
 - Seção "Categorias e fotos" no topo de Serviços (dona e admin): foto de cada categoria pelo seletor, ordem com os botões
   subir/descer (várias trocas seguidas gravam de uma vez) e renomear a categoria em todos os serviços dela.
+- Página Vitrine no menu (dona e admin): adiciona fotos da biblioteca com legenda, troca a categoria, liga ou desliga
+  "No site", reordena com subir/descer e remove. Até 24 fotos no site; a foto continua na biblioteca ao remover.
 
 ### Modificado
 

@@ -157,3 +157,70 @@ Commit `fix(midia): limites de corpo e de pixels no upload e script de limpeza �
 4. **Script não trava (BAIXO).** Erro no `DELETE` da linha, ou no `rm`, é registrado e o script segue para o próximo alvo; saída 1 só no fim. Evidência: mock devolvendo 500 no `DELETE` com 2 excluídas antigas → as duas pastas removidas, dois `ERRO: DELETE org_media -> 500`, "feito: 2 pasta(s), 0 linha(s) (com erros, veja acima)", exit 1.
 5. **`MEDIA_DIR` em produção (BAIXO).** `mediaDir()` lança "MEDIA_DIR não configurado: as fotos sumiriam no próximo deploy" na chamada, com `NODE_ENV=production` e a variável vazia (a rota já converte em 500). Evidência: com `NODE_ENV=production` o módulo carrega e `urlsDaMidia` funciona (o `next build` não é afetado); `gravarVariantes` lança a mensagem.
 6. **Documentação (sem código).** Cota de 80 não atômica registrada como limite conhecido no `01` §5, item 7 (na nova numeração; era o item 6).
+
+## F2 — painel (passos 2.1, 2.2 e 2.3)
+
+Branch `feat/midia-vitrine`. Commits: 2.1 `53f2750`, 2.2 `4d1c288` (emendado para incluir a prévia do Opus), 2.3 (ver `git log`, "feat(vitrine)"). Nada de banco, nada de push.
+
+### O que foi feito
+
+- **2.1 MediaPicker** (`web/components/midia/`): `media-picker.tsx` (Dialog, abas "Minhas fotos" / "Enviar nova", grade 3 col no celular e 5 no desktop, variante 480, `loading="lazy"`, menu ⋯ com "Editar descrição" e "Excluir da biblioteca", contador "N de 80 fotos", rodapé "Usar esta foto"), `enviar-nova.tsx` (escolher, recorte, descrição, progresso), `recorte-foto.tsx` (único arquivo que importa `react-easy-crop`), `envio-foto.ts` (decodifica, reduz para 2560 px, XHR com `upload.onprogress`, mapa de erros). `react-easy-crop` fixado em **6.2.4** (sem `^`; a 6.2.5 tem um dia, escolhi a anterior).
+- **2.2 Categorias e fotos** (`web/components/services/categorias-fotos.tsx`, ligada em `app/(app)/servicos/page.tsx`): seção colapsável (aberta se houver categoria sem foto), linha por categoria com miniatura 60 px, "Trocar foto", "Tirar foto", "Renomear", ↑/↓ otimistas com gravação 600 ms depois do último toque. A página só carrega e renderiza a seção para owner/admin.
+- **2.3 Vitrine** (`web/app/(app)/vitrine/page.tsx`, `web/components/vitrine/vitrine-painel.tsx`, item de menu em `app-sidebar.tsx`): cabeçalho, contador "N de 24 no site", cartões com legenda inline (grava no blur/Enter, "Salvo"), select de categoria, interruptor "No site", ↑/↓, remover com confirmação, "Adicionar foto" → picker → diálogo de legenda (sugestão = descrição cortada em 60). Vazio com o texto do contrato. `professional`: `notFound()` na página (mesmo padrão de `/configuracoes/atendente`) e sem item de menu.
+
+### Desvios do contrato e decisões menores
+
+1. **Action nova `listarBibliotecaAction`** em `app/actions/midia.ts` (leitura: `exigirGestorDaOrg` + `listarBiblioteca`). O contrato não dava o caminho de leitura da biblioteca para o picker (a rota de upload é só POST). Ler ao abrir o seletor evita carregar até 80 fotos em toda visita a Serviços e mantém `usos` fresco. Único toque em backend; nenhuma regra mudou.
+2. **As actions só devolvem `{ error: message }`: `detalhes.motivo` (`EM_USO`, `LIMITE_VITRINE`) não chega à tela.** Não mexi nas actions (F1 revisada). Tratamento: (a) a exclusão com `usos > 0` é barrada na própria tela, antes de chamar a action, dizendo onde a foto está ("na categoria X", "na vitrine"; se `usos` for maior que o que a tela conhece, acrescenta "em outro lugar (categoria ou vitrine)"); (b) o botão "Adicionar foto" desabilita a 24 ativos, com a explicação; (c) se mesmo assim a action recusar (corrida, ou reativar com 24 ligados), a mensagem do domínio ("Essa foto está em uso...", "A vitrine já tem 24 fotos. Desative ou remova uma.") vai no toast e o interruptor volta. Se o Opus quiser o `motivo` na tela, é uma linha em cada action (`{ error, motivo }`).
+3. **Foto pequena bloqueia, não só avisa** (05 §1.4): o servidor recusa recorte com lado menor < 480 px (`PEQUENA`, 01 §4.4), então a tela mostra "Essa foto é pequena e vai ficar borrada no site..." e desabilita "Enviar" nesse caso, em vez de deixar enviar e tomar 422. A medida é a largura do recorte em pixels da imagem já reduzida (a que vai ao servidor).
+4. **Redução no cliente** (decisão menor): sempre reencoda para JPEG 0,9 com lado maior ≤ 2560 px (resolve HEIC e orientação). Fundo branco antes de desenhar (PNG transparente não vira preto). Se passar de 8 MB, baixa a qualidade (0,8; 0,7) e, em último caso, o tamanho (×0,75, até 4 tentativas). Orientação EXIF aplicada por `createImageBitmap(..., { imageOrientation: "from-image" })`.
+5. **Constantes duplicadas de propósito** (`envio-foto.ts`: 8 MB, 80 fotos, alt 3–200): importar `contracts/painel/midia.ts` traria o `zod` inteiro para o JS do painel, que hoje não o carrega. Limites e mensagens de `AltMidia` são os mesmos; o servidor segue decidindo. O limite de 24 da vitrine vem do servidor, como prop (`LIMITE_ITENS_ATIVOS`).
+6. **429 com dois sentidos**: `Retry-After` < 60 s (o "outra foto sendo processada", 01 §4.1) vira "O servidor está ocupado. Tente de novo em alguns segundos."; ≥ 60 s (taxa de 30/hora) vira "Muitos envios seguidos. Tente de novo em X minutos." 415 (a rota não emite hoje) tem mensagem própria; 401 → "Sua sessão expirou..."; falha de rede → "Sem conexão...". Para `MEDIA_LIMIT_REACHED` e 422 vale a mensagem do envelope; com 80 fotos a aba "Enviar nova" já mostra o bloqueio antes.
+7. **Menu**: "Vitrine" fica logo depois de Serviços no menu lateral (desktop). No celular a barra de baixo já tem 5 lugares (4 itens + "Mais"), então "Vitrine" entra no painel "Mais", primeiro da lista. Só owner/admin.
+8. **↑/↓ em coluna** nas categorias (um sobre o outro, 44 px cada), para sobrar largura ao texto a 375 px; o contrato desenha lado a lado.
+9. **Categoria sem foto**: a miniatura tracejada fica sem texto (60 px não comporta) e "Sem foto: o site usa a padrão" aparece ao lado, sob o nome.
+10. A lógica de ordem com debounce está escrita duas vezes (categorias e vitrine), igual nos dois; deliberado para não mexer na seção já commitada. Vale extrair um hook se aparecer um terceiro uso. Sair da tela com a ordem pendente grava na hora (efeito de desmontagem).
+12. **Prévia "Assim aparece no site" (acréscimo do Opus ao 2.1/2.2)**: o `MediaPicker` ganhou a prop `previaSite`, ligada só na foto de categoria. Mostra uma miniatura 4:3 (`object-fit: cover`, `object-position: 50% 40%`, a moldura da ilha da LP no celular), só CSS, sem lib e sem recorte novo: depois do recorte 3:4 (a região recortada é posicionada dentro da moldura, `components/midia/previa-site.tsx`) e ao selecionar uma foto da biblioteca (acima do rodapé). Legenda "Assim aparece no site". O recorte segue 3:4. A vitrine não usa. Não verificado visualmente (só tsc/lint).
+11. `react-easy-crop` injeta o próprio CSS (`<style>` no `head`); o app não tem CSP, então funciona sem configuração.
+
+### Aceite do 05 (§5) e evidência
+
+| Item | Estado | Evidência |
+|---|---|---|
+| `tsc --noEmit` sem erro novo | feito | `npx tsc --noEmit` em `web/`: saída vazia |
+| `npm run lint` sem erro novo nos arquivos tocados | feito | arquivos novos (`components/midia/*`, `categorias-fotos.tsx`, `components/vitrine/*`, `app/(app)/vitrine`, actions de mídia) sem nenhum aviso. Em `servicos/page.tsx` (1 `any` no `.map`) e `app-sidebar.tsx` (8 problemas) os problemas são os mesmos de antes das mudanças (conferido com `git stash`) |
+| `next build` passa | feito | `npx next build`: "Compiled successfully", 42/42 páginas, rota `/vitrine` na tabela |
+| `react-easy-crop` ausente do JS inicial de `/servicos` (e de `/vitrine`) | feito (análise do build) | o código da biblioteca está só em `.next/static/chunks/1d5239b0c24a84de.js` (26 KB). Esse arquivo **não** consta na lista de chunks de `server/app/(app)/servicos/page_client-reference-manifest.js` (16 chunks iniciais, nenhum é ele; idem `/vitrine`). Só aparece em `react-loadable-manifest.json` (de `servicos` e `vitrine`) e dentro dos chunks do picker (`32fead04368d336b.js` em servicos, `edc386ae63b073ec.js` em vitrine) como `Promise.all(["static/chunks/1d5239b0c24a84de.js"].map(e.l))`, isto é, `import()` sob demanda, disparado só quando `<RecorteFoto/>` renderiza (depois de escolher a foto). `ssr: false` não pré-carrega |
+| MediaPicker: recorte e envio a 375 px | parcial | num harness temporário sem login (removido), a 375 px: foto de 3200x2400 reduzida e aberta no recorte 3:4 com grade de terços e slider de zoom; "Enviar" dispara `POST /api/painel/midia` → 401 → "Sua sessão expirou. Entre novamente."; arquivo inválido (`.heic` falso) → "Não consegui abrir essa foto. Tente uma em JPG ou PNG." O envio real, o progresso e o HEIC de iPhone **não** foram exercitados |
+| Voltar para a foto anterior pela aba "Minhas fotos" | não verificado (precisa login) | código: `listarBibliotecaAction` ao abrir, grade com seleção e "Usar esta foto" |
+| Reordenar com 3 toques grava uma vez | não verificado (precisa login) | código: temporizador de 600 ms reiniciado a cada toque, uma chamada a `reordenarCategoriasAction` / `reordenarVitrineAction` |
+| Renomear categoria e conferir os serviços | não verificado (precisa login) | código: `renomearCategoriaAction` + `revalidatePath("/servicos")` |
+| Vitrine: adicionar, legenda, categoria, desativar, reordenar, remover | não verificado (precisa login) | código sobre as actions de `app/actions/vitrine.ts` |
+| `professional`: sem seção, sem menu, actions recusam | parcial | seção só renderiza com `role` owner/admin (servidor); menu idem (`canManageOrg`); `/vitrine` → `notFound()`; as actions já recusam (F1, `exigirGestorDaOrg`). Falta ver no navegador logado |
+
+### O que ficou sem verificação visual
+
+Tudo que exige sessão: o picker aberto dentro de Serviços e da Vitrine (biblioteca, menu ⋯, editar/excluir), a seção "Categorias e fotos", a página Vitrine, o item de menu (desktop e "Mais" no celular) e qualquer envio que chegue ao servidor. Nada foi testado em aparelho real nem com foto HEIC.
+
+### Roteiro de teste manual para o R2 (celular ou DevTools 375 px com toque, logado como owner/admin)
+
+1. **Menu**: no desktop, "Vitrine" aparece logo depois de Serviços; no celular, em "Mais", "Vitrine" é o primeiro item. Resultado: abre `/vitrine`.
+2. **Enviar e usar**: em Serviços, abra "Categorias e fotos" → "Trocar foto" de uma categoria → aba "Enviar nova" → "Escolher uma foto" (galeria) → a foto abre com grade de terços; ajuste com pinça e com o slider → escreva "Unhas amendoadas com francesinha" → "Enviar". Resultado: barra de progresso, o diálogo fecha sozinho e a miniatura da categoria mostra a foto nova. No iPhone, repita com uma foto HEIC.
+3. **Foto pequena**: envie uma foto pequena (ex.: 400 px) ou dê muito zoom. Resultado: aviso "Essa foto é pequena e vai ficar borrada no site" e "Enviar" desabilitado.
+4. **Descrição curta**: toque em "Enviar" sem descrever. Resultado: "Descreva a foto em pelo menos 3 caracteres."
+5. **Voltar à foto anterior**: "Trocar foto" de novo → aba "Minhas fotos" (abre nela) → toque numa foto antiga (marca com visto) → "Usar esta foto". Resultado: a categoria volta à foto antiga. O contador mostra "N de 80 fotos".
+6. **Excluir**: em "Minhas fotos", ⋯ numa foto **em uso** → "Excluir da biblioteca". Resultado: aviso "Essa foto está em uso" dizendo onde (categoria X / vitrine), sem excluir. Numa foto **sem uso**: pede confirmação ("A foto sai da biblioteca. Isso não pode ser desfeito pelo painel.") e some da grade. ⋯ → "Editar descrição" altera e salva.
+7. **Reordenar com debounce**: com a aba Rede aberta, toque três vezes seguidas em ↓ na primeira categoria. Resultado: a linha desce 3 posições na hora e sai **uma** chamada (server action) cerca de 600 ms depois do último toque. Recarregue: a ordem permanece.
+8. **Renomear**: "Renomear" numa categoria → o diálogo diz "Muda a categoria em todos os serviços dela." → salve. Resultado: ao editar um serviço dessa categoria, o nome novo aparece e a foto continua. Renomear para o nome de outra categoria existente mostra "Os serviços vão para a categoria X, que já existe, e vale a foto dela."
+9. **Tirar foto**: "Tirar foto" numa categoria. Resultado: miniatura tracejada e "Sem foto: o site usa a padrão".
+10. **Vitrine**: `/vitrine` vazia mostra "Sua vitrine está vazia..." → "Adicionar foto" → escolher → diálogo de legenda já preenchido com a descrição cortada em 60 → "Adicionar". Resultado: o cartão entra no fim, "1 de 24 no site". Edite a legenda e saia do campo (ou Enter): aparece "Salvo". Troque a categoria no select. Desligue "No site": o contador cai e a foto fica apagada. ↑/↓ reordenam (mesmo debounce). A lixeira pede "Sai da vitrine; a foto continua na biblioteca" e remove.
+11. **Limite**: com 24 ligados, "Adicionar foto" fica desabilitado com a explicação e os interruptores desligados não ligam.
+12. **professional**: entre como `professional`. Resultado: sem "Vitrine" no menu, sem a seção em Serviços, `/vitrine` dá 404, e uma chamada direta às actions devolve "Apenas administradores podem gerenciar fotos."
+13. **Prévia**: ao trocar a foto de uma categoria, depois de recortar (e ao tocar numa foto da biblioteca) aparece "Assim aparece no site" com a foto numa moldura 4:3, mostrando só a faixa central (um pouco acima do meio). Ela deve bater com a ilha da LP no celular.
+14. **Toque**: tudo acima com o polegar a 375 px: nenhum alvo menor que 44 px, nada depende de hover.
+
+### Pendências
+
+- Teste autenticado (R2) e em aparelho real, incluindo HEIC.
+- Passo 2.4 (Haiku): conferir login de `professional` e reconfirmar o chunk.
+- Decisão do Opus: expor `detalhes.motivo` nas actions (item 2) ou ficar com a mensagem.
