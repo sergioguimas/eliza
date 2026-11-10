@@ -144,10 +144,10 @@ Use timezone `America/Sao_Paulo` no agendador sempre que ele permitir.
 As fotos da biblioteca ficam em disco, fora do banco e fora do container. O banco guarda só o
 metadado (texto alternativo, cor, quem enviou). Contrato `docs/contratos/midia-vitrine/`.
 
-- **Pasta na VPS:** `/opt/sola-media`. Criar **antes do primeiro `up`**, porque o volume é montado no start:
+- **Pasta na VPS:** `/opt/stacks/solasoftware/sola-media`. Criar **antes do primeiro `up`**, porque o volume é montado no start:
 
   ```bash
-  sudo mkdir -p /opt/sola-media && sudo chmod 755 /opt/sola-media
+  sudo mkdir -p /opt/stacks/solasoftware/sola-media && sudo chmod 755 /opt/stacks/solasoftware/sola-media
   ```
 
   O `elisa-app` grava nela, montada em `/data/media` (volume em `web/docker-compose.yaml`).
@@ -167,7 +167,7 @@ metadado (texto alternativo, cor, quem enviou). Contrato `docs/contratos/midia-v
 
 - **Backup: ainda não feito (risco aceito).** A pasta existe só na VPS. Se o disco for perdido, as fotos
   somem e a dona reenvia. Para a escala atual (uma org, ~20 fotos), é aceito. **Tarefa aberta:** `rsync`
-  diário de `/opt/sola-media` para o destino de backup que for definido para a VPS (contrato
+  diário de `/opt/stacks/solasoftware/sola-media` para o destino de backup que for definido para a VPS (contrato
   `midia-vitrine/06-infra-e-deploy.md` §5).
 
 ## Pós-Deploy

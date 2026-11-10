@@ -12,7 +12,7 @@
 ## 2. Pasta
 
 ```
-/opt/sola-media/            root:root 755 — fora de qualquer repo, sobrevive a rebuild e a git clean
+/opt/stacks/solasoftware/sola-media/   root:root 755 — fora de qualquer repo, sobrevive a rebuild e a git clean
   <uuid>/960.webp
   <uuid>/480.webp
 ```
@@ -25,7 +25,7 @@ No serviço `elisa-app`, acrescentar:
 
 ```yaml
     volumes:
-      - /opt/sola-media:/data/media
+      - /opt/stacks/solasoftware/sola-media:/data/media
     environment:
       MEDIA_DIR: /data/media
 ```
@@ -44,7 +44,7 @@ Serviço novo:
       - /var/cache/nginx
       - /var/run
     volumes:
-      - /opt/sola-media:/srv/media:ro
+      - /opt/stacks/solasoftware/sola-media:/srv/media:ro
       - ./infra/media-nginx.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       proxy_net: {}
@@ -94,7 +94,7 @@ com confiança arquivo criado em runtime em `public/`). Em produção essa rota 
 
 Hoje não há backup fora da VPS. Se o disco for perdido, as fotos somem, mas a LP cai para as fotos locais
 (F3) e a dona reenvia. Para a escala atual (uma org com ~20 fotos), aceito. **Tarefa aberta**, fora deste
-contrato: `rsync` diário de `/opt/sola-media` para o destino de backup que for definido para a VPS.
+contrato: `rsync` diário de `/opt/stacks/solasoftware/sola-media` para o destino de backup que for definido para a VPS.
 Registrar em `docs/DEPLOY.md`.
 
 ## 6. Ordem de deploy (F4)
@@ -104,7 +104,7 @@ Cada passo só depois do anterior conferido.
 | # | Passo | Quem | Conferência |
 |---|---|---|---|
 | 1 | Migration via MCP Supabase (aditiva: tabelas novas, nada lido pelo código antigo) | Sonnet na F1, ou Opus no deploy se a F1 rodou só local | Haiku: `list_tables` + privilégios de `anon` |
-| 2 | `sudo mkdir -p /opt/sola-media && sudo chmod 755 /opt/sola-media` | Sérgio | `ls -ld` |
+| 2 | `sudo mkdir -p /opt/stacks/solasoftware/sola-media && sudo chmod 755 /opt/stacks/solasoftware/sola-media` | Sérgio | `ls -ld` |
 | 3 | `cd /opt/eliza && sudo git pull` (conferir `git log -1` = commit esperado: armadilha de 03/11) | Sérgio | hash |
 | 4 | `cd web && sudo docker compose up -d --build` (sobe `elisa-app` com volume e `eliza-media`) | Sérgio | `docker compose ps` com os dois `Up` |
 | 5 | `docker exec elisa-app node -e "require('sharp')"` | Sérgio | sem erro |

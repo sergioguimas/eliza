@@ -13,7 +13,7 @@ serviço, ordena as categorias e monta uma **vitrine** (destaques do trabalho). 
 tudo pela rota pública do catálogo, que já consultam hoje. Trocar uma foto **não reconstrói a LP**:
 a página vê a mudança na próxima visita.
 
-Os arquivos ficam numa **pasta em disco da VPS** (`/opt/sola-media`). O Eliza grava nela, e um nginx
+Os arquivos ficam numa **pasta em disco da VPS** (`/opt/stacks/solasoftware/sola-media`). O Eliza grava nela, e um nginx
 pequeno serve em `https://eliza.solasoftware.com.br/media/...`. Não há bucket nem S3. O banco guarda só
 metadado (texto alternativo, cor, quem subiu), **nunca os bytes**.
 
@@ -107,7 +107,7 @@ O detalhe, com quem faz cada passo, está em [EXECUCAO.md](EXECUCAO.md).
 - Vitrine e foto de categoria no `/marcar` (MV14, fase 3).
 - Foto de categoria/serviço nas APIs v1 e de Autoatendimento. Uma ideia para depois: o atendente mandar
   a foto da categoria no WhatsApp quando a cliente pergunta por um serviço.
-- Backup da pasta `/opt/sola-media` fora da VPS (ver 06 §5: risco aceito, com tarefa aberta).
+- Backup da pasta `/opt/stacks/solasoftware/sola-media` fora da VPS (ver 06 §5: risco aceito, com tarefa aberta).
 - Foto por serviço (só por categoria e vitrine).
 - Vídeo, GIF, SVG.
 - Migrar o storage para R2/S3.

@@ -16,7 +16,7 @@ services:
     env_file:
       - .env
     volumes:
-      - /opt/sola-media:/data/media
+      - /opt/stacks/solasoftware/sola-media:/data/media
     environment:
       MEDIA_DIR: /data/media
   eliza-media:
@@ -28,7 +28,7 @@ services:
       - /var/cache/nginx
       - /var/run
     volumes:
-      - /opt/sola-media:/srv/media:ro
+      - /opt/stacks/solasoftware/sola-media:/srv/media:ro
       - ./infra/media-nginx.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       proxy_net: {}
