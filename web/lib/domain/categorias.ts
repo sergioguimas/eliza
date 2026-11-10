@@ -3,7 +3,8 @@ import "server-only"
 import type { MidiaPainel } from "@/contracts/painel/midia"
 import type { Db } from "./db"
 import { DomainError } from "./erros"
-import { midiasAtivasPorId } from "./midia"
+import type { FotoPublica } from "@/contracts/publico/catalogo"
+import { fotoPublicaDeLinha, midiasAtivasPorId } from "./midia"
 
 /**
  * Foto e ordem por categoria de serviço (tabela `service_categories`, contrato midia-vitrine/02).
@@ -227,4 +228,67 @@ export async function renomearCategoria(db: Db, orgId: string, de: string, para:
     console.error("[domain:renomearCategoria]", error)
     throw error
   }
+}
+
+/**
+ * Categorias do catálogo público, na ordem final (§5). Recebe os serviços JÁ listados pela rota (não consulta
+ * `services` de novo). Mídia excluída sai como `foto: null`.
+ */
+export async function categoriasPublicas(
+  db: Db,
+  orgId: string,
+  servicos: { categoria: string | null }[]
+): Promise<{ nome: string; foto: FotoPublica | null }[]> {
+  return montarCategoriasPublicas(await lerLinhasCategoriasPublicas(db, orgId), servicos)
+}
+
+/**
+ * Só a leitura, para a rota pública rodar em paralelo com a listagem de serviços (uma ida ao banco a menos
+ * em série). A foto vem embutida (FK composta service_categories_media_fk), já escopada pela org da linha.
+ */
+export async function lerLinhasCategoriasPublicas(db: Db, orgId: string) {
+  const { data, error } = await db
+    .from("service_categories")
+    .select(
+      "nome, chave, ordem, org_media!service_categories_media_fk(id, alt, cor, largura, altura, deleted_at)"
+    )
+    .eq("organization_id", orgId)
+
+  if (error) {
+    console.error("[domain:categoriasPublicas]", error)
+    throw error
+  }
+
+  return data ?? []
+}
+
+export type LinhasCategoriasPublicas = Awaited<ReturnType<typeof lerLinhasCategoriasPublicas>>
+
+/** Parte pura: cruza as linhas com os serviços já listados e aplica a ordem final (§5). */
+export function montarCategoriasPublicas(
+  dados: LinhasCategoriasPublicas,
+  servicos: { categoria: string | null }[]
+): { nome: string; foto: FotoPublica | null }[] {
+  const dosServicos = new Map<string, string>()
+
+  for (const s of servicos) {
+    const nome = s.categoria?.trim()
+    if (nome && !dosServicos.has(chaveDaCategoria(nome))) dosServicos.set(chaveDaCategoria(nome), nome)
+  }
+
+  if (dosServicos.size === 0) return []
+
+  const linhas = new Map(dados.filter((l) => l.chave).map((l) => [l.chave as string, l]))
+
+  const lista = [...dosServicos.entries()].map(([chave, nomeDoServico]) => {
+    const linha = linhas.get(chave)
+
+    return {
+      nome: linha?.nome ?? nomeDoServico,
+      ordem: linha ? linha.ordem : null,
+      foto: fotoPublicaDeLinha(linha?.org_media ?? null),
+    }
+  })
+
+  return ordenarCategorias(lista).map(({ nome, foto }) => ({ nome, foto }))
 }

@@ -1,6 +1,7 @@
 import "server-only"
 
 import { AltMidia, type MidiaPainel } from "@/contracts/painel/midia"
+import type { FotoPublica } from "@/contracts/publico/catalogo"
 import { urlsDaMidia } from "@/lib/midia/armazenamento"
 import type { Db } from "./db"
 import { DomainError } from "./erros"
@@ -227,4 +228,13 @@ export async function excluirMidia(db: Db, orgId: string, id: string): Promise<v
     console.error("[domain:excluirMidia]", erroUpdate)
     throw erroUpdate
   }
+}
+
+/** Linha de `org_media` embutida (join) -> foto pública; null se a foto foi excluída ou não veio. */
+export function fotoPublicaDeLinha(
+  l: { id: string; alt: string; cor: string; largura: number; altura: number; deleted_at: string | null } | null
+): FotoPublica | null {
+  if (!l || l.deleted_at) return null
+
+  return { ...urlsDaMidia(l.id), largura: l.largura, altura: l.altura, alt: l.alt, cor: l.cor }
 }

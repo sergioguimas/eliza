@@ -3,7 +3,8 @@ import "server-only"
 import type { MidiaPainel } from "@/contracts/painel/midia"
 import type { Db } from "./db"
 import { DomainError } from "./erros"
-import { midiasAtivasPorId } from "./midia"
+import type { FotoPublica } from "@/contracts/publico/catalogo"
+import { fotoPublicaDeLinha, midiasAtivasPorId } from "./midia"
 
 /**
  * Vitrine: destaques ordenados, cada um com uma foto da biblioteca, legenda e (opcional) categoria
@@ -59,7 +60,7 @@ const limiteAtingido = () =>
   })
 
 /** `ordem` crescente, depois `created_at`. */
-function ordenar(linhas: LinhaItem[]): LinhaItem[] {
+function ordenar<T extends { ordem: number; created_at: string }>(linhas: T[]): T[] {
   return [...linhas].sort((a, b) => a.ordem - b.ordem || a.created_at.localeCompare(b.created_at))
 }
 
@@ -197,4 +198,63 @@ export async function removerItem(db: Db, orgId: string, id: string): Promise<vo
   }
 
   if (!data || data.length === 0) throw new DomainError("NOT_FOUND", "Item da vitrine não encontrado.")
+}
+
+/**
+ * Destaques do catálogo público: só ativos, foto ativa, no máximo 24, na ordem. `categoriasExistentes` são as
+ * chaves (`lower(btrim)`) das categorias dos serviços ativos; categoria que não existe mais sai como null.
+ */
+export async function vitrinePublica(
+  db: Db,
+  orgId: string,
+  categoriasExistentes: Set<string>
+): Promise<{ id: string; legenda: string; categoria: string | null; foto: FotoPublica }[]> {
+  return montarVitrinePublica(await lerItensVitrinePublica(db, orgId), categoriasExistentes)
+}
+
+/** Só a leitura (a rota pública a roda em paralelo com os serviços). */
+export async function lerItensVitrinePublica(db: Db, orgId: string) {
+  // Uma ida só: a foto vem embutida (FK composta vitrine_items_media_fk).
+  const { data, error } = await db
+    .from("vitrine_items")
+    .select(`${COLUNAS}, org_media!vitrine_items_media_fk(id, alt, cor, largura, altura, deleted_at)`)
+    .eq("organization_id", orgId)
+    .eq("ativo", true)
+    .order("ordem")
+    .order("created_at")
+
+  if (error) {
+    console.error("[domain:vitrinePublica]", error)
+    throw error
+  }
+
+  return data ?? []
+}
+
+export type ItensVitrinePublica = Awaited<ReturnType<typeof lerItensVitrinePublica>>
+
+/** Parte pura: ordem, foto ativa, categoria que ainda existe, máximo de 24. */
+export function montarVitrinePublica(
+  dados: ItensVitrinePublica,
+  categoriasExistentes: Set<string>
+): { id: string; legenda: string; categoria: string | null; foto: FotoPublica }[] {
+  const itens = ordenar(dados)
+
+  return itens
+    .flatMap((i) => {
+      const foto = fotoPublicaDeLinha(i.org_media)
+      if (!foto) return []
+
+      const categoria = i.categoria?.trim() || null
+
+      return [
+        {
+          id: i.id,
+          legenda: i.legenda,
+          categoria: categoria && categoriasExistentes.has(categoria.toLowerCase()) ? categoria : null,
+          foto,
+        },
+      ]
+    })
+    .slice(0, LIMITE_ITENS_ATIVOS)
 }
