@@ -9,6 +9,7 @@ import {
   ChevronsRight,
   Clock,
   Home,
+  Images,
   LogOut,
   Menu,
   Settings,
@@ -168,11 +169,26 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
     (item) => !item.adminOnly || canManageOrg
   )
 
+  // Vitrine: só owner/admin (contrato midia-vitrine/05 §3). No desktop fica logo depois de Serviços; no celular a
+  // barra de baixo já tem os 5 lugares ocupados, então ela vai para o painel "Mais".
+  const vitrineItem: NavItem = {
+    href: "/vitrine",
+    label: "Vitrine",
+    icon: Images,
+    adminOnly: true,
+  }
+
+  const desktopOperationalItems = canManageOrg
+    ? operationalItems.flatMap((item) => (item.href === "/servicos" ? [item, vitrineItem] : [item]))
+    : operationalItems
+
+  const moreItems = canManageOrg ? [vitrineItem, ...visibleManagementItems] : visibleManagementItems
+
   // No mobile a sidebar some inteira (inclusive o menu do usuário), então o
   // que não cabe na barra — gestão, perfil, super admin e sair — vai para o
   // painel "Mais". Antes a barra levava só Configurações e ninguém conseguia
   // sair do sistema pelo celular.
-  const moreActive = visibleManagementItems.some((item) =>
+  const moreActive = moreItems.some((item) =>
     pathname.startsWith(item.href)
   )
 
@@ -235,7 +251,7 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
         <div className="flex-1 overflow-y-auto px-3 py-4">
           <SidebarSection
             title={messages.operational_section || "Operacional"}
-            items={operationalItems}
+            items={desktopOperationalItems}
             pathname={pathname}
             collapsed={collapsed}
           />
@@ -398,12 +414,12 @@ export function AppSidebar({ user, organization, profile }: AppSidebarProps) {
             </div>
           </SheetHeader>
 
-          {visibleManagementItems.length > 0 && (
+          {moreItems.length > 0 && (
             <div className="border-b px-3 py-3">
               <p className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 {messages.management_section || meta.sidebarLabel}
               </p>
-              {visibleManagementItems.map((item) => {
+              {moreItems.map((item) => {
                 const active =
                   item.href === "/configuracoes"
                     ? pathname === item.href

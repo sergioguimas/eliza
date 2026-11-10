@@ -4,6 +4,8 @@ import { createAdminClient } from "@/utils/supabase/admin"
 import type { Database } from "@/utils/database.types"
 import { consumeRateLimit, getClientIp, hashIdentifier } from "@/lib/demo/rate-limit"
 import { listarServicosAtivos } from "@/lib/domain/catalogo"
+import { chaveDaCategoria, lerLinhasCategoriasPublicas, montarCategoriasPublicas } from "@/lib/domain/categorias"
+import { lerItensVitrinePublica, montarVitrinePublica } from "@/lib/domain/vitrine"
 import { ApiError, internalError } from "@/lib/http/erros"
 import { etagConfere } from "@/lib/http/etag"
 import { corpoDeErro, jsonResponse } from "@/lib/http/resposta"
@@ -91,11 +93,22 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
     if (erroOrg) throw erroOrg
     if (!org?.slug) return falhar(naoEncontrada())
 
-    const servicos = await listarServicosAtivos(db, org.id)
+    // Serviços, categorias (foto e ordem) e vitrine: três leituras independentes, em paralelo (Promise.all),
+    // para o custo ser o da mais lenta e não a soma. A org é sempre a do slug.
+    const [todosServicos, linhasCategorias, itensVitrine] = await Promise.all([
+      listarServicosAtivos(db, org.id),
+      lerLinhasCategoriasPublicas(db, org.id),
+      lerItensVitrinePublica(db, org.id),
+    ])
+
+    const servicos = todosServicos.slice(0, LIMITE_SERVICOS_PUBLICOS)
+    const chaves = new Set(servicos.flatMap((s) => (s.categoria ? [chaveDaCategoria(s.categoria)] : [])))
+    const categorias = montarCategoriasPublicas(linhasCategorias, servicos)
+    const vitrine = montarVitrinePublica(itensVitrine, chaves)
 
     const dados: CatalogoPublico = {
       organizacao: { nome: org.name, slug: org.slug },
-      servicos: servicos.slice(0, LIMITE_SERVICOS_PUBLICOS).map((s) => ({
+      servicos: servicos.map((s) => ({
         id: s.id,
         nome: s.titulo,
         descricao: s.descricao?.trim() ? s.descricao : null,
@@ -105,6 +118,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
         categoria: s.categoria,
         adicionais: s.adicionais,
       })),
+      categorias,
+      vitrine,
       atualizadoEm: new Date().toISOString(),
     }
 
@@ -117,7 +132,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
 
     // ETag do CONTEÚDO (sem atualizadoEm, que muda a cada consulta): inalterado -> 304.
     const etag = `"${createHash("sha256")
-      .update(JSON.stringify({ o: dados.organizacao, s: dados.servicos }))
+      .update(JSON.stringify({ o: dados.organizacao, s: dados.servicos, c: dados.categorias, v: dados.vitrine }))
       .digest("hex")
       .slice(0, 32)}"`
     const headers = { ...cors(req), "Cache-Control": CACHE, ETag: etag }

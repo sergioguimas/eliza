@@ -5,6 +5,7 @@ export type CodigoDominio =
   | "INVALID_TRANSITION"   // máquina de status ou guarda de edição/pagamento
   | "CUSTOMER_AMBIGUOUS"   // mais de um cadastro casa com telefone/documento
   | "CUSTOMER_CONFLICT"    // documento já pertence a outro cliente
+  | "CONFLICT"             // estado atual impede a operação (ex.: foto em uso, `detalhes.motivo = "EM_USO"`)
 
 /**
  * Erro de regra de negócio do domínio. `message` é em português e pode ir

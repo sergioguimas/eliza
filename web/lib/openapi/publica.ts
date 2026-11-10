@@ -25,7 +25,7 @@ Não há API key, cookie nem ticket. Por isso a resposta é restrita e a rota é
 
 ## Formato
 
-Sucesso: \`{ "data": { organizacao, servicos, atualizadoEm } }\`. Erro: \`{ "error": { "code", "message", "request_id" } }\`.
+Sucesso: \`{ "data": { organizacao, servicos, categorias, vitrine, atualizadoEm } }\`. Erro: \`{ "error": { "code", "message", "request_id" } }\`.
 Todo response traz \`X-Request-Id\`.
 
 - \`servicos\`: só os ativos, ordenados por título, no máximo ${LIMITE_SERVICOS_PUBLICOS}.
@@ -108,7 +108,8 @@ export function gerarOpenApiPublica({ origem }: OpcoesDoDocumento): Objeto {
           operationId: "obterCatalogoPublico",
           summary: "Catálogo público da organização",
           description:
-            `Serviços ativos da organização, com nome, descrição, duração, preço e categoria. Sem autenticação.\n\n` +
+            `Serviços ativos da organização, com nome, descrição, duração, preço e categoria; mais as categorias (foto e ordem de exibição) e a vitrine (destaques). Sem autenticação.\n\n` +
+            `**Fotos:** arquivos imutáveis (\`Cache-Control: immutable\`, 1 ano), 3:4 em duas larguras: use \`urlPequena 480w, url 960w\` em \`srcset\` e \`largura\`/\`altura\` no \`<img>\`. Foto excluída continua no ar por 30 dias e depois some: tenha reserva em \`onerror\`.\n\n` +
             `**CORS:** só as origens de \`LP_PUBLIC_ORIGINS\` recebem \`Access-Control-Allow-Origin\`.\n\n` +
             `**Cache:** \`${CACHE}\`; use \`ETag\` com \`If-None-Match\` para receber \`304\`.`,
           security: [],
@@ -145,6 +146,12 @@ export function gerarOpenApiPublica({ origem }: OpcoesDoDocumento): Objeto {
                           servicos: [
                             { id: ID_EXEMPLO.servico, nome: "Alongamento em fibra", descricao: null, duracaoMinutos: 120, preco: 180, precoAPartirDe: true, categoria: "Alongamento", adicionais: [{ id: "5b1f7d2a-3c4e-4a69-8f10-2d9e6c0a7b13", nome: "Unha quebrada", valor: 5, unidade: "por unha" }] },
                             { id: "9b2e4d18-6a3c-4f71-8e05-d3c1a7b92f46", nome: "Esmaltação", descricao: "Inclui cuticulagem", duracaoMinutos: 45, preco: 0, precoAPartirDe: false, categoria: null, adicionais: [] },
+                          ],
+                          categorias: [
+                            { nome: "Alongamento", foto: { url: "https://eliza.exemplo.com.br/media/0b6c9a52-3f1e-4d7a-9c28-5e4f1a7d3b90/960.webp", urlPequena: "https://eliza.exemplo.com.br/media/0b6c9a52-3f1e-4d7a-9c28-5e4f1a7d3b90/480.webp", largura: 960, altura: 1280, alt: "Alongamento em fibra, tom nude", cor: "#c9a88f" } },
+                          ],
+                          vitrine: [
+                            { id: "e3a1c5d7-92b4-4f68-a0d1-7c58b2e49f13", legenda: "Nude com glitter", categoria: "Alongamento", foto: { url: "https://eliza.exemplo.com.br/media/4d8e1f2a-6b7c-4a93-b5e0-1c2d3e4f5a67/960.webp", urlPequena: "https://eliza.exemplo.com.br/media/4d8e1f2a-6b7c-4a93-b5e0-1c2d3e4f5a67/480.webp", largura: 960, altura: 1280, alt: "Unhas nude com glitter", cor: "#d8b4a0" } },
                           ],
                           atualizadoEm: "2026-10-19T14:06:43.454Z",
                         },

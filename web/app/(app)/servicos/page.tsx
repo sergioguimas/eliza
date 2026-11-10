@@ -10,6 +10,9 @@ import { CategoryIcon } from "@/components/shared/category-icon"
 import { Database } from "@/utils/database.types"
 import { lerAdicionais } from "@/lib/adicionais"
 import { rotuloAdicional } from "@/lib/preco"
+import { createAdminClient } from "@/utils/supabase/admin"
+import { listarCategorias } from "@/lib/domain/categorias"
+import { CategoriasFotos } from "@/components/services/categorias-fotos"
 
 type ProfileWithOrg = Database["public"]["Tables"]["profiles"]["Row"] & {
   organizations?: Pick<
@@ -55,13 +58,17 @@ export default async function ProcedimentosPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("organization_id, organizations(niche)")
+    .select("organization_id, role, organizations(niche)")
     .eq("id", user.id)
     .single()
 
   if (!profile?.organization_id) redirect("/setup")
 
   const organizationId = profile.organization_id
+
+  // Fotos e ordem das categorias: só owner/admin (as actions recusam o resto do mesmo jeito).
+  const gerenciaFotos = profile.role === "owner" || profile.role === "admin"
+  const categorias = gerenciaFotos ? await listarCategorias(createAdminClient<Database>(), organizationId) : []
   const typedProfile = profile as ProfileWithOrg
   const niche = typedProfile.organizations?.niche || "generico"
   const dict = getDictionary(niche)
@@ -101,6 +108,8 @@ export default async function ProcedimentosPage() {
           triggerLabel={createLabel}
         />
       </div>
+
+      {gerenciaFotos && <CategoriasFotos categorias={categorias} />}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {services?.map((service: any) => (

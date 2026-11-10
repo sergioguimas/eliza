@@ -43,3 +43,6 @@ next-env.d.ts
 
 #--- npm ---
 package-lock.json
+
+# fotos enviadas no dev; produção usa /opt/sola-media (contrato midia-vitrine)
+/.media/

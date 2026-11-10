@@ -15,6 +15,28 @@ services:
       - "traefik.http.services.elisa-app.loadbalancer.server.port=3000"
     env_file:
       - .env
+    volumes:
+      - /opt/sola-media:/data/media
+    environment:
+      MEDIA_DIR: /data/media
+  eliza-media:
+    container_name: eliza-media
+    image: nginx:1.27-alpine
+    restart: always
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+    volumes:
+      - /opt/sola-media:/srv/media:ro
+      - ./infra/media-nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      proxy_net: {}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.eliza-media.rule=Host(`${DNS}`) && PathPrefix(`/media/`)"
+      - "traefik.http.routers.eliza-media.priority=100"
+      - "traefik.http.services.eliza-media.loadbalancer.server.port=80"
 networks:
   proxy_net:
     external: true

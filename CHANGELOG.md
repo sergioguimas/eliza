@@ -7,6 +7,8 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Não publicado]
 
+## [1.4.0] - 2026-11-10
+
 ### Adicionado
 
 - Agenda visível por número de dias, ajustável em Configurações → Preferências ("Agenda visível para clientes (dias)",
@@ -19,6 +21,18 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
   horário enquanto a agenda está fechada.
 - A OpenAPI de Autoatendimento marca `consultarHorarios`, `criarAgendamento` e `remarcarAgendamento` com
   `x-atendente-agenda: true`, para o atendente saber quais ferramentas dependem da agenda aberta.
+- Biblioteca de fotos no painel: envio de JPEG, PNG ou WebP com recorte 3:4. O servidor converte para WebP em duas
+  larguras (960 e 480 px) e não guarda o arquivo original, então dados de localização da foto (GPS) são descartados.
+  Só dona e admin enviam, editam e excluem fotos.
+- Base para foto e ordem por categoria de serviço, e para a vitrine de destaques (foto, legenda e categoria por item).
+- Catálogo público (`GET /api/public/v1/orgs/{slug}/catalogo`) passa a trazer `categorias` (ordem e foto de cada uma)
+  e `vitrine` (destaques). São campos novos e aditivos: quem já lê o catálogo não precisa mudar nada.
+- Seletor de fotos no painel: escolhe da biblioteca ou envia uma nova, com recorte 3:4 (zoom por pinça ou barra),
+  descrição obrigatória e barra de progresso do envio. Dá para editar a descrição e excluir fotos que não estão em uso.
+- Seção "Categorias e fotos" no topo de Serviços (dona e admin): foto de cada categoria pelo seletor, ordem com os botões
+  subir/descer (várias trocas seguidas gravam de uma vez) e renomear a categoria em todos os serviços dela.
+- Página Vitrine no menu (dona e admin): adiciona fotos da biblioteca com legenda, troca a categoria, liga ou desliga
+  "No site", reordena com subir/descer e remove. Até 24 fotos no site; a foto continua na biblioteca ao remover.
 
 ### Modificado
 
@@ -137,7 +151,8 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
   API pública de catálogo.
 - O histórico anterior a esta versão, por data, fica em `docs/CHANGELOG.md`.
 
-[Não publicado]: https://github.com/sergioguimas/eliza/compare/v1.3.0...HEAD
+[Não publicado]: https://github.com/sergioguimas/eliza/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/sergioguimas/eliza/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/sergioguimas/eliza/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/sergioguimas/eliza/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/sergioguimas/eliza/compare/v1.0.1...v1.1.0
