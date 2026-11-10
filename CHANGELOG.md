@@ -26,6 +26,8 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
   As telas do painel para isso chegam na próxima etapa.
 - Catálogo público (`GET /api/public/v1/orgs/{slug}/catalogo`) passa a trazer `categorias` (ordem e foto de cada uma)
   e `vitrine` (destaques). São campos novos e aditivos: quem já lê o catálogo não precisa mudar nada.
+- Seletor de fotos no painel: escolhe da biblioteca ou envia uma nova, com recorte 3:4 (zoom por pinça ou barra),
+  descrição obrigatória e barra de progresso do envio. Dá para editar a descrição e excluir fotos que não estão em uso.
 
 ### Modificado
 
