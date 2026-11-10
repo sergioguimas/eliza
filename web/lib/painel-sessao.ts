@@ -26,6 +26,40 @@ export async function organizacaoDaSessao(): Promise<{ organizationId: string; u
   return { organizationId: profile.organization_id, userId: user.id }
 }
 
+/**
+ * Como `organizacaoDaSessao`, mas só aceita `owner` e `admin` (fotos, categorias e vitrine). `professional`
+ * é recusado aqui, no servidor, mesmo que alguém chame a rota ou a action direto.
+ * `motivo` deixa a rota distinguir 401 (sem sessão) de 403 (papel ou perfil sem org).
+ */
+export async function exigirGestorDaOrg(): Promise<
+  | { organizationId: string; userId: string; role: "owner" | "admin" }
+  | { error: string; motivo: "UNAUTHORIZED" | "FORBIDDEN" }
+> {
+  const session = await createClient<Database>()
+
+  const {
+    data: { user },
+  } = await session.auth.getUser()
+
+  if (!user) return { error: "Sessão expirada. Entre novamente.", motivo: "UNAUTHORIZED" }
+
+  const { data: profile } = await session
+    .from("profiles")
+    .select("organization_id, role")
+    .eq("id", user.id)
+    .single()
+
+  if (!profile?.organization_id) {
+    return { error: "Seu perfil não está vinculado a uma organização.", motivo: "FORBIDDEN" }
+  }
+
+  if (profile.role !== "owner" && profile.role !== "admin") {
+    return { error: "Apenas administradores podem gerenciar fotos.", motivo: "FORBIDDEN" }
+  }
+
+  return { organizationId: profile.organization_id, userId: user.id, role: profile.role }
+}
+
 /** Ator do painel; `notificar` liga o aviso por WhatsApp ao cliente. */
 export function atorDoPainel(organizationId: string, notificar: boolean): Ator {
   return {
