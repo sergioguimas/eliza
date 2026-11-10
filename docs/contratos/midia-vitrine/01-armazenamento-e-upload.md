@@ -98,7 +98,10 @@ export async function processarFoto(entrada: Buffer, recorte: Recorte): Promise<
 
 Passos, nesta ordem:
 
-1. `sharp.concurrency(1)` no carregamento do módulo; `sharp(entrada, { limitInputPixels: 40_000_000, failOn: "error" })`.
+1. `sharp.concurrency(1)` no carregamento do módulo; `sharp(entrada, { limitInputPixels: 2560 * 2560 * 1.25, failOn: "error" })`
+   (o painel reduz para 2560 px, MV8; acima disso → `FORMATO` "Foto grande demais", conferido pelo `metadata()` antes de
+   decodificar). No máximo **2** `processarFoto` ao mesmo tempo no processo: o 3º não espera, vira `OCUPADO`
+   (a rota responde `429 RATE_LIMITED`, `Retry-After: 5`).
 2. `metadata()`: o formato tem de ser `jpeg`, `png` ou `webp`. Qualquer outro → erro `FORMATO`.
 3. `.rotate()` (aplica a orientação do EXIF) antes do recorte.
 4. Recorte em pixels a partir das frações (arredondar, limitar à imagem). A proporção pedida tem de ser
@@ -122,22 +125,25 @@ Passos, nesta ordem:
 | `recorte` | JSON `{x,y,largura,altura}`, números finitos entre 0 e 1, `x+largura ≤ 1`, `y+altura ≤ 1` |
 | `alt` | Texto obrigatório, `trim`, 3 a 200 caracteres |
 
-Antes de ler o corpo: conferir `content-length` (se vier acima de 8,5 MB → 413 sem ler).
+O `content-length` é **obrigatório** e conferido antes de ler qualquer byte; o corpo é lido por stream com teto de
+8,5 MB (corpo que mente no header é cortado). Em `lib/midia/corpo.ts`.
 
-**Ordem das checagens:**
+**Ordem das checagens** (as baratas primeiro; corpo inválido não gasta cota):
 
-1. Sessão (`organizacaoDaSessao`). Sem sessão → `401 UNAUTHORIZED`.
-2. Papel: helper novo `exigirGestorDaOrg()` em `lib/painel-sessao.ts`, que lê `profiles.role` do usuário e
-   aceita só `owner` e `admin` → senão `403 FORBIDDEN`. **Os outros pontos de escrita deste contrato usam o
-   mesmo helper.**
-3. Org demo/suspensa: mesma regra que as outras escritas do painel usam (conferir e seguir; registrar qual).
-4. Plano: `planoPermiteVitrine(plano)` em `lib/midia/planos.ts`, com `PLANOS_COM_VITRINE = "todos"` (MV12),
+0. `Origin`, se vier, tem de ser a origem do app (em dev, ou sem `NEXT_PUBLIC_APP_URL`, também a do próprio request) → senão `403 FORBIDDEN`.
+1. Sessão (`exigirGestorDaOrg`). Sem sessão → `401 UNAUTHORIZED`.
+2. Papel: `exigirGestorDaOrg()` em `lib/painel-sessao.ts` lê `profiles.role` do usuário e aceita só `owner` e
+   `admin` → senão `403 FORBIDDEN`. **Os outros pontos de escrita deste contrato usam o mesmo helper.**
+3. Corpo: `content-length` ausente ou inválido → `422 VALIDATION_ERROR` "Envio sem tamanho declarado."; acima de
+   8,5 MB (declarado ou lido) ou arquivo > 8 MB → `413 MEDIA_TOO_LARGE`; campos inválidos → `422 VALIDATION_ERROR` (com `details` por campo).
+4. Org demo/suspensa: mesma regra de `lib/api/autenticar-chave.ts` (`is_demo` ou `subscription_status = 'suspended'`) → `403 ORGANIZATION_SUSPENDED`.
+5. Plano: `planoPermiteVitrine(plano)` em `lib/midia/planos.ts`, com `PLANOS_COM_VITRINE = "todos"` (MV12),
    no mesmo molde de `lib/api/planos.ts` → `403 PLAN_REQUIRED`.
-5. Taxa: `consumeRateLimit` (`lib/demo/rate-limit.ts`), prefixo `midia`, chave = `organization_id`, 30/hora → `429 RATE_LIMITED` + `Retry-After`.
-6. Cota: `count(*)` de `org_media` ativa da org ≥ 80 → `409 MEDIA_LIMIT_REACHED` (código **novo** no
+6. Taxa: `consumeRateLimit` (`lib/demo/rate-limit.ts`), prefixo `midia`, chave = `organization_id`, 30/hora → `429 RATE_LIMITED` + `Retry-After`.
+7. Cota: `count(*)` de `org_media` ativa da org ≥ 80 → `409 MEDIA_LIMIT_REACHED` (código **novo** no
    `ErrorCode`, aditivo) com a mensagem "A biblioteca chegou a 80 fotos. Exclua as que não usa mais."
-7. Corpo inválido → `422 VALIDATION_ERROR` (com `details` por campo). Arquivo grande → `413 MEDIA_TOO_LARGE`.
-8. `processarFoto`. Erros `FORMATO` / `RECORTE` / `PEQUENA` → `422 VALIDATION_ERROR` com mensagem em português para a tela.
+   **Limite conhecido:** a contagem não é atômica com o insert; envios simultâneos podem passar de 80 por pouco (o excesso é limitado pela taxa de 30/hora).
+8. `processarFoto`. Erros `FORMATO` / `RECORTE` / `PEQUENA` → `422 VALIDATION_ERROR` com mensagem em português para a tela; `OCUPADO` → `429`.
 9. `id = randomUUID()` → `gravarVariantes` → `insert` em `org_media` (service role). Se o insert falhar,
    `apagarDiretorio(id)` e `500 INTERNAL_ERROR`.
 
@@ -188,7 +194,8 @@ Server actions finas em `web/app/actions/midia.ts` (`editarAltMidia`, `excluirMi
 
 Node puro, no estilo de `verificar-api-publica.mjs`. Roda **dentro** do container (`docker exec elisa-app node scripts/limpar-midia.mjs`).
 
-- Sem argumento: só **lista**. Com `--aplicar`: apaga.
+- Sem argumento: só **lista**. Com `--aplicar`: apaga (casos (a) e `.tmp`). O caso (b) só apaga com `--aplicar --confirmo-orfas`.
+- Aborta sem apagar nada se há pastas candidatas a (b) e a consulta não reconheceu nenhuma, ou se os órfãos passam de 20% das pastas. Erro ao apagar uma linha é registrado e o script segue (saída 1 no fim).
 - Apaga `<MEDIA_DIR>/<id>/` quando (a) `org_media.deleted_at < now() - 30 dias`, ou (b) não existe linha
   com esse id (org apagada em cascata) **e** o diretório tem mais de 30 dias de `mtime`. Também apaga
   `*.tmp/` com mais de 1 hora.

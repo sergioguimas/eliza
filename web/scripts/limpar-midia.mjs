@@ -3,7 +3,8 @@
  * Limpeza do disco da biblioteca de fotos (docs/contratos/midia-vitrine/01 §7). Node puro, sem dependência
  * (fala com o PostgREST por fetch). Roda DENTRO do container:
  *   docker exec elisa-app node scripts/limpar-midia.mjs            # só lista
- *   docker exec elisa-app node scripts/limpar-midia.mjs --aplicar  # apaga
+ *   docker exec elisa-app node scripts/limpar-midia.mjs --aplicar  # apaga (casos a e .tmp)
+ *   docker exec elisa-app node scripts/limpar-midia.mjs --aplicar --confirmo-orfas  # apaga também o caso (b)
  *
  * Apaga <MEDIA_DIR>/<id>/ quando:
  *   (a) org_media.deleted_at tem mais de 30 dias (e depois apaga a linha);
@@ -22,6 +23,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const TMP = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.tmp$/
 
 const aplicar = process.argv.includes("--aplicar")
+const confirmoOrfas = process.argv.includes("--confirmo-orfas")
 const raiz = process.env.MEDIA_DIR?.trim() || path.join(process.cwd(), ".media")
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "")
 const chave = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -32,6 +34,21 @@ if (!url || !chave) {
 }
 
 const cab = { apikey: chave, Authorization: `Bearer ${chave}` }
+
+let houveErro = false
+
+/** Falha do DELETE depois do `rm` não pode travar o resto: registra, marca o código de saída e segue. */
+async function restSeguro(caminho, opcoes) {
+  try {
+    const r = await fetch(`${url}/rest/v1/${caminho}`, { ...opcoes, headers: { ...cab, ...opcoes.headers } })
+    if (r.ok) return true
+    console.error(`ERRO: ${opcoes.method} ${caminho.split("?")[0]} -> ${r.status} ${await r.text()}`)
+  } catch (erro) {
+    console.error(`ERRO: ${opcoes.method} ${caminho.split("?")[0]} -> ${erro.message}`)
+  }
+  houveErro = true
+  return false
+}
 
 async function rest(caminho, opcoes = {}) {
   const r = await fetch(`${url}/rest/v1/${caminho}`, { ...opcoes, headers: { ...cab, ...opcoes.headers } })
@@ -91,21 +108,58 @@ for (const nome of diretorios.map((e) => e.name)) {
   }
 }
 
+// Trava do caso (b): se a consulta não reconheceu NENHUM id existente, ou se os órfãos passam de 20% das
+// pastas, o mais provável é consulta errada (base errada, chave sem acesso), não lixo de verdade. Aborta.
+const alvosB = alvos.filter((a) => a.motivo.startsWith("sem linha"))
+
+if (candidatosB.length > 0 && comLinha.size === 0) {
+  console.error(`ABORTADO: ${candidatosB.length} pasta(s) em disco e a consulta não reconheceu nenhuma. Confira NEXT_PUBLIC_SUPABASE_URL e a chave; nada foi apagado.`)
+  process.exit(1)
+}
+
+if (alvosB.length > 0 && alvosB.length > idsEmDisco.length * 0.2) {
+  console.error(`ABORTADO: ${alvosB.length} de ${idsEmDisco.length} pastas seriam apagadas como órfãs (> 20%). Investigue antes; nada foi apagado.`)
+  process.exit(1)
+}
+
 // linhas excluídas há mais de 30 dias cujo diretório já não existe também saem do banco
 const linhasSemDiretorio = [...idsExcluidas].filter((id) => !idsEmDisco.includes(id))
 
 console.log(`${aplicar ? "APLICANDO" : "SIMULAÇÃO (use --aplicar para apagar)"} em ${raiz}`)
-for (const a of alvos) console.log(`${aplicar ? "apaga" : "apagaria"}  ${a.nome}  ${a.motivo}`)
+for (const a of alvos) {
+  const ehB = a.motivo.startsWith("sem linha")
+  const acao = aplicar && (!ehB || confirmoOrfas) ? "apaga" : "apagaria"
+  console.log(`${acao}  ${a.nome}  ${a.motivo}`)
+}
+if (alvosB.length > 0 && !(aplicar && confirmoOrfas)) {
+  console.log(`AVISO: ${alvosB.length} pasta(s) órfã(s) (sem linha no banco) só são apagadas com --aplicar --confirmo-orfas.`)
+}
 for (const id of linhasSemDiretorio) console.log(`${aplicar ? "apaga" : "apagaria"}  linha ${id}  excluída há mais de 30 dias, sem pasta`)
 if (alvos.length === 0 && linhasSemDiretorio.length === 0) console.log("nada a limpar")
 
 if (aplicar) {
+  let pastas = 0
+  let linhas = 0
+
   for (const a of alvos) {
-    await rm(a.caminho, { recursive: true, force: true })
-    if (a.linha) await rest(`org_media?id=eq.${a.linha}&deleted_at=lt.${encodeURIComponent(corte)}`, { method: "DELETE" })
+    if (a.motivo.startsWith("sem linha") && !confirmoOrfas) continue
+
+    try {
+      await rm(a.caminho, { recursive: true, force: true })
+      pastas += 1
+    } catch (erro) {
+      console.error(`ERRO: rm ${a.nome} -> ${erro.message}`)
+      houveErro = true
+      continue
+    }
+
+    if (a.linha && (await restSeguro(`org_media?id=eq.${a.linha}&deleted_at=lt.${encodeURIComponent(corte)}`, { method: "DELETE" }))) linhas += 1
   }
+
   for (const id of linhasSemDiretorio) {
-    await rest(`org_media?id=eq.${id}&deleted_at=lt.${encodeURIComponent(corte)}`, { method: "DELETE" })
+    if (await restSeguro(`org_media?id=eq.${id}&deleted_at=lt.${encodeURIComponent(corte)}`, { method: "DELETE" })) linhas += 1
   }
-  console.log(`feito: ${alvos.length} pasta(s), ${alvos.filter((a) => a.linha).length + linhasSemDiretorio.length} linha(s)`)
+
+  console.log(`feito: ${pastas} pasta(s), ${linhas} linha(s)${houveErro ? " (com erros, veja acima)" : ""}`)
+  if (houveErro) process.exit(1)
 }

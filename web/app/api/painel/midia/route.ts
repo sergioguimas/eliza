@@ -16,6 +16,7 @@ import { ApiError, validation } from "@/lib/http/erros"
 import { criarRota } from "@/lib/http/rota"
 import { apagarDiretorio, gravarVariantes, novoIdDeMidia } from "@/lib/midia/armazenamento"
 import { MENSAGEM_PLANO_SEM_VITRINE, planoPermiteVitrine } from "@/lib/midia/planos"
+import { CorpoGrandeError, contentLengthDeclarado, lerFormLimitado } from "@/lib/midia/corpo"
 import { processarFoto, ProcessamentoError } from "@/lib/midia/processar"
 import { exigirGestorDaOrg } from "@/lib/painel-sessao"
 
@@ -70,54 +71,19 @@ export const POST = criarRota({
   },
 
   async handler({ req, db, requestId, organizationId, userId }) {
-    // 3. org demo ou suspensa: mesma regra de lib/api/autenticar-chave.ts
-    const { data: org } = await db
-      .from("organizations")
-      .select("subscription_status, is_demo, plan")
-      .eq("id", organizationId)
-      .maybeSingle()
+    // 3. corpo, ANTES de qualquer consulta ao banco ou gasto de cota: content-length obrigatório e conferido
+    //    antes de ler; leitura em stream com teto (corpo que mente no header é cortado); depois os campos.
+    const declarado = contentLengthDeclarado(req.headers)
 
-    if (!org || org.is_demo || org.subscription_status === "suspended") {
-      throw new ApiError("ORGANIZATION_SUSPENDED", "Organização indisponível para envio de fotos.")
-    }
-
-    // 4. plano (MV12)
-    if (!planoPermiteVitrine(org.plan)) {
-      throw new ApiError("PLAN_REQUIRED", MENSAGEM_PLANO_SEM_VITRINE)
-    }
-
-    // 5. taxa: 30 envios por hora por org
-    const taxa = await consumeRateLimit(db, `midia:${organizationId}`, TAXA)
-
-    if (!taxa.allowed) {
-      throw new ApiError(
-        "RATE_LIMITED",
-        "Muitos envios de foto. Tente novamente mais tarde.",
-        undefined,
-        taxa.retryAfterSeconds ? { "Retry-After": String(taxa.retryAfterSeconds) } : undefined
-      )
-    }
-
-    // 6. cota: 80 fotos ativas
-    if ((await contarFotosAtivas(db, organizationId)) >= LIMITE_FOTOS_ATIVAS) {
-      throw new ApiError(
-        "MEDIA_LIMIT_REACHED",
-        `A biblioteca chegou a ${LIMITE_FOTOS_ATIVAS} fotos. Exclua as que não usa mais.`
-      )
-    }
-
-    // 7. corpo: content-length antes de ler; depois os campos
-    const declarado = Number(req.headers.get("content-length"))
-
-    if (Number.isFinite(declarado) && declarado > LIMITE_CONTENT_LENGTH) {
-      throw new ApiError("MEDIA_TOO_LARGE", "A foto passa de 8 MB. Escolha uma menor.")
-    }
+    if (declarado === null) throw validation("Envio sem tamanho declarado.")
+    if (declarado > LIMITE_CONTENT_LENGTH) throw new ApiError("MEDIA_TOO_LARGE", "A foto passa de 8 MB. Escolha uma menor.")
 
     let form: FormData
 
     try {
-      form = await req.formData()
-    } catch {
+      form = await lerFormLimitado(req, LIMITE_CONTENT_LENGTH)
+    } catch (erro) {
+      if (erro instanceof CorpoGrandeError) throw new ApiError("MEDIA_TOO_LARGE", "A foto passa de 8 MB. Escolha uma menor.")
       throw validation("Envie a foto como formulário (multipart/form-data).")
     }
 
@@ -163,12 +129,52 @@ export const POST = criarRota({
       throw validation("Dados inválidos.", detalhes)
     }
 
+    // 4. org demo ou suspensa: mesma regra de lib/api/autenticar-chave.ts
+    const { data: org } = await db
+      .from("organizations")
+      .select("subscription_status, is_demo, plan")
+      .eq("id", organizationId)
+      .maybeSingle()
+
+    if (!org || org.is_demo || org.subscription_status === "suspended") {
+      throw new ApiError("ORGANIZATION_SUSPENDED", "Organização indisponível para envio de fotos.")
+    }
+
+    // 5. plano (MV12)
+    if (!planoPermiteVitrine(org.plan)) {
+      throw new ApiError("PLAN_REQUIRED", MENSAGEM_PLANO_SEM_VITRINE)
+    }
+
+    // 6. taxa: 30 envios por hora por org
+    const taxa = await consumeRateLimit(db, `midia:${organizationId}`, TAXA)
+
+    if (!taxa.allowed) {
+      throw new ApiError(
+        "RATE_LIMITED",
+        "Muitos envios de foto. Tente novamente mais tarde.",
+        undefined,
+        taxa.retryAfterSeconds ? { "Retry-After": String(taxa.retryAfterSeconds) } : undefined
+      )
+    }
+
+    // 7. cota: 80 fotos ativas
+    if ((await contarFotosAtivas(db, organizationId)) >= LIMITE_FOTOS_ATIVAS) {
+      throw new ApiError(
+        "MEDIA_LIMIT_REACHED",
+        `A biblioteca chegou a ${LIMITE_FOTOS_ATIVAS} fotos. Exclua as que não usa mais.`
+      )
+    }
+
     // 8. decodifica e reescreve (nunca salva o original)
     let processada: Awaited<ReturnType<typeof processarFoto>>
 
     try {
       processada = await processarFoto(Buffer.from(await arquivo.arrayBuffer()), recorte)
     } catch (erro) {
+      if (erro instanceof ProcessamentoError && erro.codigo === "OCUPADO") {
+        throw new ApiError("RATE_LIMITED", erro.message, undefined, { "Retry-After": "5" })
+      }
+
       if (erro instanceof ProcessamentoError) {
         throw validation(erro.message, [{ field: erro.codigo === "FORMATO" ? "arquivo" : "recorte", message: erro.message, code: erro.codigo }])
       }

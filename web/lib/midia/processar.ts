@@ -13,7 +13,7 @@ sharp.concurrency(1)
 /** Frações 0..1 da imagem enviada (já com a orientação do EXIF aplicada, como o navegador mostra). */
 export type Recorte = { x: number; y: number; largura: number; altura: number }
 
-export type CodigoProcessamento = "FORMATO" | "RECORTE" | "PEQUENA"
+export type CodigoProcessamento = "FORMATO" | "RECORTE" | "PEQUENA" | "OCUPADO"
 
 // Campos declarados à parte (sem "parameter properties"), como DomainError.
 export class ProcessamentoError extends Error {
@@ -30,6 +30,17 @@ const FORMATOS = new Set(["jpeg", "png", "webp"])
 const LADO_MINIMO = 480
 const PROPORCAO = 3 / 4
 const TOLERANCIA = 0.02
+/**
+ * Teto de pixels da imagem de entrada. O painel reduz a foto para no máximo 2560 px no maior lado antes de
+ * enviar (decisão MV8), então 2560x2560 (com 25% de folga) cobre qualquer envio legítimo; acima disso é
+ * foto que não passou pelo painel ou bomba de descompressão (um PNG sólido de 40 MP cabe em poucos KB).
+ */
+const LIMITE_PIXELS_ENTRADA = 2560 * 2560 * 1.25
+
+/** No máximo 2 decodificações ao mesmo tempo no processo; a 3ª não espera em fila (a rota responde 429). */
+const MAX_SIMULTANEOS = 2
+let emProcessamento = 0
+
 const LARGURAS_SAIDA: readonly Largura[] = [960, 480]
 
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n))
@@ -40,23 +51,49 @@ export async function processarFoto(
   entrada: Buffer,
   recorte: Recorte
 ): Promise<{
+  variantes: { largura: Largura; larguraReal: number; altura: number; dados: Buffer }[]
+  cor: string
+  bytes: number
+}> {
+  if (emProcessamento >= MAX_SIMULTANEOS) {
+    throw new ProcessamentoError("OCUPADO", "Outra foto está sendo processada. Tente em alguns segundos.")
+  }
+
+  emProcessamento += 1
+
+  try {
+    return await processar(entrada, recorte)
+  } finally {
+    emProcessamento -= 1
+  }
+}
+
+async function processar(
+  entrada: Buffer,
+  recorte: Recorte
+): Promise<{
   /** `largura` = nome do arquivo (960|480); `larguraReal`/`altura` = pixels de verdade (sem ampliar, a 960 pode ser menor). */
   variantes: { largura: Largura; larguraReal: number; altura: number; dados: Buffer }[]
   cor: string
   bytes: number
 }> {
-  const opcoes = { limitInputPixels: 40_000_000, failOn: "error" } as const
+  const opcoes = { limitInputPixels: LIMITE_PIXELS_ENTRADA, failOn: "error" } as const
 
   // 2. formato decidido pelo conteúdo, não pelo tipo declarado
   let meta: Metadata
   try {
-    meta = await sharp(entrada, opcoes).metadata()
+    // só lê o cabeçalho (não decodifica pixels): sem o limite aqui para poder dar a mensagem certa abaixo
+    meta = await sharp(entrada, { ...opcoes, limitInputPixels: false }).metadata()
   } catch {
     throw new ProcessamentoError("FORMATO", MSG_FORMATO)
   }
 
   if (!meta.format || !FORMATOS.has(meta.format) || !meta.width || !meta.height) {
     throw new ProcessamentoError("FORMATO", MSG_FORMATO)
+  }
+
+  if (meta.width * meta.height > LIMITE_PIXELS_ENTRADA) {
+    throw new ProcessamentoError("FORMATO", "Foto grande demais. Envie pelo painel, que já reduz o tamanho.")
   }
 
   // 3. orientação do EXIF (5–8 trocam largura e altura) antes do recorte

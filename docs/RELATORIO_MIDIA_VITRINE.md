@@ -140,3 +140,20 @@ Aceite 04 §7:
 - ✅ campo extra (proxy local acrescentando `extra` ao primeiro item da vitrine): o script reprovou com `FALHOU: vitrine[0] = id, legenda, categoria, foto  recebido: ["categoria","extra","foto","id","legenda"]`.
 - ✅ tempo medido (acima).
 - Compatibilidade com a LP antiga: pela natureza aditiva; a LP não foi testada.
+
+## R1 — correções
+
+Commit `fix(midia): limites de corpo e de pixels no upload e script de limpeza à prova de erro`. Contrato `01` §4, §5 e §7 atualizado para bater com o código (inclui a ordem nova das checagens, o limite conhecido da cota de 80 e as flags do script).
+
+1. **Teto de corpo no upload (ALTO).** `lib/midia/corpo.ts` (sem `server-only`, testável isolado). A rota agora, logo depois do papel e antes de demo, plano, taxa e cota: exige `content-length` inteiro > 0 (ausente ou inválido → `422` "Envio sem tamanho declarado."), acima de 8,5 MB → `413 MEDIA_TOO_LARGE`, lê por stream com teto (`TransformStream` que conta bytes e dá erro ao estourar) e só então valida os campos. Corpo inválido não gasta cota. Evidência (script no scratchpad, `Request` reais):
+   - `content-length` ausente, `abc`, `0`, `-5` → `null` (a rota responde 422); `12` → 12.
+   - multipart válido de 1 KB com limite de 100 KB → lido (`alt` e `arquivo.size` corretos).
+   - corpo de 1 MB com header mentindo `content-length: 500` → `CorpoGrandeError` (413).
+   - chunked de 50 MB sem tamanho, limite de 100 KB → `CorpoGrandeError`, e o gerador parou em 196 608 bytes (o stream é cortado, não lido inteiro).
+   - `text/plain` → `CorpoInvalidoError` (422).
+   - Pela rota no dev, sem sessão a resposta é 401 (a sessão vem antes do corpo, de propósito); por isso o limitador foi testado isolado.
+2. **Bomba de pixels (MÉDIO).** `LIMITE_PIXELS_ENTRADA = 2560 * 2560 * 1.25` (comentário cita o MV8). O `metadata()` lê só o cabeçalho (sem limite) e, acima do teto, → `FORMATO` "Foto grande demais. Envie pelo painel, que já reduz o tamanho."; o decode mantém `limitInputPixels` com o mesmo valor. Semáforo de 2 `processarFoto` por processo: o 3º recebe `OCUPADO` sem esperar, e a rota responde `429 RATE_LIMITED` com `Retry-After: 5` e "Outra foto está sendo processada. Tente em alguns segundos.". Evidência: PNG sólido 6300x6300 (131 509 bytes) → `FORMATO` "Foto grande demais..."; JPEG 1920x2560 passa; 3 chamadas simultâneas → `[ok, ok, OCUPADO]`, e a seguinte, depois de terminar, passa. Casos do 1.3 (orientação 6, 700x933, sem EXIF) refeitos antes: iguais.
+3. **`limpar-midia.mjs`, caso (b) (MÉDIO).** Aborta sem apagar nada (saída 1) se há pastas candidatas a (b) e a consulta não reconheceu nenhuma, ou se os órfãos passam de 20% das pastas. O caso (b) só apaga com `--aplicar --confirmo-orfas`; sem a flag, lista e avisa. Evidência com mock local de PostgREST: consulta vazia com 5 pastas e `--aplicar --confirmo-orfas` → "ABORTADO ... nada foi apagado", exit 1, 5 pastas restantes; 1 órfã em 10 (10%): lista e avisa, `--aplicar` sem a flag não apaga (10 restantes), com a flag apaga 1; 3 órfãs em 10 (30%) → ABORTADO, exit 1, 10 restantes.
+4. **Script não trava (BAIXO).** Erro no `DELETE` da linha, ou no `rm`, é registrado e o script segue para o próximo alvo; saída 1 só no fim. Evidência: mock devolvendo 500 no `DELETE` com 2 excluídas antigas → as duas pastas removidas, dois `ERRO: DELETE org_media -> 500`, "feito: 2 pasta(s), 0 linha(s) (com erros, veja acima)", exit 1.
+5. **`MEDIA_DIR` em produção (BAIXO).** `mediaDir()` lança "MEDIA_DIR não configurado: as fotos sumiriam no próximo deploy" na chamada, com `NODE_ENV=production` e a variável vazia (a rota já converte em 500). Evidência: com `NODE_ENV=production` o módulo carrega e `urlsDaMidia` funciona (o `next build` não é afetado); `gravarVariantes` lança a mensagem.
+6. **Documentação (sem código).** Cota de 80 não atômica registrada como limite conhecido no `01` §5, item 7 (na nova numeração; era o item 6).

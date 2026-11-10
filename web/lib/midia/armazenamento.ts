@@ -19,7 +19,15 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /** Padrão em dev: <web>/.media (fora de public/; servido por app/media/[id]/[arquivo]/route.ts). Produção: volume em /data/media. */
 function mediaDir(): string {
-  return process.env.MEDIA_DIR?.trim() || path.join(process.cwd(), ".media")
+  const configurado = process.env.MEDIA_DIR?.trim()
+  if (configurado) return configurado
+
+  // Na CHAMADA (não no carregamento): o `next build` roda com NODE_ENV=production sem gravar nada.
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("MEDIA_DIR não configurado: as fotos sumiriam no próximo deploy")
+  }
+
+  return path.join(process.cwd(), ".media")
 }
 
 function mediaPublicBase(): string {
