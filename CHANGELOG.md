@@ -28,6 +28,8 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
   e `vitrine` (destaques). São campos novos e aditivos: quem já lê o catálogo não precisa mudar nada.
 - Seletor de fotos no painel: escolhe da biblioteca ou envia uma nova, com recorte 3:4 (zoom por pinça ou barra),
   descrição obrigatória e barra de progresso do envio. Dá para editar a descrição e excluir fotos que não estão em uso.
+- Seção "Categorias e fotos" no topo de Serviços (dona e admin): foto de cada categoria pelo seletor, ordem com os botões
+  subir/descer (várias trocas seguidas gravam de uma vez) e renomear a categoria em todos os serviços dela.
 
 ### Modificado
 

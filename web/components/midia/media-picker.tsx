@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import { EnviarNova } from "./enviar-nova"
 import { LIMITE_FOTOS, validarAlt } from "./envio-foto"
+import { PreviaSite } from "./previa-site"
 
 type Props = {
   open: boolean
@@ -37,9 +38,11 @@ type Props = {
    * Opcional: sem ele a mensagem é genérica.
    */
   descreverUsos?: (mediaId: string) => string[]
+  /** Foto de categoria: mostra "Assim aparece no site" (moldura 4:3, object-position 50% 40%). */
+  previaSite?: boolean
 }
 
-export function MediaPicker({ open, onOpenChange, titulo, selecionadaId, onEscolher, descreverUsos }: Props) {
+export function MediaPicker({ open, onOpenChange, titulo, selecionadaId, onEscolher, descreverUsos, previaSite }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[92dvh] w-[calc(100%-1rem)] max-w-[calc(100%-1rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
@@ -49,7 +52,7 @@ export function MediaPicker({ open, onOpenChange, titulo, selecionadaId, onEscol
         </DialogHeader>
 
         {/* Montado só com o diálogo aberto: o estado (lista, foto em recorte) zera a cada abertura. */}
-        <Conteudo selecionadaId={selecionadaId ?? null} onEscolher={onEscolher} descreverUsos={descreverUsos} />
+        <Conteudo selecionadaId={selecionadaId ?? null} onEscolher={onEscolher} descreverUsos={descreverUsos} previaSite={previaSite} />
       </DialogContent>
     </Dialog>
   )
@@ -59,7 +62,9 @@ function Conteudo({
   selecionadaId,
   onEscolher,
   descreverUsos,
+  previaSite,
 }: {
+  previaSite?: boolean
   selecionadaId: string | null
   onEscolher: (m: MidiaPainel) => void
   descreverUsos?: (mediaId: string) => string[]
@@ -192,6 +197,12 @@ function Conteudo({
             )}
           </div>
 
+          {previaSite && escolhida && (
+            <div className="border-t bg-background px-3 pt-3">
+              <PreviaSite src={escolhida.urlPequena} />
+            </div>
+          )}
+
           <div className="flex items-center justify-between gap-3 border-t bg-background p-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
             <p className="text-sm text-muted-foreground">
               {fotos?.length ?? 0} de {LIMITE_FOTOS} fotos
@@ -204,7 +215,7 @@ function Conteudo({
 
         <TabsContent value="enviar" className="min-h-0 flex-1 overflow-y-auto p-4">
           {erroCarga && <p className="mb-3 text-sm text-destructive">{erroCarga}</p>}
-          <EnviarNova cheia={(fotos?.length ?? 0) >= LIMITE_FOTOS} aoEnviar={aoEnviar} />
+          <EnviarNova cheia={(fotos?.length ?? 0) >= LIMITE_FOTOS} aoEnviar={aoEnviar} previaSite={previaSite} />
         </TabsContent>
       </Tabs>
 
@@ -353,7 +364,7 @@ function ExcluirFoto({
               <AlertDialogTitle>Essa foto está em uso</AlertDialogTitle>
               <AlertDialogDescription>
                 {locais.length > 0
-                  ? `Ela está ${listar(locais)}. Troque a foto lá antes de excluir.`
+                  ? `Ela está ${listar(foto && foto.usos > locais.length ? [...locais, "em outro lugar (categoria ou vitrine)"] : locais)}. Troque a foto lá antes de excluir.`
                   : "Ela está numa categoria ou na vitrine. Troque a foto lá antes de excluir."}
               </AlertDialogDescription>
             </AlertDialogHeader>

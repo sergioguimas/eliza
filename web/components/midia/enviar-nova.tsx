@@ -19,6 +19,7 @@ import {
   type ImagemPreparada,
 } from "./envio-foto"
 import type { AreaRecortada } from "./recorte-foto"
+import { PreviaSite } from "./previa-site"
 
 // O chunk do react-easy-crop só é pedido quando este componente renderiza <RecorteFoto/>, isto é, depois que a
 // pessoa escolheu uma foto. Nada disso entra no JS inicial das páginas.
@@ -35,11 +36,13 @@ type Props = {
   /** Biblioteca cheia: o envio fica bloqueado (a rota também recusa). */
   cheia: boolean
   aoEnviar: (foto: MidiaPainel) => void
+  /** Foto de categoria: mostra como a moldura 4:3 do site corta a foto. */
+  previaSite?: boolean
 }
 
 type Preparada = ImagemPreparada & { url: string }
 
-export function EnviarNova({ cheia, aoEnviar }: Props) {
+export function EnviarNova({ cheia, aoEnviar, previaSite }: Props) {
   const entrada = useRef<HTMLInputElement>(null)
   const [preparada, setPreparada] = useState<Preparada | null>(null)
   const [abrindo, setAbrindo] = useState(false)
@@ -154,6 +157,8 @@ export function EnviarNova({ cheia, aoEnviar }: Props) {
   return (
     <div className="space-y-4">
       <RecorteFoto imagem={preparada.url} aoMudar={aoMudarArea} />
+
+      {previaSite && area && <PreviaSite src={preparada.url} recorte={area.recorte} />}
 
       {pequena && (
         <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
