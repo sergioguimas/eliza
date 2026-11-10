@@ -224,3 +224,27 @@ Tudo que exige sessão: o picker aberto dentro de Serviços e da Vitrine (biblio
 - Teste autenticado (R2) e em aparelho real, incluindo HEIC.
 - Passo 2.4 (Haiku): conferir login de `professional` e reconfirmar o chunk.
 - Decisão do Opus: expor `detalhes.motivo` nas actions (item 2) ou ficar com a mensagem.
+
+## R2 — Revisão e teste com login (Opus, 2026-11-10)
+
+Dev local (`localhost:3001`) com o login do Sérgio na org `admin`, a 375 px. Banco = produção; os 3 registros e os arquivos do teste foram apagados no fim (contagem final: 0 / 0 / 0 nas três tabelas).
+
+| Passo | Resultado |
+|---|---|
+| Serviços › "Trocar foto" abre o seletor; sem biblioteca, cai em "Enviar nova" | ok |
+| Recorte 3:4 com grade e zoom + prévia 4:3 "Assim aparece no site" | ok (também ao escolher da biblioteca) |
+| Enviar sem descrição | ok: "Descreva a foto em pelo menos 3 caracteres." |
+| Envio real | ok: `POST /api/painel/midia` → 201; barra de progresso e "Processando a foto…"; categoria ficou com a foto |
+| Arquivo servido | ok: `960.webp` 960×1280 e `480.webp` 480×640, `image/webp`, `immutable` |
+| Catálogo público | ok: `categorias[0].foto` com url/urlPequena/largura/altura/alt/cor |
+| Menu "Mais" › Vitrine | ok |
+| Excluir foto em uso | bloqueado, com aviso (genérico na Vitrine: "numa categoria ou na vitrine") |
+| Adicionar à vitrine pela biblioteca, legenda pré-preenchida pelo alt | ok: "1 de 24 no site", interruptor e setas |
+| "Tirar foto" da categoria | ok: catálogo volta a `foto: null` |
+| Ponta a ponta com a LP local (`feat/fotos-eliza`) | ok: a ilha mostra a foto do painel sem rebuild e volta à local quando a foto sai. Corrigido na LP (`e612d31`) o cache que mostrava a versão velha na 1ª visita |
+
+Observações:
+- **Dev:** se `NEXT_PUBLIC_APP_URL` não estiver no `.env.local` e o dev subir fora da porta 3000, as URLs de foto apontam para `localhost:3000` (padrão) e não carregam. Em produção a variável existe. Para dev em outra porta: `MEDIA_PUBLIC_BASE=http://localhost:<porta>/media`.
+- **Dev:** a LP local só lê o Eliza local se a origem dela estiver em `LP_PUBLIC_ORIGINS`.
+- Ajuste pequeno pendente (não bloqueia): na página Vitrine o aviso de foto em uso não diz onde ela está; em Serviços ele diz.
+- Não verificado: login de `professional` (passo 2.4; precisa de outra conta) e build Docker com `sharp` (vai no deploy, passo 5 do 06 §6).
