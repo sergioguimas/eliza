@@ -139,7 +139,7 @@ selecionado. Id que não for serviço ativo da org é ignorado (abre sem seleç�
 
 | Variável | Onde | Exemplo |
 |---|---|---|
-| `LP_PUBLIC_ORIGINS` | `.env` da VPS (`/opt/eliza`) e `web/.env.local` | `https://deborahpereira.com.br,https://www.deborahpereira.com.br` (dev: `http://localhost:3200`) |
+| `LP_PUBLIC_ORIGINS` | `.env` da VPS (`/opt/stacks/solasoftware/eliza`) e `web/.env.local` | `https://deborahpereira.com.br,https://www.deborahpereira.com.br` (dev: `http://localhost:3200`) |
 
 Novo cliente com LP = cadastrar a org, acrescentar o domínio dele em
 `LP_PUBLIC_ORIGINS` e recriar o container.
