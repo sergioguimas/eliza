@@ -27,7 +27,7 @@ grep -E '^(NEXT_PUBLIC_APP_URL|LP_PUBLIC_ORIGINS|DNS)=' /opt/eliza/web/.env
 #    MEDIA_DIR e MEDIA_PUBLIC_BASE NÃO precisam estar no .env (vêm do compose / do padrão).
 
 # 2. Pasta das fotos (antes do primeiro up: o volume é montado no start)
-sudo mkdir -p /opt/sola-media && sudo chmod 755 /opt/sola-media && ls -ld /opt/sola-media
+sudo mkdir -p /opt/stacks/solasoftware/sola-media && sudo chmod 755 /opt/stacks/solasoftware/sola-media && ls -ld /opt/stacks/solasoftware/sola-media
 
 # 3. Código
 cd /opt/eliza && sudo git pull && git log -1 --oneline
@@ -56,7 +56,7 @@ As tabelas novas não atrapalham o código antigo.
 
 **7. Envio de teste em produção (org `admin`):** o Sérgio entra no painel de produção, envia uma foto
 em Serviços › Categorias e fotos. Conferir:
-- `sudo ls /opt/sola-media` mostra a pasta `<uuid>` (prova de que o volume está montado e a foto sobrevive a rebuild);
+- `sudo ls /opt/stacks/solasoftware/sola-media` mostra a pasta `<uuid>` (prova de que o volume está montado e a foto sobrevive a rebuild);
 - `HEAD` na URL da foto → 200 `image/webp`, `Cache-Control: ... immutable`.
 - Depois o Opus apaga esse registro de teste.
 
@@ -83,4 +83,4 @@ Voltar, se preciso: `sudo git checkout v1.0.0 && sudo sh infrastructure/deploy.s
 3. **Aceite com a Deborah, no celular dela:** trocar a foto de uma ilha, mudar a ordem, adicionar e esconder uma
    foto da vitrine, e ver cada troca no site ao recarregar.
 4. Fora do aceite, ainda aberto: login de `professional` (não vê menu, seção nem página) e o backup diário de
-   `/opt/sola-media` (risco aceito, 06 §5).
+   `/opt/stacks/solasoftware/sola-media` (risco aceito, 06 §5).
