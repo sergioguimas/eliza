@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
@@ -794,6 +794,53 @@ export type Database = {
           },
         ]
       }
+      org_media: {
+        Row: {
+          alt: string
+          altura: number
+          bytes: number
+          cor: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          id: string
+          largura: number
+          organization_id: string
+        }
+        Insert: {
+          alt: string
+          altura: number
+          bytes: number
+          cor: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          largura: number
+          organization_id: string
+        }
+        Update: {
+          alt?: string
+          altura?: number
+          bytes?: number
+          cor?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          largura?: number
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_media_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_settings: {
         Row: {
           agenda_visivel_dias: number
@@ -858,12 +905,12 @@ export type Database = {
       }
       organizations: {
         Row: {
+          brand_palette: string | null
           created_at: string
           expires_at: string | null
           id: string
           is_demo: boolean
           name: string
-          brand_palette: string | null
           niche: string
           plan: string | null
           slug: string
@@ -874,12 +921,12 @@ export type Database = {
           whatsapp_status: string | null
         }
         Insert: {
+          brand_palette?: string | null
           created_at?: string
           expires_at?: string | null
           id?: string
           is_demo?: boolean
           name: string
-          brand_palette?: string | null
           niche: string
           plan?: string | null
           slug: string
@@ -890,12 +937,12 @@ export type Database = {
           whatsapp_status?: string | null
         }
         Update: {
+          brand_palette?: string | null
           created_at?: string
           expires_at?: string | null
           id?: string
           is_demo?: boolean
           name?: string
-          brand_palette?: string | null
           niche?: string
           plan?: string | null
           slug?: string
@@ -1096,6 +1143,51 @@ export type Database = {
           },
         ]
       }
+      service_categories: {
+        Row: {
+          chave: string | null
+          id: string
+          media_id: string | null
+          nome: string
+          ordem: number
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          chave?: string | null
+          id?: string
+          media_id?: string | null
+          nome: string
+          ordem?: number
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          chave?: string | null
+          id?: string
+          media_id?: string | null
+          nome?: string
+          ordem?: number
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_categories_media_fk"
+            columns: ["media_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "org_media"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "service_categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_records: {
         Row: {
           appointment_id: string | null
@@ -1202,6 +1294,7 @@ export type Database = {
       }
       services: {
         Row: {
+          addons: Json
           category: string | null
           color: string | null
           created_at: string
@@ -1211,11 +1304,11 @@ export type Database = {
           is_active: boolean | null
           organization_id: string
           price: number | null
-          addons: Json
           price_from: boolean
           title: string
         }
         Insert: {
+          addons?: Json
           category?: string | null
           color?: string | null
           created_at?: string
@@ -1225,11 +1318,11 @@ export type Database = {
           is_active?: boolean | null
           organization_id: string
           price?: number | null
-          addons?: Json
           price_from?: boolean
           title: string
         }
         Update: {
+          addons?: Json
           category?: string | null
           color?: string | null
           created_at?: string
@@ -1239,13 +1332,60 @@ export type Database = {
           is_active?: boolean | null
           organization_id?: string
           price?: number | null
-          addons?: Json
           price_from?: boolean
           title?: string
         }
         Relationships: [
           {
             foreignKeyName: "services_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vitrine_items: {
+        Row: {
+          ativo: boolean
+          categoria: string | null
+          created_at: string
+          id: string
+          legenda: string
+          media_id: string
+          ordem: number
+          organization_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          categoria?: string | null
+          created_at?: string
+          id?: string
+          legenda: string
+          media_id: string
+          ordem?: number
+          organization_id: string
+        }
+        Update: {
+          ativo?: boolean
+          categoria?: string | null
+          created_at?: string
+          id?: string
+          legenda?: string
+          media_id?: string
+          ordem?: number
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vitrine_items_media_fk"
+            columns: ["media_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "org_media"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "vitrine_items_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -1329,6 +1469,10 @@ export type Database = {
         }
       }
       get_user_org_id: { Args: never; Returns: string }
+      renomear_categoria: {
+        Args: { p_de: string; p_org: string; p_para: string }
+        Returns: undefined
+      }
       request_public_appointment: {
         Args: {
           p_address?: string
@@ -1346,6 +1490,7 @@ export type Database = {
           p_start_time: string
         }
         Returns: {
+          addons: Json
           created_at: string
           customer_id: string
           end_time: string
@@ -1415,12 +1560,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1444,11 +1589,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1469,11 +1614,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1494,11 +1639,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1511,11 +1656,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
