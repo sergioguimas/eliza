@@ -10,7 +10,7 @@
  *   (b) não existe linha com o id (org apagada em cascata) E o diretório tem mais de 30 dias de mtime.
  * Também apaga <id>.tmp/ com mais de 1 hora (upload interrompido).
  * Usa NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY do ambiente; MEDIA_DIR como o app
- * (vazio = <cwd>/public/media).
+ * (vazio = <cwd>/.media).
  */
 
 import { readdir, rm, stat } from "node:fs/promises"
@@ -22,7 +22,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const TMP = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.tmp$/
 
 const aplicar = process.argv.includes("--aplicar")
-const raiz = process.env.MEDIA_DIR?.trim() || path.join(process.cwd(), "public", "media")
+const raiz = process.env.MEDIA_DIR?.trim() || path.join(process.cwd(), ".media")
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "")
 const chave = process.env.SUPABASE_SERVICE_ROLE_KEY
 

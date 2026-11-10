@@ -61,7 +61,7 @@ Depois de aplicar: tipos regenerados (`web/utils/database.types.ts`, nunca à m�
 
 | Item | Valor |
 |---|---|
-| Variável | `MEDIA_DIR`. Padrão em dev: `<web>/public/media` (no `.gitignore`). Produção: `/data/media` (volume, ver 06) |
+| Variável | `MEDIA_DIR`. Padrão em dev: `<web>/.media` (no `.gitignore`; fora de `public/`). Produção: `/data/media` (volume, ver 06) |
 | Variável | `MEDIA_PUBLIC_BASE`. Padrão: `${NEXT_PUBLIC_APP_URL}/media`. Sem barra no fim |
 | Caminho | `<MEDIA_DIR>/<org_media.id>/960.webp` e `<MEDIA_DIR>/<org_media.id>/480.webp` |
 | URL | `<MEDIA_PUBLIC_BASE>/<id>/960.webp` e `.../480.webp` |

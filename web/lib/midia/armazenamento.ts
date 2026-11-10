@@ -1,7 +1,7 @@
 import "server-only"
 
 import { randomUUID } from "node:crypto"
-import { mkdir, open, rename, rm } from "node:fs/promises"
+import { mkdir, open, readFile, rename, rm } from "node:fs/promises"
 import path from "node:path"
 
 /**
@@ -17,9 +17,9 @@ export type Largura = (typeof LARGURAS)[number]
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-/** Padrão em dev: <web>/public/media (o `next dev` roda com cwd = web). Produção: volume em /data/media. */
+/** Padrão em dev: <web>/.media (fora de public/; servido por app/media/[id]/[arquivo]/route.ts). Produção: volume em /data/media. */
 function mediaDir(): string {
-  return process.env.MEDIA_DIR?.trim() || path.join(process.cwd(), "public", "media")
+  return process.env.MEDIA_DIR?.trim() || path.join(process.cwd(), ".media")
 }
 
 function mediaPublicBase(): string {
@@ -75,6 +75,19 @@ export async function gravarVariantes(
   } catch (erro) {
     await rm(tmp, { recursive: true, force: true }).catch(() => {})
     throw erro
+  }
+}
+
+/** Lê uma variante do disco (rota de dev que serve /media/ sem nginx). null = não existe. id e largura validados. */
+export async function lerVariante(id: string, arquivo: string): Promise<Buffer | null> {
+  const seguro = idValido(id)
+  const largura = LARGURAS.find((l) => `${l}.webp` === arquivo)
+  if (!largura) return null
+
+  try {
+    return await readFile(path.join(mediaDir(), seguro, `${largura}.webp`))
+  } catch {
+    return null
   }
 }
 

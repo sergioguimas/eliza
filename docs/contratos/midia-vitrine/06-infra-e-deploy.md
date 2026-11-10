@@ -86,8 +86,9 @@ server {
 `Cross-Origin-Resource-Policy: cross-origin` deixa a LP (outra origem) exibir a foto. Não há
 `Access-Control-Allow-Origin`, porque `<img>` não precisa.
 
-**Dev local:** sem nginx. `MEDIA_DIR` cai em `web/public/media` (no `.gitignore`), e o `next dev` serve os
-arquivos em `http://localhost:<porta>/media/...`. Em produção esse caminho nunca chega ao Next (Traefik).
+**Dev local:** sem nginx. `MEDIA_DIR` cai em `web/.media` (no `.gitignore`), e a rota
+`app/media/[id]/[arquivo]/route.ts` serve os arquivos em `http://localhost:<porta>/media/...` (o Next não serve
+com confiança arquivo criado em runtime em `public/`). Em produção essa rota responde sempre 404. Em produção esse caminho nunca chega ao Next (Traefik).
 
 ## 5. Backup (risco aceito, tarefa aberta)
 
