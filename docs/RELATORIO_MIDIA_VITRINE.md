@@ -79,3 +79,64 @@ Executor: Sonnet. Contrato: `docs/contratos/midia-vitrine/01-armazenamento-e-upl
 - `docker compose build` no R1.
 - Corrida conhecida: entre o `excluirMidia` e uma atribuição concorrente de categoria/vitrine, uma foto pode ser excluída logicamente já referenciada. O 1.4 deve recusar `media_id` de foto com `deleted_at` preenchido.
 - Em dev, o Next não serve arquivos novos de `public/media` criados em runtime de forma confiável; o nginx do 06 resolve em produção.
+
+## F1 — passo 1.3, correções do Opus (origem e pipeline)
+
+- `POST /api/painel/midia` confere o header `Origin` antes de tocar na sessão: se vier e não for a origem do app (`NEXT_PUBLIC_APP_URL`; em dev, ou sem a variável, vale também a origem do próprio request), responde `403 FORBIDDEN`. Sem `Origin` (curl) segue. Evidência no dev: sem Origin → 401; `Origin: https://evil.example` → 403 `FORBIDDEN`; `Origin: http://localhost:3099` → 401 (passou a checagem, falta sessão).
+- `processarFoto` monta `sharp(entrada).rotate().extract(...)` uma vez e usa `.clone()` para cada `resize` (uma decodificação do original por foto). Casos do 1.3 reconferidos com o mesmo script: JPEG 3000x4000 com EXIF → 960x1280 e 480x640 sem EXIF; orientação 6 → 960x1280; 700x933 → variante 960 com 700 px reais; GIF/SVG/txt → `FORMATO`; 1:1 → `RECORTE`; 3:4 de 300 px → `PEQUENA`.
+
+## F1 — passo 1.4 (categorias e vitrine no domínio)
+
+Commit `feat(midia): foto e ordem por categoria e vitrine no domínio`. `lib/domain/categorias.ts`, `lib/domain/vitrine.ts`, actions `app/actions/categorias.ts` e `vitrine.ts` (todas com `exigirGestorDaOrg` + `revalidatePath`).
+
+Decisões do Opus aplicadas: mídia com `deleted_at` é `NOT_FOUND` em `definirFotoCategoria` e `adicionarItem`; limites da vitrine (24 ativos, 60 no total) = `DomainError("CONFLICT", msg, { motivo: "LIMITE_VITRINE" })`; nome exibido = o da linha da tabela, senão o primeiro `services.category` por título; desempate por `localeCompare(..., "pt-BR", { sensitivity: "base" })`.
+
+Escolhas minhas (o contrato não fecha):
+- `definirFotoCategoria` em categoria que nenhum serviço ativo usa → `NOT_FOUND`.
+- Pôr foto em categoria sem linha cria a linha já na posição atual e dá `ordem` às demais sem linha (senão a categoria pularia para o topo, porque as com linha vêm antes das sem linha).
+- `editarItem` reativando item com 24 ativos → o mesmo `CONFLICT`.
+- Actions: `definirFotoDaCategoria`, `reordenarCategoriasAction`, `renomearCategoriaAction`, `adicionarItemVitrine`, `editarItemVitrine`, `reordenarVitrineAction`, `removerItemVitrine`; as de vitrine devolvem `{ success: true, resultado }`.
+
+Evidência (script temporário no scratchpad, org `admin` de produção, serviços e fotos temporários, tudo apagado no fim: `org_media`, `vitrine_items` e `service_categories` com 0 linhas; `services` voltou aos 4 originais):
+
+Aceite 02 §6:
+- ✅ foto numa categoria + reordenar: `listarCategorias` devolveu `Zz Pedicure(0), Zz Gel(10, foto), Zz Alongamento(20), Zz Alongamentos(30)`; chave inexistente em `reordenarCategorias` → `VALIDATION_ERROR`.
+- ✅ renomear A → B com B existente e com foto: serviços de A foram para B, vale a foto de B (`Zz Alongamentos`, 2 serviços, com foto). Renomear sem destino (Pedicure → Pedicures) manteve a ordem 0. Maiúscula/espaço (`zz gel `) foi unificada na mesma categoria. Foto mantida em renomeação sem destino: não testada com foto (só a ordem); a função só troca o `nome`.
+- ✅ mídia que não é da org (uuid alheio) → `NOT_FOUND`. A FK cruzada por SQL **não foi verificada**: exigiria inserir foto em outra org real de produção; o 1.1 criou a FK composta.
+- ✅ excluir a linha de `org_media` por SQL deixou a categoria sem foto, sem erro (FK `set null`).
+
+Aceite 03 §5:
+- ✅ 3 itens, reordenar, desativar 1 → pública devolve 2 na ordem nova (`Destaque 3`, `Destaque 1`).
+- ✅ 25º ativo → `CONFLICT` "A vitrine já tem 24 fotos. Desative ou remova uma." (`LIMITE_VITRINE`); reativar com 24 ativos também.
+- ✅ categoria "Zz Nao Existe" sai `null` na pública (vista na resposta HTTP).
+- ✅ excluir da biblioteca a foto de um item → `CONFLICT` `EM_USO` (usos 1). A mensagem do domínio é "Essa foto está em uso (categoria ou vitrine)..."; a tela do 05 pode trocar por "usada na vitrine" quando o item for da vitrine.
+- Também: item de org alheia (`editarItem`) → `NOT_FOUND`; remover duas vezes → `NOT_FOUND`.
+
+## F1 — acréscimo: fotos no dev (desvio do 01 §3 e do 06 §4, decidido pelo Opus)
+
+Commit `feat(midia): servir fotos no dev por rota e MEDIA_DIR fora de public`.
+- Padrão de `MEDIA_DIR` em dev = `<web>/.media` (antes `public/media`), no `armazenamento.ts`, no `limpar-midia.mjs`, no `.gitignore` (`/.media/`) e no `.env.example`.
+- `app/media/[id]/[arquivo]/route.ts` serve `/media/<uuid>/<960|480>.webp` só fora de produção (`NODE_ENV === "production"` → 404). Leitura via `lerVariante` em `armazenamento.ts` (o disco continua num módulo só). O matcher do `middleware.ts` já exclui `.webp`.
+- Contratos 01 §3 e 06 §4 atualizados.
+- Evidência: `960.webp` e `480.webp` → 200 `image/webp` com `cache-control: public, max-age=31536000, immutable`; `100.webp`, `..%2F/960.webp` e `nao-uuid/960.webp` → 404. O 404 de produção não foi exercitado (só o código).
+
+## F1 — passo 1.5 (catálogo público)
+
+Commit `feat(api-publica): categorias e vitrine no catálogo público`.
+- Zod do §2 em `contracts/publico/catalogo.ts` (`FotoPublica`, `CategoriaPublica`, `ItemVitrinePublico`, `categorias` e `vitrine` depois de `servicos`, `.strict()`). O ETag agora inclui categorias e vitrine.
+- Rota: `Promise.all` de três leituras (serviços, linhas de categoria com a foto embutida por join, itens de vitrine com a foto embutida). Desvio do §3 ("depois de `listarServicosAtivos`, em paralelo"): paralelizei também com os serviços, e `categoriasPublicas`/`vitrinePublica` ficaram divididas em `ler...` (consulta) e `montar...` (parte pura), com as funções do contrato como atalho. Motivo: a medição abaixo.
+- OpenAPI pública: descrição, resumo do formato e exemplo atualizados (o schema sai do Zod, então os campos novos aparecem). `docs/API_PUBLICA.md` (Haiku) conferido e coerente com a implementação, sem alteração.
+- `verificar-api-publica.mjs`: lista fechada com `categorias`/`vitrine`, `foto`, item de vitrine, nome de categoria presente em algum serviço, `HEAD` em até 3 fotos. Também corrigi um bug antigo: `adicionais` não estava na lista de campos do serviço, então o script já reprovava antes.
+
+Tempo da rota (dev local, Supabase remoto; 3 aquecimentos + 10 chamadas, mediana; cada ida ao banco custa ~230 ms nesta máquina):
+- antes (HEAD sem os campos novos): 692 a 810 ms
+- depois, primeira versão (duas consultas extras em série depois dos serviços, 2 idas cada): ~950 ms
+- depois, com join + `Promise.all` de tudo: 744 a 754 ms (com fotos, categoria com foto e 2 itens de vitrine), dentro do ruído e abaixo do alvo de +40 ms.
+
+Aceite 04 §7:
+- ✅ org sem fotos: `categorias: [{nome:"Alongamento", foto:null}]`, `vitrine: []` (medido antes das fixtures); o script passou (30 verificações).
+- ✅ com foto e vitrine: o script passou contra o dev local, `node web/scripts/verificar-api-publica.mjs http://localhost:3099 admin http://localhost:3200` → "50 verificações passaram", incluindo os `HEAD` das fotos (200, `image/webp`, `immutable`, sem `set-cookie`).
+- ✅ trocar a foto da categoria muda o ETag (`"67b7e850..."` → `"fb1619e1..."`) e `If-None-Match` antigo → 200.
+- ✅ campo extra (proxy local acrescentando `extra` ao primeiro item da vitrine): o script reprovou com `FALHOU: vitrine[0] = id, legenda, categoria, foto  recebido: ["categoria","extra","foto","id","legenda"]`.
+- ✅ tempo medido (acima).
+- Compatibilidade com a LP antiga: pela natureza aditiva; a LP não foi testada.

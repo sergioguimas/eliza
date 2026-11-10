@@ -82,10 +82,12 @@ export async function processarFoto(
     // 5. duas variantes; sem ampliar; sem withMetadata (EXIF/GPS caem por padrão)
     const variantes: { largura: Largura; larguraReal: number; altura: number; dados: Buffer }[] = []
 
+    // Um pipeline base (orientação + recorte); cada largura parte de um clone dele.
+    const base = sharp(entrada, opcoes).rotate().extract({ left, top, width, height })
+
     for (const largura of LARGURAS_SAIDA) {
-      const { data, info } = await sharp(entrada, opcoes)
-        .rotate()
-        .extract({ left, top, width, height })
+      const { data, info } = await base
+        .clone()
         .resize(largura, Math.round((largura * 4) / 3), { fit: "cover", withoutEnlargement: true })
         .webp({ quality: 80, effort: 4 })
         .toBuffer({ resolveWithObject: true })

@@ -1,5 +1,7 @@
 import "server-only"
 
+import type { NextRequest } from "next/server"
+
 import {
   AltMidia,
   LIMITE_FOTOS_ATIVAS,
@@ -28,9 +30,36 @@ export const runtime = "nodejs"
 const LIMITE_CONTENT_LENGTH = 8.5 * 1024 * 1024
 const TAXA = { windowMs: 60 * 60 * 1000, max: 30 }
 
+/**
+ * Defesa explícita contra POST de outra origem (route handler não tem a checagem de Origin da server action;
+ * os cookies Lax já seguram o cross-site). Com `Origin`: tem de ser a origem do app (NEXT_PUBLIC_APP_URL); em
+ * dev (ou sem a variável) vale também a origem do próprio request. Sem `Origin` (curl), segue.
+ */
+function origemPermitida(req: NextRequest): boolean {
+  const origin = req.headers.get("origin")
+  if (!origin) return true
+
+  const configurada = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL
+  const permitidas = new Set<string>()
+
+  if (configurada) {
+    try {
+      permitidas.add(new URL(configurada).origin)
+    } catch {
+      // URL malformada: cai na regra do request abaixo
+    }
+  }
+
+  if (process.env.NODE_ENV !== "production" || permitidas.size === 0) permitidas.add(req.nextUrl.origin)
+
+  return permitidas.has(origin)
+}
+
 export const POST = criarRota({
-  // 1 e 2. sessão (401) e papel owner/admin (403)
-  async autenticar() {
+  // 0, 1 e 2. origem (403), sessão (401) e papel owner/admin (403)
+  async autenticar(req) {
+    if (!origemPermitida(req)) throw new ApiError("FORBIDDEN", "Origem não permitida.")
+
     const sessao = await exigirGestorDaOrg()
 
     if ("error" in sessao) {
