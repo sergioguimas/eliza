@@ -12,6 +12,7 @@ Se discordarem, Zod vence para forma e `.md` para regra; registre a divergência
 | [autoatendimento/](autoatendimento/README.md) | TO-BE | API do cliente final (bot), revisada em 2026-10-06 |
 | [api-publica/](api-publica/README.md) | AS-IS + TO-BE | Catálogo público sem autenticação para sites dos clientes (2026-10-19); categoria de serviço, OpenAPI e verificação |
 | [adicionais/](adicionais/README.md) | TO-BE | Adicionais no valor do agendamento, no financeiro e no `/marcar` (2026-11-03) |
+| [midia-vitrine/](midia-vitrine/README.md) | TO-BE | Biblioteca de fotos em disco, foto e ordem por categoria, vitrine e campos novos no catálogo público (2026-11-09) |
 
 Zod: `web/contracts/comum/envelope.ts` (envelope e erros únicos),
 `web/contracts/api-v1/`, `web/contracts/autoatendimento/`, `web/contracts/publico/`.
@@ -36,6 +37,7 @@ funcionando. Cada contrato tem a sua ordem interna e o seu Aceite.
 | 5 | Autoatendimento F0 | autoatendimento §7 | `docs/RELATORIO_AUTOATENDIMENTO_F0.md` |
 | 6 | API pública: categoria, OpenAPI, verificação (migration **antes** do código) — **feito 2026-10-19** (`09f83e2`, migration aplicada) | api-publica §7 | `docs/RELATORIO_API_PUBLICA.md` |
 | 7 | Adicionais: fase 1 (painel e `/marcar`) e fase 2 (API v1 e atendente) | adicionais §10 | `docs/RELATORIO_ADICIONAIS.md` |
+| 8 | Mídia e vitrine: F1 base, F2 painel, F3 LP (em paralelo com F2), F4 deploy (migration **antes** do código; pasta e nginx na VPS) | midia-vitrine/EXECUCAO.md | `docs/RELATORIO_MIDIA_VITRINE.md` |
 
 A auditoria do painel (`docs/AUDITORIA_STATUS_PAINEL.md`, 2026-10-06) já está
 incorporada ao 00-dominio §8 (decisões D9–D11).
