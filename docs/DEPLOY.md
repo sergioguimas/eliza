@@ -17,7 +17,7 @@ O compose atual usa:
 
 - serviço `elisa-app`;
 - porta interna `3000`;
-- redes externas `public` e `private`;
+- redes externas `proxy_net` e `evo_net` (e `proxy_net` também no `eliza-media`);
 - host Traefik `eliza.solasoftware.com.br`;
 - env file `web/.env`.
 
@@ -33,7 +33,7 @@ O compose atual usa:
   segredo no caminho (subir o código antes de trocar a URL na Evolution faz
   as respostas "sim/não" dos clientes caírem em 401 até a troca).
 - Evolution API acessível pela VPS.
-- Redes Docker externas `public` e `private` existentes.
+- Redes Docker externas `proxy_net` e `evo_net` existentes.
 - Traefik com certresolver `meuresolver`, ou ajuste o label.
 
 ## Comandos
@@ -75,6 +75,9 @@ AUTOATENDIMENTO_API_TOKEN=
 AUTOATENDIMENTO_TICKET_SECRET=
 ATENDENTE_URL=
 ATENDENTE_ENCAMINHAMENTO_SECRET=
+# Opcionais (biblioteca de fotos, ver "Fotos"; os padrões já valem em produção):
+# MEDIA_DIR=/data/media
+# MEDIA_PUBLIC_BASE=https://eliza.solasoftware.com.br/media
 ```
 
 `WHATSAPP_WEBHOOK_SECRET` é obrigatória: sem ela o webhook de entrada do
@@ -103,7 +106,7 @@ log (`[autoatendimento:autenticar]`). Rotação = trocar a env nos dois lados.
 
 Sem linha em `autoatendimento_config` (ou com `ativo = false`) o add-on está
 desligado para a org: `ADDON_INACTIVE`. Na F0 a linha se cria pelo Studio.
-Não há `.env.example` no repo (o `.gitignore` ignora `.env*`); este arquivo é o
+O `web/.env.example` lista as variáveis; este arquivo é o
 registro das variáveis.
 
 ## Supabase
@@ -135,6 +138,37 @@ Authorization: Bearer <CRON_SECRET>
 ```
 
 Use timezone `America/Sao_Paulo` no agendador sempre que ele permitir.
+
+## Fotos (biblioteca de mídia)
+
+As fotos da biblioteca ficam em disco, fora do banco e fora do container. O banco guarda só o
+metadado (texto alternativo, cor, quem enviou). Contrato `docs/contratos/midia-vitrine/`.
+
+- **Pasta na VPS:** `/opt/sola-media`. Criar **antes do primeiro `up`**, porque o volume é montado no start:
+
+  ```bash
+  sudo mkdir -p /opt/sola-media && sudo chmod 755 /opt/sola-media
+  ```
+
+  O `elisa-app` grava nela, montada em `/data/media` (volume em `web/docker-compose.yaml`).
+- **Container `eliza-media`:** nginx 1.27 (alpine), só leitura, sem acesso ao banco nem à `evo_net`.
+  Serve a pasta em `https://eliza.solasoftware.com.br/media/...`. O Traefik manda para ele só o caminho
+  `/media/` (prioridade 100). A configuração está em `web/infra/media-nginx.conf`: aceita apenas
+  `<uuid>/960.webp` e `<uuid>/480.webp`, e o resto responde 404.
+- **Variáveis:** `MEDIA_DIR` (vem do compose, `/data/media`) e `MEDIA_PUBLIC_BASE` (padrão
+  `${NEXT_PUBLIC_APP_URL}/media`, sem barra no fim). Não precisam estar no `.env` para produção.
+- **Limpeza mensal:** excluir uma foto é lógico, e os arquivos só saem do disco 30 dias depois. Rodar à mão
+  uma vez por mês. Sem argumento, o script só lista. Com `--aplicar`, apaga:
+
+  ```bash
+  docker exec elisa-app node scripts/limpar-midia.mjs            # lista
+  docker exec elisa-app node scripts/limpar-midia.mjs --aplicar  # apaga o que passou dos 30 dias
+  ```
+
+- **Backup: ainda não feito (risco aceito).** A pasta existe só na VPS. Se o disco for perdido, as fotos
+  somem e a dona reenvia. Para a escala atual (uma org, ~20 fotos), é aceito. **Tarefa aberta:** `rsync`
+  diário de `/opt/sola-media` para o destino de backup que for definido para a VPS (contrato
+  `midia-vitrine/06-infra-e-deploy.md` §5).
 
 ## Pós-Deploy
 

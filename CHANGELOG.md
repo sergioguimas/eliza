@@ -19,6 +19,13 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
   horário enquanto a agenda está fechada.
 - A OpenAPI de Autoatendimento marca `consultarHorarios`, `criarAgendamento` e `remarcarAgendamento` com
   `x-atendente-agenda: true`, para o atendente saber quais ferramentas dependem da agenda aberta.
+- Biblioteca de fotos no painel: envio de JPEG, PNG ou WebP com recorte 3:4. O servidor converte para WebP em duas
+  larguras (960 e 480 px) e não guarda o arquivo original, então dados de localização da foto (GPS) são descartados.
+  Só dona e admin enviam, editam e excluem fotos.
+- Base para foto e ordem por categoria de serviço, e para a vitrine de destaques (foto, legenda e categoria por item).
+  As telas do painel para isso chegam na próxima etapa.
+- Catálogo público (`GET /api/public/v1/orgs/{slug}/catalogo`) passa a trazer `categorias` (ordem e foto de cada uma)
+  e `vitrine` (destaques). São campos novos e aditivos: quem já lê o catálogo não precisa mudar nada.
 
 ### Modificado
 

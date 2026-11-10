@@ -31,6 +31,34 @@ vazamento.
         "adicionais": [{ "id": "5b1f7d2a-3c4e-4a69-8f10-2d9e6c0a7b13", "nome": "Unha quebrada", "valor": 5, "unidade": "por unha" }]
       }
     ],
+    "categorias": [
+      {
+        "nome": "Nail art",
+        "foto": {
+          "url": "https://eliza.solasoftware.com.br/media/0b7e5c2a-41d3-4f8e-9a62-3c1d7e8f9a10/960.webp",
+          "urlPequena": "https://eliza.solasoftware.com.br/media/0b7e5c2a-41d3-4f8e-9a62-3c1d7e8f9a10/480.webp",
+          "largura": 960,
+          "altura": 1280,
+          "alt": "Unhas decoradas com desenhos florais em tons pastel",
+          "cor": "#e8d5c4"
+        }
+      }
+    ],
+    "vitrine": [
+      {
+        "id": "9d2e4b6a-1c3f-4e5a-8b7c-0a1d2e3f4b5c",
+        "legenda": "Nail art com decoração floral",
+        "categoria": "Nail art",
+        "foto": {
+          "url": "https://eliza.solasoftware.com.br/media/5a8f3d1e-2b6c-4d9a-8e7f-1c0b9a8d7e6f/960.webp",
+          "urlPequena": "https://eliza.solasoftware.com.br/media/5a8f3d1e-2b6c-4d9a-8e7f-1c0b9a8d7e6f/480.webp",
+          "largura": 960,
+          "altura": 1280,
+          "alt": "Mão com unhas longas e desenho de flores brancas",
+          "cor": "#d9cfc4"
+        }
+      }
+    ],
     "atualizadoEm": "2026-10-19T14:06:43.454Z"
   }
 }
@@ -44,6 +72,8 @@ vazamento.
 | `precoAPartirDe` | `true` = preço "a partir de": o valor final depende do que o cliente pedir a mais e é combinado no atendimento. Sempre presente (`false` por padrão). Exibir como "a partir de R$ X" |
 | `categoria` | Texto livre (até 40) definido no painel; `null` = sem grupo. Serviços com a mesma categoria devem ser exibidos juntos (decisão D2 da LP) |
 | `adicionais` | Custos opcionais além de `preco`: `id` (estável), `nome`, `valor` (reais) e `unidade` (ex.: "por unha"; `null` = valor fixo). O cliente escolhe a quantidade ao agendar na página de agendamento e a soma entra no valor do agendamento. Até 10 por serviço. Sempre presente; `[]` quando não há |
+| `categorias[]` | Categorias de serviço na ordem de exibição (definida no painel), só as usadas por serviços ativos, no máximo 30. `nome` é igual ao `categoria` dos serviços (compare com `lower` e `trim`). `foto` é a foto da categoria, ou `null` quando não há. Sempre presente; `[]` quando vazio |
+| `vitrine[]` | Destaques ativos na ordem de exibição, no máximo 24. `legenda` (até 60 caracteres), `categoria` (texto, ou `null` quando não há ou a categoria deixou de existir) e `foto`. Sempre presente; `[]` quando vazia |
 | `atualizadoEm` | Instante da consulta (`services` não tem `updated_at`) |
 
 Erros no envelope único (`contracts/comum/envelope.ts`): `404 NOT_FOUND`
@@ -65,6 +95,40 @@ Comportamento:
 ```bash
 curl -i https://eliza.solasoftware.com.br/api/public/v1/orgs/admin/catalogo -H "Origin: https://<dominio-da-lp>"
 ```
+
+## Fotos
+
+`categorias[].foto` e `vitrine[].foto` têm o mesmo formato. `foto` é `null` só na categoria sem foto.
+
+| Campo | Uso |
+|---|---|
+| `url` | Variante grande, 960 px de largura |
+| `urlPequena` | Variante pequena, 480 px de largura |
+| `largura`, `altura` | Dimensões da variante grande (formato 3:4, 960 × 1280). Use em `width` e `height` do `<img>` para não deslocar o layout |
+| `alt` | Texto alternativo escrito pela dona. Sempre preenchido: use no `<img>` |
+| `cor` | Cor dominante (`#rrggbb`), para o fundo enquanto a foto carrega |
+
+As fotos são WebP. Cada arquivo é **imutável**: nunca é sobrescrito, e trocar a foto gera outra URL. Por isso
+a resposta pode ser guardada em cache por 1 ano (`immutable`). Trocar a foto de uma categoria muda o `ETag`
+do catálogo, e a página vê a mudança na próxima leitura (até 30 s, pelo cache da resposta).
+
+Use as duas larguras em `srcset`, com `alt`, `width` e `height`:
+
+```html
+<img
+  src="https://eliza.solasoftware.com.br/media/0b7e5c2a-41d3-4f8e-9a62-3c1d7e8f9a10/960.webp"
+  srcset="https://eliza.solasoftware.com.br/media/0b7e5c2a-41d3-4f8e-9a62-3c1d7e8f9a10/480.webp 480w,
+          https://eliza.solasoftware.com.br/media/0b7e5c2a-41d3-4f8e-9a62-3c1d7e8f9a10/960.webp 960w"
+  width="960"
+  height="1280"
+  alt="Unhas decoradas com desenhos florais em tons pastel"
+  style="background-color: #e8d5c4"
+  loading="lazy">
+```
+
+Uma foto excluída na biblioteca sai do catálogo na hora, mas o arquivo continua no ar por **30 dias**: uma
+página com build antigo ainda pode apontar para ele. Depois desse prazo a URL responde 404. Por isso, o site
+deve ter reserva para quando a foto não carregar (um `onerror` que troque por uma imagem do próprio site).
 
 ## Deep link de agendamento
 
