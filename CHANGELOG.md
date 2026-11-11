@@ -7,6 +7,11 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Não publicado]
 
+### Corrigido
+
+- No celular, janelas com conteúdo maior que a tela (como a de solicitações pendentes no início) ficavam travadas e
+  cortavam os últimos itens. Agora toda janela do painel cabe na tela e rola por dentro.
+
 ## [1.4.0] - 2026-11-10
 
 ### Adicionado
