@@ -7,6 +7,8 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Não publicado]
 
+## [1.4.1] - 2026-11-11
+
 ### Corrigido
 
 - No celular, janelas com conteúdo maior que a tela (como a de solicitações pendentes no início) ficavam travadas e
@@ -156,7 +158,8 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
   API pública de catálogo.
 - O histórico anterior a esta versão, por data, fica em `docs/CHANGELOG.md`.
 
-[Não publicado]: https://github.com/sergioguimas/eliza/compare/v1.4.0...HEAD
+[Não publicado]: https://github.com/sergioguimas/eliza/compare/v1.4.1...HEAD
+[1.4.1]: https://github.com/sergioguimas/eliza/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/sergioguimas/eliza/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/sergioguimas/eliza/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/sergioguimas/eliza/compare/v1.1.0...v1.2.0
