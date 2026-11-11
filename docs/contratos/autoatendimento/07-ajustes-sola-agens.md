@@ -280,7 +280,7 @@ continua sem `contato_humano_telefone` e sem dado de outro cliente.
 
 Deploy: código antes de migration não quebra (colunas lidas com `select("*")` ausentes viram
 `undefined` → `null`); migration antes de código também não (colunas novas anuláveis). Seguir o
-caminho normal do DEPLOY (PR `development` → `main`, VPS `/opt/eliza`).
+caminho normal do DEPLOY (PR `development` → `main`, VPS `/opt/stacks/solasoftware/eliza`).
 
 ## 8. Aceite
 

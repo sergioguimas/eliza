@@ -248,3 +248,21 @@ Observações:
 - **Dev:** a LP local só lê o Eliza local se a origem dela estiver em `LP_PUBLIC_ORIGINS`.
 - Ajuste pequeno pendente (não bloqueia): na página Vitrine o aviso de foto em uso não diz onde ela está; em Serviços ele diz.
 - Não verificado: login de `professional` (passo 2.4; precisa de outra conta) e build Docker com `sharp` (vai no deploy, passo 5 do 06 §6).
+
+## F4 — Deploy (2026-11-10)
+
+Eliza 1.4.0 (tag `v1.4.0` em `2e946af`) e LP 1.1.0 (tag `v1.1.0` em `74930d9`) no ar.
+
+| Passo | Resultado |
+|---|---|
+| Migrations | já aplicadas antes do deploy (agenda visível + mídia) |
+| Pasta | `/opt/stacks/solasoftware/sola-media` (escolha do Sérgio; compose e docs ajustados no #69) |
+| 1º build na VPS | **falhou** em `next/font/google`: o Google passou a devolver URLs `/l/font?kit=…&skey=…` para a VPS e o Turbopack do Next 16.0.8 não as resolve. Corrigido com a fonte no repo (`next/font/local`, #70); mesma prevenção na LP (debora-nails #2) |
+| `/media/` | 404 do nginx (corpo padrão, sem versão, sem `x-powered-by`); o resto segue no Next. Domínio atrás do Cloudflare |
+| Catálogo + `verificar-api-publica.mjs` | `categorias` (6) e `vitrine` presentes; 67 verificações ok |
+| 1º envio | **403 "Origem não permitida"**: `NEXT_PUBLIC_APP_URL` não existia no `.env` de produção. Acrescentada e container recriado; daí 401 sem login com a origem certa e 403 com origem de fora |
+| Envio real | foto da categoria "Nail Art Premium" na org `deborah-pereira`; `960.webp`/`480.webp` 200 `image/webp` `immutable`, `cf-cache-status: HIT` na 2ª chamada |
+| LP | `npm run smoke -- https://deborahpereiranails.com.br --both` passou (aviso de `noindex`, que já existia); ilha Nail Art Premium mostra a foto do Eliza, 1 pedido ao catálogo por visita |
+
+Falta: carga das outras 5 categorias e da vitrine (≥ 4 fotos para a galeria trocar), aceite com a Deborah,
+login de `professional`, backup de `/opt/stacks/solasoftware/sola-media`.

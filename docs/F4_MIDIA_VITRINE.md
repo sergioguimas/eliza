@@ -20,7 +20,7 @@ A agenda visível sobe junto neste deploy. A migration dela já está aplicada, 
 
 ```bash
 # 1. Conferir o .env (sem isso todo envio de foto leva 403 pela checagem de origem)
-grep -E '^(NEXT_PUBLIC_APP_URL|LP_PUBLIC_ORIGINS|DNS)=' /opt/eliza/web/.env
+grep -E '^(NEXT_PUBLIC_APP_URL|LP_PUBLIC_ORIGINS|DNS)=' /opt/stacks/solasoftware/eliza/web/.env
 #    esperado: NEXT_PUBLIC_APP_URL=https://eliza.solasoftware.com.br
 #              LP_PUBLIC_ORIGINS com https://deborahpereiranails.com.br (e o www, se houver)
 #              DNS=eliza.solasoftware.com.br
@@ -30,7 +30,7 @@ grep -E '^(NEXT_PUBLIC_APP_URL|LP_PUBLIC_ORIGINS|DNS)=' /opt/eliza/web/.env
 sudo mkdir -p /opt/stacks/solasoftware/sola-media && sudo chmod 755 /opt/stacks/solasoftware/sola-media && ls -ld /opt/stacks/solasoftware/sola-media
 
 # 3. Código
-cd /opt/eliza && sudo git pull && git log -1 --oneline
+cd /opt/stacks/solasoftware/eliza && sudo git pull && git log -1 --oneline
 #    o hash tem de ser o merge do PR (armadilha de 03/11: pull que não trouxe nada)
 
 # 4. Subir (rebuild do elisa-app + container novo eliza-media)
@@ -42,7 +42,7 @@ sudo docker exec elisa-app node -e "const s=require('sharp');console.log('sharp'
 ```
 
 Se o passo 4 falhar no build, o container antigo continua no ar: nada a desfazer. Se subir e der problema,
-voltar: `cd /opt/eliza && sudo git checkout <hash anterior> && cd web && sudo docker compose up -d --build`.
+voltar: `cd /opt/stacks/solasoftware/eliza && sudo git checkout <hash anterior> && cd web && sudo docker compose up -d --build`.
 As tabelas novas não atrapalham o código antigo.
 
 **Conferência de fora (Opus/Haiku), depois do passo 5:**

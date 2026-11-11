@@ -4,7 +4,7 @@
 
 ## 1. AS-IS
 
-- VPS da Sola `srv1394604`. Eliza em `/opt/eliza/web`, `docker compose up -d --build`, container `elisa-app`
+- VPS da Sola `srv1394604`. Eliza em `/opt/stacks/solasoftware/eliza/web`, `docker compose up -d --build`, container `elisa-app`
   (root, porta 3000), redes externas `proxy_net` e `evo_net`, router Traefik `Host(${DNS})`.
 - TLS e redirect são globais no Traefik (padrão Sola): o router só declara rule e porta.
 - LP da Deborah em `/opt/stacks/solasoftware/lp-deborah`, atrás do Cloudflare.
@@ -105,7 +105,7 @@ Cada passo só depois do anterior conferido.
 |---|---|---|---|
 | 1 | Migration via MCP Supabase (aditiva: tabelas novas, nada lido pelo código antigo) | Sonnet na F1, ou Opus no deploy se a F1 rodou só local | Haiku: `list_tables` + privilégios de `anon` |
 | 2 | `sudo mkdir -p /opt/stacks/solasoftware/sola-media && sudo chmod 755 /opt/stacks/solasoftware/sola-media` | Sérgio | `ls -ld` |
-| 3 | `cd /opt/eliza && sudo git pull` (conferir `git log -1` = commit esperado: armadilha de 03/11) | Sérgio | hash |
+| 3 | `cd /opt/stacks/solasoftware/eliza && sudo git pull` (conferir `git log -1` = commit esperado: armadilha de 03/11) | Sérgio | hash |
 | 4 | `cd web && sudo docker compose up -d --build` (sobe `elisa-app` com volume e `eliza-media`) | Sérgio | `docker compose ps` com os dois `Up` |
 | 5 | `docker exec elisa-app node -e "require('sharp')"` | Sérgio | sem erro |
 | 6 | `curl -sI https://eliza.solasoftware.com.br/media/00000000-0000-0000-0000-000000000000/960.webp` → 404 **do nginx** (`server` sem versão) e `curl -sI https://eliza.solasoftware.com.br/` → 200 do app | Haiku | cabeçalhos |
