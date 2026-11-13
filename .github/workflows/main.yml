@@ -1,0 +1,17 @@
+name: Deploy Eliza Prod
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Atualizar e recriar elisa-app
+        run: |
+          cd /opt/stacks/solasoftware/eliza/web
+          git pull
+          docker compose down -v
+          docker compose up -d --build
